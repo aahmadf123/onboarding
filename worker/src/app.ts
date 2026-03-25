@@ -41,6 +41,14 @@ app.route('/api/contacts', contacts);
 app.route('/api/systems', systems);
 app.route('/api/policies', policies);
 
+// ── Static assets (branding images) ───────────────────────────
+app.get('/branding/*', async (c) => {
+  const url = new URL(c.req.url);
+  url.pathname = url.pathname.replace(/^\/branding/, '');
+  if (url.pathname === '' || url.pathname === '/') url.pathname = '/index.html';
+  return c.env.ASSETS.fetch(new Request(url.toString(), c.req.raw));
+});
+
 // ── SPA fallback ──────────────────────────────────────────────
 // For any non-API route, serve the React SPA shell
 app.get('*', (c) => c.html(getIndexHtml()));

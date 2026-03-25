@@ -291,15 +291,14 @@ expect(Array.isArray(json.data)).toBe(true);
 it('SPA shell includes new feature components', async () => {
 const response = await SELF.fetch('https://example.com/');
 const text = await response.text();
-expect(text).toContain('TipsPage');
+expect(text).toContain('OnboardingGuidePage');
 expect(text).toContain('OrgChartPage');
 expect(text).toContain('AIChatWidget');
 expect(text).toContain('AIHubPage');
 expect(text).toContain('YouTubeFinderPage');
-expect(text).toContain('QuickLinksPage');
+expect(text).toContain('ResourcesPage');
 expect(text).toContain('ContactsPage');
 expect(text).toContain('PoliciesPage');
-expect(text).toContain('SystemsPage');
 expect(text).toContain('FeedbackButton');
 expect(text).toContain('Footer');
 });

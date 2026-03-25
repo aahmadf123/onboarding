@@ -5,30 +5,78 @@ export function getContentCode(): string {
 // ── HomePage ──────────────────────────────────────────────────────────────────
 function HomePage({ categories, stats, onNavigate, onSearch }) {
   return React.createElement('div', { className: 'fade-in' },
+    // Hero banner
     React.createElement('div', { className: 'bg-gradient-to-br from-toledo-blue via-toledo-dark to-toledo-blue text-white py-16' },
       React.createElement('div', { className: 'max-w-4xl mx-auto px-4 text-center' },
+        React.createElement('img', { src: '/branding/Primary_Logo_for_Dark_Background.png', alt: 'Toledo Athletics', className: 'h-20 w-auto mx-auto mb-6' }),
         React.createElement('h1', { className: 'text-4xl md:text-5xl font-extrabold mb-4 tracking-tight' }, 'Welcome to Toledo Athletics'),
         React.createElement('p', { className: 'text-xl text-blue-200 mb-8 max-w-2xl mx-auto' }, 'Your complete onboarding guide — everything you need to succeed from day one.'),
         React.createElement('div', { className: 'max-w-xl mx-auto' }, React.createElement(SearchBar, { onSearch }))
       )
     ),
-    stats && React.createElement('div', { className: 'bg-white border-b' },
-      React.createElement('div', { className: 'max-w-7xl mx-auto px-4 py-4' },
-        React.createElement('div', { className: 'grid grid-cols-2 md:grid-cols-4 gap-4' },
-          [
-            { label: 'Categories', value: stats.categories, color: 'text-toledo-blue' },
-            { label: 'Articles', value: stats.articles, color: 'text-green-600' },
-            { label: 'Team Members', value: stats.total_users, color: 'text-purple-600' },
-            { label: 'Pending Reviews', value: stats.pending_submissions, color: 'text-orange-500' },
-          ].map((s, i) => React.createElement('div', { key: i, className: 'text-center' },
-            React.createElement('div', { className: 'text-2xl font-bold ' + s.color }, s.value),
-            React.createElement('div', { className: 'text-xs text-gray-500 mt-0.5' }, s.label)
-          ))
-        )
+
+    // Quick Actions
+    React.createElement('div', { className: 'max-w-7xl mx-auto px-4 -mt-8 relative z-10' },
+      React.createElement('div', { className: 'grid grid-cols-2 md:grid-cols-4 gap-4' },
+        [
+          { id: 'guide', icon: '🗺️', label: 'Onboarding Guide', desc: 'Step-by-step journey' },
+          { id: 'resources', icon: '🔗', label: 'Resources & Systems', desc: 'Links and tools' },
+          { id: 'contacts', icon: '👥', label: 'Key Contacts', desc: 'Who to reach out to' },
+          { id: 'ai-hub', icon: '✨', label: 'AI Assessment', desc: 'Check your AI literacy' },
+        ].map(function (action) {
+          return React.createElement('button', {
+            key: action.id, onClick: function () { onNavigate(action.id); },
+            className: 'bg-white rounded-xl border border-gray-200 p-5 text-center hover:shadow-lg hover:border-toledo-blue/30 transition-all group shadow-md',
+          },
+            React.createElement('span', { className: 'text-3xl block mb-2' }, action.icon),
+            React.createElement('h3', { className: 'font-semibold text-gray-900 group-hover:text-toledo-blue transition-colors text-sm' }, action.label),
+            React.createElement('p', { className: 'text-xs text-gray-500 mt-1' }, action.desc)
+          );
+        })
       )
     ),
+
+    // Getting Started Journey
     React.createElement('div', { className: 'max-w-7xl mx-auto px-4 py-12' },
-      React.createElement('h2', { className: 'text-2xl font-bold text-gray-900 mb-6' }, 'Onboarding Categories'),
+      React.createElement('h2', { className: 'text-2xl font-bold text-gray-900 mb-2' }, 'Your Onboarding Journey'),
+      React.createElement('p', { className: 'text-gray-500 mb-6' }, "Follow these milestones to get settled in. Don't try to do everything at once!"),
+      React.createElement('div', { className: 'grid grid-cols-1 md:grid-cols-4 gap-4' },
+        [
+          { phase: 'First Day', icon: '☀️', color: 'border-l-green-500', items: ['Get your Rocket ID & UTAD', 'Set up MFA', 'Activate MyUT access', 'Meet your team'] },
+          { phase: 'First Week', icon: '📅', color: 'border-l-blue-500', items: ['Complete parking setup', 'Set up direct deposit', 'Tour facilities', 'Systems training'] },
+          { phase: 'First Month', icon: '📋', color: 'border-l-purple-500', items: ['Complete benefits enrollment', 'Finish required training', 'Learn department workflows', 'Connect with key contacts'] },
+          { phase: 'First 90 Days', icon: '🎯', color: 'border-l-toledo-gold', items: ['Review compliance policies', 'Complete AI literacy check', 'Build your learning plan', 'Check in with supervisor'] },
+        ].map(function (phase) {
+          return React.createElement('div', {
+            key: phase.phase,
+            className: 'bg-white rounded-xl border border-gray-200 p-5 border-l-4 ' + phase.color,
+          },
+            React.createElement('div', { className: 'flex items-center gap-2 mb-3' },
+              React.createElement('span', { className: 'text-xl' }, phase.icon),
+              React.createElement('h3', { className: 'font-semibold text-gray-900' }, phase.phase)
+            ),
+            React.createElement('ul', { className: 'space-y-1.5' },
+              phase.items.map(function (item, i) {
+                return React.createElement('li', { key: i, className: 'text-sm text-gray-600 flex items-start gap-2' },
+                  React.createElement('span', { className: 'text-gray-300 mt-0.5' }, '•'),
+                  item
+                );
+              })
+            )
+          );
+        })
+      ),
+      React.createElement('div', { className: 'text-center mt-6' },
+        React.createElement('button', {
+          onClick: function () { onNavigate('guide'); },
+          className: 'px-6 py-3 bg-toledo-blue text-white rounded-lg hover:bg-toledo-dark transition-colors font-medium text-sm',
+        }, '📖 View Full Onboarding Guide')
+      )
+    ),
+
+    // Explore by Category
+    React.createElement('div', { className: 'max-w-7xl mx-auto px-4 pb-12' },
+      React.createElement('h2', { className: 'text-2xl font-bold text-gray-900 mb-6' }, 'Explore by Topic'),
       React.createElement('div', { className: 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4' },
         categories.map((cat) => React.createElement('button', {
           key: cat.id, onClick: () => onNavigate('category', cat.id),
