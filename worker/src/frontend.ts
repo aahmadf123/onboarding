@@ -1028,10 +1028,10 @@ function FeedbackButton({ currentUser }) {
     });
   }
 
-  return React.createElement('div', { className: 'inline-block' },
+  return React.createElement('div', { className: 'fixed bottom-6 left-6 z-40' },
     React.createElement('button', {
       onClick: function () { setShowModal(true); setSent(false); },
-      className: 'flex items-center gap-1 text-xs text-gray-400 hover:text-toledo-blue transition-colors',
+      className: 'flex items-center gap-1.5 px-3 py-2 bg-white border border-gray-200 rounded-lg shadow-md text-xs text-gray-500 hover:text-toledo-blue hover:border-toledo-blue/30 transition-colors',
     }, React.createElement(IconFlag), 'Report Issue'),
     showModal && React.createElement('div', { className: 'fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4' },
       React.createElement('div', { className: 'bg-white rounded-xl shadow-xl p-6 w-full max-w-md' },
