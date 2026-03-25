@@ -1,4 +1,4 @@
-const CHAT_MODEL = '@cf/meta/llama-3.1-8b-instruct-fp8' as const;
+const CHAT_MODEL = '@cf/meta/llama-3.3-70b-instruct-fp8' as const;
 
 const SYSTEM_PROMPT = `You are an onboarding assistant for the University of Toledo Athletics department.
 
@@ -36,7 +36,7 @@ export async function chat(
   return result.response ?? 'I was unable to generate a response. Please try again.';
 }
 
-const ASSESSMENT_MODEL = '@cf/meta/llama-3.1-8b-instruct-fp8' as const;
+const ASSESSMENT_MODEL = '@cf/meta/llama-3.3-70b-instruct-fp8' as const;
 
 /**
  * Presents a scenario question to the user and returns the AI-generated

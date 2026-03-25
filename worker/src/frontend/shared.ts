@@ -79,6 +79,9 @@ function Header({ currentUser, onNavigate, currentView }) {
     { id: 'ai-hub',     label: 'AI Hub' },
     { id: 'youtube',    label: 'Learning' },
     { id: 'quicklinks', label: 'Quick Links' },
+    { id: 'contacts',   label: 'Contacts' },
+    { id: 'policies',   label: 'Policies' },
+    { id: 'systems',    label: 'Systems' },
     { id: 'submit',     label: 'Contribute' },
     ...(isMod ? [{ id: 'moderate', label: 'Moderate' }] : []),
   ];
@@ -95,7 +98,7 @@ function Header({ currentUser, onNavigate, currentView }) {
       React.createElement('div', { className: 'flex items-center justify-between h-14' },
         // Logo
         React.createElement('div', { className: 'flex items-center gap-3 cursor-pointer flex-shrink-0', onClick: () => onNavigate('home') },
-          React.createElement('div', { className: 'bg-toledo-gold text-toledo-blue font-extrabold text-lg w-9 h-9 rounded-lg flex items-center justify-center' }, 'UT'),
+          React.createElement('img', { src: '/branding/Primary_Logo_for_Dark_Background.png', alt: 'Toledo Athletics', className: 'h-9 w-auto' }),
           React.createElement('div', { className: 'hidden sm:block' },
             React.createElement('p', { className: 'text-sm font-bold leading-tight' }, 'Toledo Athletics'),
             React.createElement('p', { className: 'text-xs text-blue-200 leading-tight' }, 'Onboarding Portal'),
@@ -165,7 +168,7 @@ function LoginScreen({ onLogin }) {
   return React.createElement('div', { className: 'min-h-screen bg-gradient-to-br from-toledo-blue via-toledo-dark to-toledo-blue flex items-center justify-center px-4' },
     React.createElement('div', { className: 'bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md fade-in' },
       React.createElement('div', { className: 'text-center mb-8' },
-        React.createElement('div', { className: 'w-16 h-16 bg-toledo-gold text-toledo-blue font-extrabold text-2xl rounded-xl flex items-center justify-center mx-auto mb-4' }, 'UT'),
+        React.createElement('img', { src: '/branding/Primary_Logo_for_Light_Background.png', alt: 'Toledo Athletics', className: 'h-16 w-auto mx-auto mb-4' }),
         React.createElement('h1', { className: 'text-2xl font-bold text-gray-900' }, 'Toledo Athletics'),
         React.createElement('p', { className: 'text-gray-500 mt-1' }, 'Onboarding Portal')
       ),

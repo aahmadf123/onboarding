@@ -75,7 +75,9 @@ function CategoryView({ categoryId, onNavigate }) {
           },
             React.createElement('h3', { className: 'font-semibold text-gray-900' }, article.title),
             React.createElement('p', { className: 'text-sm text-gray-500 mt-1 line-clamp-2' },
-              article.current_content ? article.current_content.substring(0, 200) + '...' : ''
+              article.current_content
+                ? article.current_content.replace(/[#*_~>|!\\[\\]]/g,'').replace(/\\s+/g,' ').substring(0, 200) + '...'
+                : ''
             ),
             React.createElement('p', { className: 'text-xs text-gray-400 mt-2' }, 'Last updated: ' + new Date(article.last_updated).toLocaleDateString())
           ))
@@ -90,23 +92,13 @@ function ArticleView({ articleId, onNavigate }) {
     api('/articles/' + articleId).then(r => r.success && setArticle(r.data));
   }, [articleId]);
   if (!article) return React.createElement('div', { className: 'max-w-4xl mx-auto px-4 py-12 text-center text-gray-500' }, 'Loading...');
-  function formatContent(text) {
-    if (!text) return [];
-    const paragraphs = text.split('\\n\\n');
-    return paragraphs.map((p, i) => {
-      const lines = p.split('\\n');
-      const children = [];
-      lines.forEach((line, j) => {
-        const parts = line.split(/(https?:\\/\\/[^\\s]+)/g);
-        parts.forEach((part, k) => {
-          if (/^https?:\\/\\//.test(part)) {
-            children.push(React.createElement('a', { key: j + '-' + k, href: part, target: '_blank', rel: 'noopener noreferrer', className: 'text-toledo-blue underline hover:text-toledo-dark break-all' }, part));
-          } else { children.push(part); }
-        });
-        if (j < lines.length - 1) children.push(React.createElement('br', { key: 'br-' + j }));
-      });
-      return React.createElement('p', { key: i, className: 'mb-4 leading-relaxed text-gray-700' }, ...children);
-    });
+  function renderMarkdown(text) {
+    if (!text) return '';
+    if (typeof marked !== 'undefined') {
+      try { return marked.parse(text); } catch (e) {}
+    }
+    // Fallback: preserve line breaks
+    return text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\\n/g,'<br>');
   }
   return React.createElement('div', { className: 'max-w-4xl mx-auto px-4 py-8 fade-in' },
     React.createElement('button', { onClick: () => article.category_id ? onNavigate('category', article.category_id) : onNavigate('home'), className: 'flex items-center gap-2 text-toledo-blue hover:text-toledo-dark mb-6 text-sm font-medium' },
@@ -117,7 +109,7 @@ function ArticleView({ articleId, onNavigate }) {
         React.createElement('h1', { className: 'text-2xl md:text-3xl font-bold text-gray-900' }, article.title),
         React.createElement('p', { className: 'text-sm text-gray-400 mt-2' }, 'Last updated: ' + new Date(article.last_updated).toLocaleDateString())
       ),
-      React.createElement('div', { className: 'p-6 md:p-8 prose max-w-none' }, ...formatContent(article.current_content))
+      React.createElement('div', { className: 'p-6 md:p-8 prose max-w-none', dangerouslySetInnerHTML: { __html: renderMarkdown(article.current_content) } })
     )
   );
 }
