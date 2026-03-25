@@ -73,15 +73,14 @@ function Header({ currentUser, onNavigate, currentView }) {
 
   const navItems = [
     { id: 'home',       label: 'Home' },
+    { id: 'guide',      label: 'Guide' },
     { id: 'categories', label: 'Browse' },
-    { id: 'tips',       label: 'Tips' },
     { id: 'orgchart',   label: 'Org Chart' },
     { id: 'ai-hub',     label: 'AI Hub' },
     { id: 'youtube',    label: 'Learning' },
-    { id: 'quicklinks', label: 'Quick Links' },
+    { id: 'resources',  label: 'Resources' },
     { id: 'contacts',   label: 'Contacts' },
     { id: 'policies',   label: 'Policies' },
-    { id: 'systems',    label: 'Systems' },
     { id: 'submit',     label: 'Contribute' },
     ...(isMod ? [{ id: 'moderate', label: 'Moderate' }] : []),
   ];

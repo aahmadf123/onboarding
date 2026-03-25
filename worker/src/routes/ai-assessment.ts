@@ -18,27 +18,35 @@ aiAssessment.use('*', rateLimit(30));
  * Body: { role_archetype: string }
  */
 aiAssessment.post('/start', async (c) => {
-  const body = await c.req.json<{ role_archetype: string }>();
+  try {
+    const body = await c.req.json<{ role_archetype: string }>();
 
-  if (!body.role_archetype) {
-    return c.json({ success: false, error: 'role_archetype is required' }, 400);
+    if (!body.role_archetype) {
+      return c.json({ success: false, error: 'role_archetype is required' }, 400);
+    }
+
+    // Load rubric from AppConfig
+    const config = await c.env.DB.prepare(
+      "SELECT value FROM AppConfig WHERE key = 'ai_assessment_rubric'"
+    ).first<{ value: string }>();
+
+    const rubric = config?.value ?? 'General AI literacy assessment.';
+
+    const question = await generateAssessmentQuestion(
+      c.env.AI,
+      body.role_archetype,
+      rubric,
+      []
+    );
+
+    return c.json({ success: true, data: { question } });
+  } catch (err) {
+    console.error('AI Assessment start error:', err);
+    return c.json({
+      success: false,
+      error: 'Unable to start assessment. The AI service may be temporarily unavailable.',
+    }, 500);
   }
-
-  // Load rubric from AppConfig
-  const config = await c.env.DB.prepare(
-    "SELECT value FROM AppConfig WHERE key = 'ai_assessment_rubric'"
-  ).first<{ value: string }>();
-
-  const rubric = config?.value ?? 'General AI literacy assessment.';
-
-  const question = await generateAssessmentQuestion(
-    c.env.AI,
-    body.role_archetype,
-    rubric,
-    []
-  );
-
-  return c.json({ success: true, data: { question } });
 });
 
 /**
@@ -48,43 +56,51 @@ aiAssessment.post('/start', async (c) => {
  * Body: { role_archetype: string; messages: ChatMessage[]; is_last_answer?: boolean }
  */
 aiAssessment.post('/answer', async (c) => {
-  const body = await c.req.json<{
-    role_archetype: string;
-    messages: ChatMessage[];
-    is_last_answer?: boolean;
-  }>();
+  try {
+    const body = await c.req.json<{
+      role_archetype: string;
+      messages: ChatMessage[];
+      is_last_answer?: boolean;
+    }>();
 
-  if (!body.role_archetype || !body.messages) {
-    return c.json(
-      { success: false, error: 'role_archetype and messages are required' },
-      400
-    );
-  }
+    if (!body.role_archetype || !body.messages) {
+      return c.json(
+        { success: false, error: 'role_archetype and messages are required' },
+        400
+      );
+    }
 
-  const config = await c.env.DB.prepare(
-    "SELECT value FROM AppConfig WHERE key = 'ai_assessment_rubric'"
-  ).first<{ value: string }>();
+    const config = await c.env.DB.prepare(
+      "SELECT value FROM AppConfig WHERE key = 'ai_assessment_rubric'"
+    ).first<{ value: string }>();
 
-  const rubric = config?.value ?? 'General AI literacy assessment.';
+    const rubric = config?.value ?? 'General AI literacy assessment.';
 
-  if (body.is_last_answer) {
-    const evaluation = await evaluateAssessment(
+    if (body.is_last_answer) {
+      const evaluation = await evaluateAssessment(
+        c.env.AI,
+        body.role_archetype,
+        rubric,
+        body.messages
+      );
+      return c.json({ success: true, data: { done: true, evaluation } });
+    }
+
+    const question = await generateAssessmentQuestion(
       c.env.AI,
       body.role_archetype,
       rubric,
       body.messages
     );
-    return c.json({ success: true, data: { done: true, evaluation } });
+
+    return c.json({ success: true, data: { done: false, question } });
+  } catch (err) {
+    console.error('AI Assessment answer error:', err);
+    return c.json({
+      success: false,
+      error: 'Unable to process your answer. The AI service may be temporarily unavailable.',
+    }, 500);
   }
-
-  const question = await generateAssessmentQuestion(
-    c.env.AI,
-    body.role_archetype,
-    rubric,
-    body.messages
-  );
-
-  return c.json({ success: true, data: { done: false, question } });
 });
 
 /**

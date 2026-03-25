@@ -5,6 +5,7 @@
 export type Bindings = {
   DB: D1Database;
   AI: Ai;
+  ASSETS: Fetcher;
   YOUTUBE_API_KEY: string;
 };
 
