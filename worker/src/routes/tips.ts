@@ -1,7 +1,22 @@
 import { Hono } from 'hono';
 import { Bindings } from '../types';
+import { requireRole } from '../middleware/auth';
 
 const tips = new Hono<{ Bindings: Bindings }>();
+
+// GET moderation queue (moderator/admin only) — must be before /:id
+tips.get('/queue', requireRole('moderator', 'admin'), async (c) => {
+  const status = c.req.query('status') || 'pending';
+  const { results } = await c.env.DB.prepare(`
+    SELECT Tips.*, Users.email as author_email, Categories.name as category_name
+    FROM Tips
+    LEFT JOIN Users ON Tips.author_id = Users.id
+    LEFT JOIN Categories ON Tips.category_id = Categories.id
+    WHERE Tips.status = ?
+    ORDER BY Tips.submitted_at DESC
+  `).bind(status).all();
+  return c.json({ success: true, data: results });
+});
 
 // GET approved tips (optionally filter by category or tags)
 tips.get('/', async (c) => {
