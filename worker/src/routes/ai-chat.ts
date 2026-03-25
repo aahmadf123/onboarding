@@ -45,7 +45,8 @@ aiChat.post('/', async (c) => {
   } catch (err) {
     console.error('AI Chat error:', err);
     return c.json({
-      success: true,
+      success: false,
+      error: 'AI service temporarily unavailable',
       data: {
         reply: 'The AI assistant encountered an error. Please try again in a moment, or contact your department directly for help.',
         sources: [],

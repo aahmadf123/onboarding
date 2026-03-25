@@ -309,13 +309,13 @@ function AIChatWidget({ currentUser }) {
       body: JSON.stringify({ messages: newMessages.map(function (m) { return { role: m.role, content: m.content }; }) }),
     }).then(function (r) {
       setSending(false);
-      if (r.success && r.data) {
+      if (r.data && r.data.reply) {
         setMessages(function (prev) {
           return prev.concat([{ role: 'assistant', content: r.data.reply, sources: r.data.sources }]);
         });
       } else {
         setMessages(function (prev) {
-          return prev.concat([{ role: 'assistant', content: 'Sorry, I could not process your request. Please try again.' }]);
+          return prev.concat([{ role: 'assistant', content: r.error || 'Sorry, I could not process your request. Please try again.' }]);
         });
       }
     }).catch(function () {
