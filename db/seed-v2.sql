@@ -1,259 +1,230 @@
 -- ============================================================
--- Toledo Athletics Onboarding Platform — Seed V2
--- Data for Issues #1-#6 new tables
--- Run AFTER schema-v2.sql
+-- Toledo Athletics Onboarding Platform — Seed V3
+-- Run AFTER schema-v3.sql
+-- Populates V2 tables plus new V3 structured reference tables.
 -- ============================================================
 
+PRAGMA foreign_keys = ON;
 
--- ============================================================
--- ORG CHART (Issue #3)
--- Based on UToledo Athletics Staff Directory and strategic plan docs
--- parent_id NULL = top of hierarchy
--- ============================================================
-
--- Level 0: Vice President / Director of Athletics
-INSERT INTO OrgChart (id, name, title, department, email, parent_id, display_order) VALUES
-(1, 'Bryan B. Blair', 'Vice President and Director of Athletics', 'Executive', 'bryan.blair@utoledo.edu', NULL, 1);
-
--- Level 1: Direct reports to AD
-INSERT INTO OrgChart (id, name, title, department, email, parent_id, display_order) VALUES
-(2, 'Nicole Harris', 'Deputy AD / COO / Senior Woman Administrator', 'Executive', 'nicole.harris@utoledo.edu', 1, 1),
-(3, 'Brian Lutz', 'Senior Associate AD for Compliance and Integrity', 'Compliance', 'brian.lutz@utoledo.edu', 1, 2),
-(4, 'Jillian Lehman', 'Associate AD for Student-Athlete Experience', 'Student-Athlete Development', 'jillian.lehman@utoledo.edu', 1, 3);
-
--- Level 2: Compliance staff
-INSERT INTO OrgChart (id, name, title, department, email, parent_id, display_order) VALUES
-(5, 'Kenneth Schank', 'Assistant AD for Compliance', 'Compliance', 'kenneth.schank@utoledo.edu', 3, 1);
-
--- Level 2: SASS staff
-INSERT INTO OrgChart (id, name, title, department, email, parent_id, display_order) VALUES
-(6, 'Duane Welch', 'Assistant Director of SASS', 'Student-Athlete Development', 'duane.welch@utoledo.edu', 4, 1);
-
--- NOTE FOR AI AGENTS: This is starter data. The full org chart should be expanded
--- as the real staff directory at https://utrockets.com/staff-directory is referenced.
--- Add more rows following the same parent_id hierarchy pattern.
--- Coaches, sport administrators, facilities, marketing, ticketing, etc.
-
-
--- ============================================================
--- APPROVED YOUTUBE SOURCES (Issue #6)
--- Channels and playlists pre-approved by admin for the video finder
--- Categories: compliance, leadership, mental-health, nil, academic, general, title-ix
--- ============================================================
-
-INSERT INTO ApprovedYouTubeSources (source_type, youtube_id, display_name, description, category, is_active) VALUES
--- NCAA Official
-('channel', 'UCncsaFSMwjk2CHpkmvVyntA', 'NCAA', 'Official NCAA channel — compliance updates, eligibility rules, championship coverage', 'compliance', 1),
-
--- NCAA Compliance & Education
-('playlist', 'PLBaXSYTHla_Pu6OYBIkzxQP5uaEAaZBZ5', 'NCAA Compliance Education', 'Official NCAA compliance education videos and rule interpretations', 'compliance', 1),
-
--- Title IX / Gender Equity
-('channel', 'UCg-K8ithKxBR_bE1hY5bLhA', 'Title IX & Beyond', 'Title IX education, gender equity in athletics, policy updates', 'title-ix', 1),
-
--- NIL Education
-('channel', 'UC0Kl3mQ2VjYnJsxFfcCVizw', 'Opendorse', 'NIL education, athlete branding, endorsement compliance', 'nil', 1),
-('channel', 'UCZiPnQIrKJElIqjuGq_iB_g', 'INFLCR', 'NIL compliance platform — educational content for staff and athletes', 'nil', 1),
-
--- Mental Health & Wellness
-('channel', 'UCqb3-nd3XCjfJ1Kp2KKwFQg', 'Athletes Connected', 'University of Michigan mental health program — athlete wellness resources', 'mental-health', 1),
-('channel', 'UCPa3SKhLfB4sFMFnenBp0YA', 'Jed Foundation', 'Mental health resources for young adults and college students', 'mental-health', 1),
-('channel', 'UCrPx4Y9pY6E6D_PMRxCk2Aw', 'Headspace', 'Mindfulness and mental health — used by many athletics programs', 'mental-health', 1),
-
--- Leadership & Professional Development
-('channel', 'UCx2oNzN5PEECnYNvxypxdog', 'Simon Sinek', 'Leadership principles, team building, purpose-driven management', 'leadership', 1),
-('channel', 'UCfiwagBgPMIXCCWJVUJFIjlg', 'N4A NFCA', 'National Association of Academic Advisors for Athletics — career development', 'academic', 1),
-
--- Athletic Administration
-('channel', 'UCBmS9S97CEU5zybnRqGTzdw', 'NACDA', 'National Association of Collegiate Directors of Athletics', 'leadership', 1),
-
--- Toledo Athletics (own content)
-('channel', 'UC_wAT-GlU5h1rP2TPBKF8PA', 'Toledo Rockets', 'Official Toledo Athletics YouTube channel', 'general', 1),
-
--- Financial Literacy (for NIL support)
-('channel', 'UCL8w_A8p8P1HWI3k6PR5Z6w', 'Two Cents (PBS)', 'Financial literacy basics — useful for NIL financial education', 'nil', 1);
-
-
--- ============================================================
--- SAMPLE TIPS (Issue #1)
--- A few starter tips that are pre-approved to show the feature
--- ============================================================
-
--- First, ensure we have a staff user to attribute tips to
+-- ------------------------------------------------------------
+-- Seed users needed for moderated / admin-owned content
+-- ------------------------------------------------------------
 INSERT OR IGNORE INTO Users (id, email, role) VALUES (100, 'staff.example@utoledo.edu', 'staff');
 INSERT OR IGNORE INTO Users (id, email, role) VALUES (101, 'admin@utoledo.edu', 'admin');
 
-INSERT INTO Tips (author_id, category_id, title, content, tags, status, reviewed_by, approved_at) VALUES
-(100, 7, 'Parking Pro Tip: First Day Arrival',
-'Arrive at least 30 minutes early on your first day. The lots near Savage Arena fill up fast before 9am. If you don''t have your A permit yet, use the C permit daily option ($6.20) through the ParkUToledo app — you can buy it from your phone in the lot.',
-'parking,first-day,savage-arena',
-'approved', 101, CURRENT_TIMESTAMP),
+-- ============================================================
+-- ORG CHART (expanded starter hierarchy)
+-- ============================================================
+DELETE FROM OrgChart;
 
-(100, 6, 'UTAD Account: Don''t Skip MFA Setup',
-'Set up Microsoft Authenticator BEFORE you try to log into anything else. I made the mistake of trying to access MyUT first and got locked out for 30 minutes. The order matters: 1) Activate UTAD, 2) Set up MFA, 3) Then access everything else.',
-'utad,mfa,it,first-week',
-'approved', 101, CURRENT_TIMESTAMP),
-
-(100, 5, 'Benefits Enrollment: Set a Calendar Reminder NOW',
-'The 30-day benefits deadline is real and they will not make exceptions. I set a reminder for day 15 and day 25. Also — even if you''re declining coverage because you''re on a spouse''s plan, you MUST actively decline in MyUT. Not clicking anything is NOT the same as declining.',
-'benefits,hr,deadline,30-day',
-'approved', 101, CURRENT_TIMESTAMP),
-
-(100, 9, 'Best Lunch Spots Near Campus',
-'If you''re tired of campus food: Vito''s Pizza on Secor is a 5-minute drive and has great slices. Grumpy''s in Old Orchard is perfect for a sit-down lunch. And Brew Coffee Bar in Gateway Plaza is right on campus if you just need a quick bite and coffee between meetings.',
-'food,lunch,campus,toledo',
-'approved', 101, CURRENT_TIMESTAMP),
-
-(100, 2, 'Compliance: When in Doubt, Call First',
-'This was the best advice I got: if you''re even 1% unsure whether an action might violate NCAA rules, call the compliance office BEFORE you do it. Brian and Kenneth are incredibly helpful and would rather answer a quick question than deal with an infraction report. Their number should be in your phone contacts on day one.',
-'compliance,ncaa,advice',
-'approved', 101, CURRENT_TIMESTAMP);
-
+INSERT INTO OrgChart (id, name, title, department, email, phone, parent_id, display_order, is_active) VALUES
+(1, 'Bryan B. Blair', 'Vice President and Director of Athletics', 'Executive', 'bryan.blair@utoledo.edu', NULL, NULL, 1, 1),
+(2, 'Rebecca Lugo', 'Executive Assistant to the Vice President and Director of Athletics', 'Executive', NULL, NULL, 1, 1, 1),
+(3, 'Nicole Harris', 'Deputy Athletic Director / Chief Operating Officer / Senior Woman Administrator', 'Executive', 'nicole.harris@utoledo.edu', NULL, 1, 2, 1),
+(4, 'Connor Whelan', 'Deputy Athletic Director / Chief Revenue Officer', 'Executive', NULL, NULL, 1, 3, 1),
+(5, 'Melissa DeAngelo', 'Senior Associate Athletic Director for Business Strategy / Chief Financial Officer', 'Business Office', NULL, NULL, 1, 4, 1),
+(6, 'Brian Lutz', 'Senior Associate Athletic Director for Compliance and Integrity', 'Compliance', 'brian.lutz@utoledo.edu', '419-530-8496', 1, 5, 1),
+(7, 'Josh Dittman', 'Senior Associate Athletic Director for Development', 'Development', NULL, NULL, 1, 6, 1),
+(8, 'Paul Helgren', 'Associate Athletic Director of Communications', 'Communications', 'paul.helgren@utoledo.edu', '419-530-4918', 1, 7, 1),
+(9, 'Tim Warga', 'Associate Athletic Director of Operations and Events', 'Facilities and Operations', NULL, NULL, 1, 8, 1),
+(10, 'Jillian Lehman', 'Associate Athletic Director for Student-Athlete Experience', 'Student-Athlete Development', 'jillian.lehman@utoledo.edu', NULL, 1, 9, 1),
+(11, 'Brian Jones', 'Senior Associate Athletic Director of Health and Wellness', 'Sports Medicine', NULL, NULL, 1, 10, 1),
+(12, 'Michelle McDevitt', 'Director of Title IX and Compliance', 'Title IX Compliance', NULL, NULL, 1, 11, 1),
+(13, 'Ellen Holton', 'Assistant Athletic Director for Creative Services and Brand Strategy', 'Creative Services', NULL, NULL, 3, 1, 1),
+(14, 'Kenneth Schank', 'Assistant Athletic Director for Compliance', 'Compliance', 'kenneth.schank@utoledo.edu', NULL, 6, 1, 1),
+(15, 'Duane Welch', 'Assistant Director of SASS', 'Student-Athlete Development', 'duane.welch@utoledo.edu', NULL, 10, 1, 1),
+(16, 'Traci Snyder', 'Director of Student-Athlete Development', 'Student-Athlete Development', NULL, NULL, 10, 2, 1),
+(17, 'Brandon Hannum', 'Director of Sports Performance', 'Strength and Conditioning', NULL, NULL, 3, 2, 1),
+(18, 'Brandon Norris', 'Assistant Athletic Director of Equipment', 'Equipment', NULL, NULL, 3, 3, 1),
+(19, 'Christopher Harris', 'Director of Ticket Sales and Operations', 'Ticket Department', NULL, NULL, 4, 1, 1),
+(20, 'Steve Easton', 'Associate Director of Communications', 'Communications', NULL, NULL, 8, 1, 1),
+(21, 'Nick Kerver', 'Associate Director of Communications', 'Communications', NULL, NULL, 8, 2, 1),
+(22, 'Jordyn Prok', 'Assistant Director of Communications', 'Communications', NULL, NULL, 8, 3, 1),
+(23, 'Mike Jacobs', 'Head Football Coach', 'Football', NULL, NULL, 3, 10, 1),
+(24, 'Tod Kowalczyk', 'Head Men''s Basketball Coach', 'Men''s Basketball', NULL, NULL, 4, 10, 1),
+(25, 'Ginny Boggess', 'Head Women''s Basketball Coach', 'Women''s Basketball', NULL, NULL, 3, 11, 1),
+(26, 'Rob Reinstetle', 'Head Baseball Coach', 'Baseball', NULL, NULL, 9, 10, 1),
+(27, 'Jessica Bracamonte', 'Head Softball Coach', 'Softball', NULL, NULL, 5, 10, 1),
+(28, 'Mark Batman', 'Head Women''s Soccer Coach', 'Women''s Soccer', NULL, NULL, 6, 10, 1),
+(29, 'Brian Wright', 'Head Women''s Volleyball Coach', 'Women''s Volleyball', NULL, NULL, 4, 11, 1),
+(30, 'Andrea Grove-McDonough', 'Head Cross Country and Track and Field Coach', 'Cross Country and Track and Field', NULL, NULL, 6, 11, 1),
+(31, 'Jeff Roope', 'Head Men''s Golf Coach', 'Men''s Golf', NULL, NULL, 7, 10, 1),
+(32, 'Ali Green', 'Head Women''s Golf Coach', 'Women''s Golf', NULL, NULL, 7, 11, 1),
+(33, 'Jacy Dyer', 'Head Women''s Swimming and Diving Coach', 'Women''s Swimming and Diving', NULL, NULL, 3, 12, 1),
+(34, 'Tracy Mauntler', 'Head Women''s Tennis Coach', 'Women''s Tennis', NULL, NULL, 6, 12, 1),
+(35, 'Al Wermer', 'Head Men''s Tennis Coach', 'Men''s Tennis', NULL, NULL, 6, 13, 1),
+(36, 'Chris Bailey-Greene', 'Head Women''s Rowing Coach', 'Women''s Rowing', NULL, NULL, 3, 13, 1),
+(37, 'Shelby Tincher', 'Head Cheerleading Coach', 'Cheerleading', NULL, NULL, 9, 11, 1);
 
 -- ============================================================
--- SITE CONTENT INDEX (Issue #4)
--- Pre-index existing articles so AI chat can reference them
--- This pulls from the seed.sql articles
+-- APPROVED YOUTUBE SOURCES
 -- ============================================================
+DELETE FROM ApprovedYouTubeSources;
+
+INSERT INTO ApprovedYouTubeSources (id, source_type, youtube_id, display_name, description, category, added_by, is_active) VALUES
+(1, 'channel', 'UCncsaFSMwjk2CHpkmvVyntA', 'NCAA', 'Official NCAA channel for compliance updates, rules education, and championships.', 'compliance', 101, 1),
+(2, 'playlist', 'PLBaXSYTHla_Pu6OYBIkzxQP5uaEAaZBZ5', 'NCAA Compliance Education', 'Official NCAA compliance education playlist and interpretations.', 'compliance', 101, 1),
+(3, 'channel', 'UCg-K8ithKxBR_bE1hY5bLhA', 'Title IX & Beyond', 'Title IX education, gender equity, and policy discussions.', 'title-ix', 101, 1),
+(4, 'channel', 'UC0Kl3mQ2VjYnJsxFfcCVizw', 'Opendorse', 'NIL education, athlete branding, and endorsements.', 'nil', 101, 1),
+(5, 'channel', 'UCZiPnQIrKJElIqjuGq_iB_g', 'INFLCR', 'NIL education and athlete brand support.', 'nil', 101, 1),
+(6, 'channel', 'UCqb3-nd3XCjfJ1Kp2KKwFQg', 'Athletes Connected', 'Athlete wellness and mental-health programming.', 'mental-health', 101, 1),
+(7, 'channel', 'UCPa3SKhLfB4sFMFnenBp0YA', 'Jed Foundation', 'Mental-health resources relevant to college students and staff.', 'mental-health', 101, 1),
+(8, 'channel', 'UCrPx4Y9pY6E6D_PMRxCk2Aw', 'Headspace', 'Mindfulness and mental-health support content.', 'mental-health', 101, 1),
+(9, 'channel', 'UCx2oNzN5PEECnYNvxypxdog', 'Simon Sinek', 'Leadership, purpose, and team-building content.', 'leadership', 101, 1),
+(10, 'channel', 'UCfiwagBgPMIXCCWJVUJFIjlg', 'N4A NFCA', 'Academic and professional development for athletics staff.', 'academic', 101, 1),
+(11, 'channel', 'UCBmS9S97CEU5zybnRqGTzdw', 'NACDA', 'Athletic administration and leadership content.', 'leadership', 101, 1),
+(12, 'channel', 'UC_wAT-GlU5h1rP2TPBKF8PA', 'Toledo Rockets', 'Official Toledo Athletics YouTube channel.', 'general', 101, 1),
+(13, 'channel', 'UCL8w_A8p8P1HWI3k6PR5Z6w', 'Two Cents (PBS)', 'Financial literacy content useful for NIL support.', 'nil', 101, 1);
+
+-- ============================================================
+-- SAMPLE TIPS
+-- ============================================================
+DELETE FROM Tips;
+
+INSERT INTO Tips (id, author_id, category_id, title, content, tags, status, reviewed_by, approved_at) VALUES
+(1, 100, 7, 'Parking Pro Tip: First Day Arrival', 'Arrive at least 30 minutes early on your first day. The lots near Savage Arena fill up fast before 9am. If you do not have your A permit yet, use the C permit daily option through ParkUToledo.', 'parking,first-day,savage-arena', 'approved', 101, CURRENT_TIMESTAMP),
+(2, 100, 6, 'UTAD First, MFA Second, Everything Else Third', 'The fastest path is Rocket ID to UTAD activation to Microsoft Authenticator to MyUT. Skipping MFA setup early tends to create access friction across payroll and employee systems.', 'utad,mfa,it,myut', 'approved', 101, CURRENT_TIMESTAMP),
+(3, 100, 5, 'Benefits Deadline Is Not Soft', 'You have 30 days to elect or waive benefits. Declining coverage still requires action in MyUT; silence is not a waiver.', 'benefits,hr,deadline,30-day', 'approved', 101, CURRENT_TIMESTAMP),
+(4, 100, 2, 'When Compliance Is Unclear, Call Before You Act', 'If a recruiting, NIL, booster, or eligibility action feels even slightly uncertain, call Compliance before you do anything. Prevention is easier than remediation.', 'compliance,ncaa,booster,nil', 'approved', 101, CURRENT_TIMESTAMP),
+(5, 100, 9, 'Best Quick Lunch Circuit Near Campus', 'For a fast lunch, Gateway Plaza is the easiest campus-adjacent option. For off-campus options, Old Orchard and Secor corridor spots are practical on a workday.', 'food,lunch,campus,toledo', 'approved', 101, CURRENT_TIMESTAMP),
+(6, 100, 6, 'Direct Deposit and Tax Setup Belong on Day One', 'Once UTAD and MFA are working, go straight into MyUT to verify direct deposit and tax setup. That closes one of the most common onboarding gaps.', 'payroll,direct-deposit,myut,taxes', 'approved', 101, CURRENT_TIMESTAMP),
+(7, 100, 4, 'Use Official Work Email Only for Athletics Business', 'Do not route onboarding or student-related work through personal email. Use official @utoledo.edu accounts for business records, security, and compliance.', 'email,security,ferpa,workflows', 'approved', 101, CURRENT_TIMESTAMP),
+(8, 100, 3, 'Branding Has Two Blue Standards', 'Athletics branding and University marketing materials do not always use the same blue hex value. Check whether the asset is Athletics-facing or University-wide before publishing.', 'branding,design,athletics,marketing', 'approved', 101, CURRENT_TIMESTAMP);
+
+-- ============================================================
+-- BRANDING TOKENS
+-- ============================================================
+DELETE FROM BrandingTokens;
+
+INSERT INTO BrandingTokens (id, token_group, token_key, token_value, format, description, display_order) VALUES
+(1, 'font', 'primary_typeface', 'Poppins', 'font-family', 'Official University brand typeface.', 1),
+(2, 'voice', 'campaign', 'Power To Do', 'text', 'University-level brand positioning phrase.', 1),
+(3, 'voice', 'approved_identifiers', 'The University of Toledo|Toledo Rockets|Toledo Athletics|Toledo|Rockets|UToledo', 'pipe-list', 'Approved identifiers for institutional use.', 2),
+(4, 'voice', 'avoid_identifiers', 'UT|UT Rockets|Toledo Rockets Football|Lady Rockets', 'pipe-list', 'Examples of disallowed or discouraged naming.', 3),
+(5, 'color_university', 'midnight_blue', '#003E7E', 'hex', 'University-wide midnight blue.', 1),
+(6, 'color_university', 'gold', '#FFD200', 'hex', 'University-wide gold.', 2),
+(7, 'color_athletics', 'midnight_blue', '#0B2240', 'hex', 'Athletics midnight blue.', 1),
+(8, 'color_athletics', 'gold', '#FFCD00', 'hex', 'Athletics gold.', 2),
+(9, 'color_secondary', 'dark_blue', '#000F3E', 'hex', 'Secondary dark blue.', 1),
+(10, 'color_secondary', 'space_blue', '#102B5F', 'hex', 'Secondary space blue.', 2),
+(11, 'color_secondary', 'azure', '#009CE5', 'hex', 'Secondary azure.', 3),
+(12, 'color_accent', 'magenta', '#A2047D', 'hex', 'Accent magenta.', 1),
+(13, 'color_accent', 'turquoise', '#168F9C', 'hex', 'Accent turquoise.', 2),
+(14, 'color_tertiary', 'neutral_base', '#D3C1AE', 'hex', 'Neutral base tone.', 1),
+(15, 'logo_rules', 'primary_logo_required', 'true', 'boolean', 'Primary athletic logo is the default mark for institutional and athletics use.', 1),
+(16, 'logo_rules', 'secondary_logo_usage', 'Only after the primary logo has already established brand identity on the same asset.', 'text', 'Constraint for secondary mark usage.', 2),
+(17, 'logo_rules', 'athletic_logo_clear_space', 'X = 1/4 logo height', 'rule', 'Athletic logo clear-space guidance.', 3),
+(18, 'logo_rules', 'rocket_logo_clear_space', 'X = 1/3 logo height', 'rule', 'Rocket logo clear-space guidance.', 4);
+
+-- ============================================================
+-- QUICK LINKS
+-- ============================================================
+DELETE FROM QuickLinks;
+
+INSERT INTO QuickLinks (id, title, url, category, audience, description, display_order, is_active) VALUES
+(1, 'Welcome to UToledo', 'https://www.utoledo.edu/depts/hr/newemployees/welcome/', 'onboarding', 'all_staff', 'Primary HR onboarding entry point for new employees.', 1, 1),
+(2, 'MyUT Portal', 'https://myut.utoledo.edu/', 'systems', 'all_staff', 'Primary portal for employee access and self-service.', 2, 1),
+(3, 'Employee Self-Service Dashboard', 'https://myut.utoledo.edu/', 'systems', 'all_staff', 'Benefits, earnings, taxes, leave balances, and team information.', 3, 1),
+(4, 'ParkUToledo', 'https://www.utoledo.edu/parkingservices/parkutoledo/', 'parking', 'all_staff', 'Parking permits, portal access, and parking information.', 4, 1),
+(5, 'Payroll Department', 'https://www.utoledo.edu/depts/hr/employment/pdf/neo/online/Payroll.pdf', 'payroll', 'all_staff', 'Payroll orientation information and direct-deposit guidance.', 5, 1),
+(6, 'Staff Directory', 'https://utrockets.com/staff-directory', 'directory', 'all_staff', 'Public athletics staff directory by office.', 6, 1),
+(7, 'Toledo Athletics Branding', 'https://utrockets.com/sports/2023/3/30/toledo-athletics-branding', 'branding', 'communications', 'Athletics branding guide and downloadable marks.', 7, 1),
+(8, 'University Marketing Toolkit', 'https://www.utoledo.edu/offices/marketing/toolkit/', 'branding', 'communications', 'University-wide branding toolkit and standards.', 8, 1),
+(9, 'University Policy Directory', 'https://www.utoledo.edu/policies/', 'policies', 'all_staff', 'Central index for university policies.', 9, 1),
+(10, 'Benefits and Retirement', 'https://www.utoledo.edu/depts/hr/total-rewards/benefits/', 'benefits', 'benefits_eligible', 'Benefits and retirement information for employees.', 10, 1),
+(11, 'Winter Break Schedule', 'https://www.utoledo.edu/depts/hr/work-life-harmony/winter-break.html', 'calendar', 'all_staff', 'Official winter-break operational schedule.', 11, 1),
+(12, 'IT Help Desk', 'https://www.utoledo.edu/it/', 'support', 'all_staff', 'Central IT support and technology help.', 12, 1),
+(13, 'Rocket Card Office', 'https://www.utoledo.edu/administration/auxiliaryservices/rocketcard/', 'campus_access', 'all_staff', 'Rocket Card, campus identity, and related access info.', 13, 1),
+(14, 'Facilities Work Control', 'https://www.utoledo.edu/facilities/', 'facilities', 'all_staff', 'Facilities and work order routing.', 14, 1),
+(15, 'Toledo Rockets Exchange', 'https://utrockets.com/news/2025/9/29/toledo-athletics-partners-with-teamworks-influencer-to-launch-toledo-rockets-exchange-enhancing-nil-opportunities-for-student-athletes', 'nil', 'athletics_staff', 'NIL marketplace launch reference.', 15, 1),
+(16, 'Toledo Athletics Strategic Vision', 'https://utrockets.com/news/2023/8/29/toledo-athletics-unveils-rise-together-a-strategic-vision-that-aims-to-elevate-the-program-into-national-prominence', 'strategy', 'leadership', 'Rise Together strategic vision page.', 16, 1);
+
+-- ============================================================
+-- KEY CONTACTS
+-- ============================================================
+DELETE FROM KeyContacts;
+
+INSERT INTO KeyContacts (id, function_area, department, contact_name, title, email, phone, url, notes, is_active, display_order) VALUES
+(1, 'Human Resources', 'Center for Administrative Support', NULL, NULL, 'HumanResourcesDepartment@utoledo.edu', '419-530-4747', NULL, 'Benefits, hiring, and onboarding support.', 1, 1),
+(2, 'Facilities Management', 'Plant Operations Work Control Center', NULL, NULL, NULL, '419-530-1000', NULL, 'Maintenance and urgent facilities issues.', 1, 2),
+(3, 'IT Help Desk', 'UT Information Technology', NULL, NULL, 'ithelpdesk@utoledo.edu', '419-530-2400', 'https://www.utoledo.edu/it/', 'Technology support and account issues.', 1, 3),
+(4, 'Athletics Compliance', 'Compliance', 'Brian Lutz', 'Senior Associate Athletic Director for Compliance and Integrity', 'brian.lutz@utoledo.edu', '419-530-8496', NULL, 'Primary athletics compliance contact.', 1, 4),
+(5, 'Athletics Communications', 'Communications', 'Paul Helgren', 'Associate Athletic Director of Communications', 'paul.helgren@utoledo.edu', '419-530-4918', NULL, 'Media, communications, and interview routing.', 1, 5),
+(6, 'University Marketing and Communications', 'Marketing', 'Jen Sorgenfrei', 'Executive Director', 'utmarcom@utoledo.edu', '419-530-5546', NULL, 'University-level marketing and branding support.', 1, 6),
+(7, 'Payroll Services', 'Office of the Controller', NULL, NULL, 'payroll@utoledo.edu', '419-530-8780', NULL, 'Payroll operations and pay-related questions.', 1, 7),
+(8, 'Door Access and Security', 'Auxiliary Services', NULL, NULL, 'dooraccess@utoledo.edu', NULL, NULL, 'Badge and door access plan changes.', 1, 8),
+(9, 'Brand Licensing', 'Marketing and Licensing', 'Kevin Taylor', 'Brand and Licensing Manager', 'kevin.taylor3@utoledo.edu', NULL, NULL, 'Trademark and licensing approvals.', 1, 9),
+(10, 'HRIS Data Maintenance', 'Human Resources Information Systems', NULL, NULL, 'HRIS@utoledo.edu', NULL, NULL, 'Supervisor and reporting-line updates.', 1, 10);
+
+-- ============================================================
+-- SYSTEMS DIRECTORY
+-- ============================================================
+DELETE FROM SystemsDirectory;
+
+INSERT INTO SystemsDirectory (id, system_name, category, access_url, login_notes, owner_department, support_contact, description, display_order, is_active) VALUES
+(1, 'MyUT Portal', 'portal', 'https://myut.utoledo.edu/', 'Requires UTAD credentials and MFA.', 'University IT', 'ithelpdesk@utoledo.edu', 'Primary employee gateway into university systems.', 1, 1),
+(2, 'Employee Self-Service Dashboard', 'hr', 'https://myut.utoledo.edu/', 'Available through MyUT employee tab after login.', 'Human Resources', 'HumanResourcesDepartment@utoledo.edu', 'Earnings, benefits, taxes, leave balances, and team data.', 2, 1),
+(3, 'Microsoft 365', 'productivity', 'https://www.office.com/', 'Institutional account access via UTAD.', 'University IT', 'ithelpdesk@utoledo.edu', 'Outlook, Teams, OneDrive, Word, Excel, and related apps.', 3, 1),
+(4, 'Blackboard Learn', 'learning', 'https://blackboard.utoledo.edu/', 'Available via direct sign-in or MyUT.', 'University IT', 'ithelpdesk@utoledo.edu', 'Learning management system used for course-related workflows.', 4, 1),
+(5, 'TimeClock Plus', 'timekeeping', NULL, 'Uses UTAD credentials for supported employee groups.', 'Payroll', 'payroll@utoledo.edu', 'Time reporting and time-off workflow for applicable employees.', 5, 1),
+(6, 'Teamworks', 'athletics_operations', 'https://teamworks.com/', 'Athletics-managed system access.', 'Athletics', 'brian.lutz@utoledo.edu', 'Athletics operating platform used across department workflows.', 6, 1),
+(7, 'Teamworks Compliance / ARMS', 'compliance', 'https://teamworks.com/compliance/', 'Athletics-managed compliance access.', 'Compliance', 'brian.lutz@utoledo.edu', 'Recruiting, CARA logging, prospect visits, and compliance workflow support.', 7, 1),
+(8, 'Teamworks GM', 'athletics_operations', 'https://teamworks.com/general-manager/', 'Athletics-managed access for roster, budget, and modern athletics operations.', 'Athletics', NULL, 'General manager functionality for revenue, roster, and transfer-era operations.', 8, 1),
+(9, 'Toledo Rockets Exchange (INFLCR)', 'nil', 'https://utrockets.com/news/2025/9/29/toledo-athletics-partners-with-teamworks-influencer-to-launch-toledo-rockets-exchange-enhancing-nil-opportunities-for-student-athletes', 'Athletics-managed NIL-related platform.', 'Athletics / NIL', NULL, 'Marketplace and NIL support environment for student-athletes.', 9, 1),
+(10, 'ParkUToledo', 'parking', 'https://www.utoledo.edu/parkingservices/parkutoledo/', 'No athletics-specific login required for public information; employee permit workflows may require authenticated access.', 'Parking Services', NULL, 'Parking permits, visitor rules, and parking guidance.', 10, 1),
+(11, 'Rocket Card / Transact eAccounts', 'campus_access', 'https://www.utoledo.edu/administration/auxiliaryservices/rocketcard/', 'Requires identity setup via UTAD before issuance.', 'Auxiliary Services', 'dooraccess@utoledo.edu', 'Campus ID and mobile credential ecosystem.', 11, 1);
+
+-- ============================================================
+-- POLICY RESOURCES
+-- ============================================================
+DELETE FROM PolicyResources;
+
+INSERT INTO PolicyResources (id, policy_code, title, category, applies_to, url, summary, display_order, is_active) VALUES
+(1, '3364-25-07', 'New Employee Orientation', 'onboarding', 'new employees', 'https://www.utoledo.edu/policies/administration/humanresources/pdfs/3364_25_07_New_Employee_Orientation.pdf', 'Mandatory orientation policy for newly hired regular staff.', 1, 1),
+(2, '3364-25-01', 'Standards of Conduct', 'conduct', 'all employees', 'https://www.utoledo.edu/policies/administration/humanresources/pdfs/3364_25_01_Standards_of_Conduct.pdf', 'Broad employee conduct expectations and disciplinary framing.', 2, 1),
+(3, '3364-25-36', 'Vacation Policy', 'leave', 'employees', 'https://www.utoledo.edu/policies/administration/humanresources/pdfs/3364_25_36%20Vacation%20policy.pdf', 'Vacation accrual and usage guidance.', 3, 1),
+(4, '3364-25-123', 'Leaves of Absence and Sick Leave Accrual', 'leave', 'employees', 'https://codes.ohio.gov/ohio-administrative-code/rule-3364-25-123', 'Sick leave accrual and leave-of-absence framing.', 4, 1),
+(5, '3364-25-30', 'Family and Medical Leave Act', 'leave', 'eligible employees', 'https://www.utoledo.edu/policies/administration/humanresources/pdfs/3364_25_30_Family_and_Medical.pdf', 'FMLA eligibility, protections, and process requirements.', 5, 1),
+(6, '3364-25-14', 'Inclement Weather or Other Emergency / Disaster', 'operations', 'all employees', 'https://www.utoledo.edu/policies/administration/humanresources/', 'Operational guidance for campus closures and essential functions.', 6, 1),
+(7, '3364-25-18', 'Conflict of Interest and Nepotism', 'ethics', 'all employees', 'https://www.utoledo.edu/policies/administration/humanresources/', 'Conflict-of-interest and nepotism expectations under university and Ohio ethics framing.', 7, 1),
+(8, '3364-30-20', 'Anti-Hazing', 'safety', 'students and employees', 'https://www.utoledo.edu/policies/', 'Zero-tolerance anti-hazing policy relevant to university organizations and athletics contexts.', 8, 1),
+(9, NULL, 'FERPA and Confidentiality for Faculty and Staff', 'privacy', 'employees handling student data', 'https://www.utoledo.edu/offices/registrar/FERPA_faculty_staff.html', 'Guidance on student education record confidentiality.', 9, 1),
+(10, NULL, 'Responsible Technology Use / Information Security', 'security', 'all employees', 'https://www.utoledo.edu/policies/', 'Technology-use expectations, account security, and sensitive information handling.', 10, 1),
+(11, '3364-35-16', 'Compliance Rules Education and Training', 'athletics_compliance', 'athletics personnel', 'https://www.utoledo.edu/policies/athletics/pdfs/3364-35-16%20Compliance%20rules%20education%20and%20training.pdf', 'Athletics-specific rules education and training framework.', 11, 1);
+
+-- ============================================================
+-- SITE CONTENT INDEX
+-- ============================================================
+DELETE FROM SiteContentIndex;
 
 INSERT INTO SiteContentIndex (source_type, source_id, source_title, content_text, section_path) VALUES
-('article', 1, 'Executive Leadership & Organizational Structure',
-'Bryan B. Blair is VP and Director of Athletics. Nicole Harris is Deputy AD, COO, and Senior Woman Administrator overseeing football, women''s basketball, women''s swimming & diving, women''s rowing, academics, student-athlete development, and strength and conditioning.',
-'Department Overview > Leadership'),
-
-('article', 2, 'Rise Together Strategic Plan',
-'The Rise Together strategic plan has the acronym R.I.S.E. standing for Resilience, Integrity, Servanthood, and Excellence. The six goals are: 1) Recruit, Retain, Develop Teammates, 2) Generate Student-Athlete Success, 3) Elevate the Brand, 4) Enhance Team Toledo Engagement, 5) Grow Resources, 6) Invest in Infrastructure.',
-'Department Overview > Strategic Plan'),
-
-('article', 3, 'Athletic Facilities Directory',
-'Savage Arena is the main admin hub for basketball and volleyball. Larimer Athletic Complex houses football operations, strength and conditioning, and SASS. Findlay Building is the base for baseball and softball.',
-'Department Overview > Facilities'),
-
-('article', 4, 'Compliance Office & Mandatory Acknowledgments',
-'Brian Lutz is Senior Associate AD for Compliance. Kenneth Schank is Assistant AD for Compliance. All new staff must digitally sign the Employee Compliance Guide and acknowledge the UT Athletics Compliance Manual.',
-'NCAA Compliance > Compliance Office'),
-
-('article', 5, 'Core NCAA Bylaws',
-'Key bylaws: 11 (Personnel Conduct), 12 (Amateurism), 13 (Recruiting), 14 (Academic Eligibility), 15 (Financial Aid), 16 (Permissible Benefits), 17 (Playing and Practice Seasons/CARA).',
-'NCAA Compliance > NCAA Bylaws'),
-
-('article', 6, 'ARMS Platform',
-'ARMS is used for logging CARA hours, managing recruiting communications, and processing prospect visits. Training is mandatory before any recruiting activities.',
-'NCAA Compliance > ARMS'),
-
-('article', 7, 'Booster Relations Policy',
-'Boosters cannot recruit off-campus or use relationships to advantage Toledo in recruiting. Any booster contact about a recruit must be reported to compliance immediately.',
-'NCAA Compliance > Boosters'),
-
-('article', 8, 'Sports Wagering Prohibition',
-'Absolute prohibition on wagering for all staff, coaches, and student-athletes on any NCAA championship sport. Includes March Madness brackets and informal pools. Violation means termination.',
-'NCAA Compliance > Sports Wagering'),
-
-('article', 9, 'Title IX Compliance',
-'Three-part test: equitable participation, equitable financial support, equitable treatment (the laundry list). All staff must report suspected sexual violence to Title IX coordinator immediately.',
-'Title IX > Overview'),
-
-('article', 10, 'Transgender Student-Athlete Inclusion',
-'Use preferred names and pronouns. Maintain strict confidentiality about transgender status. Ensure dignified facility access. Questions go to compliance or Nicole Harris.',
-'Title IX > Transgender Inclusion'),
-
-('article', 11, 'NIL at Toledo',
-'Toledo was the first MAC school with an organized NIL collective. Has Campus Ink apparel partnerships. The Liftoff program and NIL Resource Center are the main hubs.',
-'NIL > Overview'),
-
-('article', 12, 'NIL Compliance Rules',
-'Staff must understand institutional involvement limits, state law vs NCAA policy conflicts, disclosure requirements, and the prohibition on non-compliant apparel during team events.',
-'NIL > Rules'),
-
-('article', 13, 'Spry & Teamworks GM',
-'Spry provides NIL compliance education. Teamworks GM provides financial literacy and brand management courses. Staff need admin access to both — request from compliance office.',
-'NIL > Platforms'),
-
-('article', 14, 'Pre-Employment Checklist',
-'Before day one: complete I-9 via IntelliCorp, mail official transcripts in sealed envelopes, finalize health screening if on Health Science Campus.',
-'HR & Benefits > Pre-Employment'),
-
-('article', 15, 'First Week Tasks',
-'Attend Monday 8:30am orientation. Activate UTAD account. Set up MFA via Microsoft Authenticator. Set up direct deposit and tax forms in MyUT.',
-'HR & Benefits > First Week'),
-
-('article', 16, '30-Day Benefits Deadline',
-'Exactly 30 days to elect or waive medical, dental, vision, life insurance. Must actively decline even if not enrolling. Upload dependent documentation in MyUT.',
-'HR & Benefits > Benefits'),
-
-('article', 17, '120-Day Retirement Elections',
-'120 days to finalize retirement plan. Create accounts with approved vendors. Submit authorization forms. Manager should do 30/60/90 day check-ins.',
-'HR & Benefits > Retirement'),
-
-('article', 18, 'Employee Benefits & Work-Life Harmony',
-'EAP through AllOne Health (free, confidential). Voluntary Summer Reduced Hours. FMLA/ADA accommodations. Corporate discounts for software and hotels.',
-'HR & Benefits > Work-Life'),
-
-('article', 19, 'Mandatory Training Modules',
-'Within 30 days: Ohio Ethics Law, HIPAA Basics (if applicable), Title IX/VAWA training, NCAA Compliance acknowledgment, Employee Compliance Guide acknowledgment.',
-'HR & Benefits > Training'),
-
-('article', 20, 'Rocket Card & Mobile ID',
-'Activate UTAD first, then set up MFA, then request Rocket Card in MyUT. Download Transact eAccounts app for mobile ID in Apple/Google Wallet.',
-'IT & Campus Access > Rocket Card'),
-
-('article', 21, 'Essential Apps',
-'Required: Microsoft Authenticator, Transact eAccounts. Recommended: Blackboard Mobile, Rave Guardian (emergency alerts).',
-'IT & Campus Access > Apps'),
-
-('article', 22, 'Parking Permits',
-'A permit for full-time staff: $329/year. E permit for executives: $952/year. C permit for daily: $6.20/day. Enforcement is year-round including breaks and weekends.',
-'Parking > Permits'),
-
-('article', 23, 'Campus Parking Map',
-'Savage Arena: east side A permit spaces. Larimer: dedicated athletics lots. Findlay: south end surface lots. Use ParkUToledo portal and interactive parking finder.',
-'Parking > Map'),
-
-('article', 24, 'SASS Overview',
-'Located in Larimer Athletic Complex. Jillian Lehman is Associate AD for Student-Athlete Experience. Duane Welch is Assistant Director. Provides tutoring, study tables, course scheduling.',
-'Student-Athlete Development > SASS'),
-
-('article', 25, 'Mental Health Resources',
-'Watch for withdrawal, performance drops, hopelessness, sleep/eating changes. Refer to Jillian Lehman, University Health Center. Crisis: 988 Lifeline or text HOME to 741741.',
-'Student-Athlete Development > Mental Health'),
-
-('article', 26, 'Career Development',
-'Rockets Rise: Networking & NIL Night connects athletes with employers. Staff should encourage career programming attendance and share professional contacts.',
-'Student-Athlete Development > Career'),
-
-('article', 27, 'Relocation Allowance',
-'Up to $8,500 for eligible full-time staff/coaches. New commute must be 50+ miles greater. Taxed as ordinary income. Need 3 moving quotes from preferred vendors.',
-'Relocation > Allowance'),
-
-('article', 28, 'Toledo Neighborhoods',
-'Old Orchard: walkable, historic, north of campus. Ottawa Hills: affluent, near Wildwood Metropark. Westgate: retail access, suburban, highway convenient.',
-'Relocation > Neighborhoods'),
-
-('article', 29, 'Coffee Shops & Dining',
-'Earth Coffeehouse in TolHouse for focused work. Brew Coffee Bar on campus in Gateway Plaza. Plate 21 in Beverly neighborhood. Toledo Museum of Art has free admission.',
-'Relocation > Dining & Culture'),
-
-('orgchart', 1, 'Bryan B. Blair', 'Vice President and Director of Athletics. Top executive of the athletics department.', 'Org Chart > Executive'),
-('orgchart', 2, 'Nicole Harris', 'Deputy AD, COO, Senior Woman Administrator. Sport admin for Football, Women''s Basketball, Swimming & Diving, Rowing. Oversees academics, student-athlete development, strength & conditioning.', 'Org Chart > Executive'),
-('orgchart', 3, 'Brian Lutz', 'Senior Associate AD for Compliance and Integrity. Leads the compliance office.', 'Org Chart > Compliance'),
-('orgchart', 4, 'Jillian Lehman', 'Associate AD for Student-Athlete Experience. Oversees SASS and student development.', 'Org Chart > Student-Athlete Development'),
-('orgchart', 5, 'Kenneth Schank', 'Assistant AD for Compliance. Reports to Brian Lutz.', 'Org Chart > Compliance'),
-('orgchart', 6, 'Duane Welch', 'Assistant Director of SASS. Reports to Jillian Lehman.', 'Org Chart > Student-Athlete Development');
-
+('article', 1, 'Executive Leadership and Organizational Structure', 'Bryan B. Blair leads Toledo Athletics as Vice President and Director of Athletics. Key executive leaders include Nicole Harris, Connor Whelan, Melissa DeAngelo, Brian Lutz, Josh Dittman, Paul Helgren, Tim Warga, Jillian Lehman, Brian Jones, and Michelle McDevitt.', 'Department Overview > Leadership'),
+('article', 2, 'Rise Together Strategic Plan', 'The Rise Together strategic vision emphasizes recruiting and retaining teammates, student-athlete success, elevating the brand, enhancing Team Toledo engagement, growing resources, and investing in infrastructure.', 'Department Overview > Strategic Plan'),
+('article', 3, 'Brand Standards and Naming Rules', 'Poppins is the official typeface. Athletics and University branding use different midnight blue values depending on context. Approved identifiers include The University of Toledo, Toledo Rockets, Toledo Athletics, Toledo, Rockets, and UToledo. Avoid UT, UT Rockets, Toledo Rockets Football, and Lady Rockets.', 'Branding > Identity Standards'),
+('article', 4, 'Athletics Logo Rules', 'The primary athletic logo is the default mark. Secondary marks are only for assets where the primary mark has already established identity. Clear-space rules differ between the athletic logo and the rocket mark.', 'Branding > Logos'),
+('article', 5, 'Pre-Arrival Onboarding Sequence', 'The onboarding path is Rocket ID to UTAD setup to MFA to MyUT access, followed by Rocket Card, parking, payroll, direct deposit, and tax setup.', 'Onboarding > Pre-Arrival'),
+('article', 6, 'First 60 Days Checklist', 'Supervisors are expected to guide facility tours, team introductions, systems training, benefits completion, required training, and follow-up reviews during the first 60 days.', 'Onboarding > First 60 Days'),
+('article', 7, 'Benefits and Retirement Deadlines', 'Employees generally have 30 days for benefits elections and eligible full-time employees have a 120-day window to elect an alternative retirement plan.', 'HR and Benefits > Deadlines'),
+('article', 8, 'Core Systems and Access', 'Primary systems include MyUT, Employee Self-Service, Microsoft 365, Blackboard, TimeClock Plus, Teamworks, Teamworks Compliance / ARMS, Teamworks GM, and the Toledo Rockets Exchange.', 'Systems > Overview'),
+('article', 9, 'Compliance and Booster Guidance', 'Athletics personnel must understand NCAA rules, booster restrictions, NIL boundaries, sports-wagering prohibitions, and the importance of routing unclear situations through compliance before acting.', 'Compliance > Core Rules'),
+('article', 10, 'Privacy and Sensitive Information', 'Onboarding resources should not include SSNs, salary details, medical data, passwords, API keys, or private personal email addresses. FERPA and information-security rules govern the handling of protected student and employee data.', 'Privacy > Sensitive Information'),
+('article', 11, 'Social Media and Brand Conduct', 'Athletics-facing communications should align with official brand standards. Social posts must avoid discriminatory, harassing, threatening, false, or security-compromising content.', 'Communications > Social Media'),
+('article', 12, 'Mental Health and Student Support', 'Student-athlete support includes SASS, mental-health referral awareness, and career programming such as networking and NIL-related development events.', 'Student-Athlete Development > Support'),
+('contact', 4, 'Athletics Compliance Contact', 'Brian Lutz is the primary athletics compliance contact and should be consulted before uncertain recruiting, NIL, or booster-related actions.', 'Contacts > Compliance'),
+('contact', 5, 'Athletics Communications Contact', 'Paul Helgren leads athletics communications and is the key routing contact for media and communications matters.', 'Contacts > Communications'),
+('system', 1, 'MyUT Portal', 'The MyUT Portal is the primary authenticated gateway for employee systems and self-service workflows.', 'Systems > Portal'),
+('system', 7, 'Teamworks Compliance / ARMS', 'Teamworks Compliance / ARMS supports recruiting workflows, prospect visits, and CARA monitoring.', 'Systems > Compliance'),
+('policy', 2, 'Standards of Conduct', 'The standards-of-conduct policy defines broad employee expectations and disciplinary baselines.', 'Policies > Conduct'),
+('policy', 9, 'FERPA and Confidentiality for Faculty and Staff', 'FERPA guidance governs handling of student education records and limits disclosure without an authorized exception.', 'Policies > Privacy'),
+('orgchart', 1, 'Bryan B. Blair', 'Vice President and Director of Athletics. Cabinet-level athletics leader.', 'Org Chart > Executive'),
+('orgchart', 3, 'Nicole Harris', 'Deputy Athletic Director, Chief Operating Officer, and Senior Woman Administrator. Oversees major operational areas and selected sport administration responsibilities.', 'Org Chart > Executive'),
+('orgchart', 6, 'Brian Lutz', 'Senior Associate Athletic Director for Compliance and Integrity. Leads compliance and related athletics rules governance.', 'Org Chart > Compliance'),
+('orgchart', 10, 'Jillian Lehman', 'Associate Athletic Director for Student-Athlete Experience. Oversees student-athlete experience and support-related functions.', 'Org Chart > Student-Athlete Development');
 
 -- ============================================================
--- AI LITERACY RUBRIC DATA (Issue #5)
--- Stored as a single JSON config row in a simple config table
--- The AI assessment chatbot uses this to structure conversations
+-- AI LITERACY RUBRIC
 -- ============================================================
-
-CREATE TABLE IF NOT EXISTS AppConfig (
-    key TEXT PRIMARY KEY,
-    value TEXT NOT NULL,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-);
-
-INSERT OR REPLACE INTO AppConfig (key, value) VALUES
+INSERT OR REPLACE INTO AppConfig (key, value, updated_at) VALUES
 ('ai_literacy_rubric', '{
   "role_archetypes": {
     "coach": {
@@ -278,75 +249,34 @@ INSERT OR REPLACE INTO AppConfig (key, value) VALUES
     }
   },
   "assessment_categories": {
-    "recruiting_compliance": {
-      "label": "Recruiting Rules & Compliance",
-      "scenarios": [
-        "A booster tells you they had dinner with a recruit and their family. What do you do?",
-        "A recruit asks if they can attend a home game this weekend. What rules apply?",
-        "You want to text a prospective student-athlete. What do you check first?"
-      ]
-    },
-    "cara_logging": {
-      "label": "CARA Logging & ARMS",
-      "scenarios": [
-        "Your team had a voluntary workout this morning. Does this count as CARA time?",
-        "How do you log a recruiting phone call in ARMS?",
-        "An athlete participated in 19.5 hours of countable activities this week. Is this a problem?"
-      ]
-    },
-    "nil_basics": {
-      "label": "NIL Fundamentals",
-      "scenarios": [
-        "An athlete asks if they can wear a brand-sponsored hoodie to an away game. What do you tell them?",
-        "A local business wants to pay an athlete for a social media post. What disclosures are needed?",
-        "Where do you direct an athlete who wants to learn about NIL opportunities at Toledo?"
-      ]
-    },
-    "mental_health_referral": {
-      "label": "Mental Health Awareness & Referral",
-      "scenarios": [
-        "An athlete has been missing practice and seems withdrawn. What steps do you take?",
-        "A student-athlete mentions feeling like a burden to their teammates. How do you respond?",
-        "An athlete is having a panic attack in your office. What do you do?"
-      ]
-    },
-    "hr_processes": {
-      "label": "HR & Onboarding Processes",
-      "scenarios": [
-        "It is day 28 and you have not enrolled in benefits yet. What happens?",
-        "You need to set up your university email. What is the first step?",
-        "A new hire asks you about the retirement plan deadline. What do you tell them?"
-      ]
-    },
-    "general_compliance": {
-      "label": "General NCAA Compliance",
-      "scenarios": [
-        "A colleague invites you to a March Madness bracket pool with a $10 buy-in. Can you participate?",
-        "A student-athlete asks you to buy them lunch. Can you?",
-        "You receive a gift from a booster for your birthday. What do you do?"
-      ]
-    },
-    "title_ix_basics": {
-      "label": "Title IX Fundamentals",
-      "scenarios": [
-        "A student-athlete reports that a coach made an inappropriate comment. What is your obligation?",
-        "What are the three parts of the Title IX compliance test for athletics?",
-        "A transgender student-athlete asks about facility access. How do you handle this?"
-      ]
-    },
-    "campus_navigation": {
-      "label": "Campus & IT Setup",
-      "scenarios": [
-        "Where are the main athletics administrative offices located?",
-        "You need to get into a locked athletic facility on a weekend. What do you need?",
-        "Your parking permit is not working and you got a citation. What do you do?"
-      ]
-    }
+    "recruiting_compliance": {"label": "Recruiting Rules and Compliance", "weight": 1.0},
+    "cara_logging": {"label": "CARA and Practice Logging", "weight": 0.9},
+    "nil_basics": {"label": "NIL Fundamentals", "weight": 1.0},
+    "mental_health_referral": {"label": "Mental Health Referral Awareness", "weight": 0.8},
+    "booster_rules": {"label": "Booster Rules", "weight": 1.0},
+    "hr_processes": {"label": "HR and Benefits Processes", "weight": 0.9},
+    "it_setup": {"label": "IT and Account Setup", "weight": 0.8},
+    "campus_navigation": {"label": "Campus Navigation and Access", "weight": 0.7},
+    "general_compliance": {"label": "General Compliance Awareness", "weight": 0.9},
+    "title_ix_basics": {"label": "Title IX Basics", "weight": 0.9},
+    "ncaa_bylaws_deep": {"label": "Deep NCAA Bylaw Knowledge", "weight": 1.0},
+    "arms_platform": {"label": "ARMS / Teamworks Compliance Fluency", "weight": 1.0},
+    "nil_advanced": {"label": "Advanced NIL Governance", "weight": 1.0},
+    "title_ix_advanced": {"label": "Advanced Title IX Understanding", "weight": 0.9},
+    "booster_management": {"label": "Booster Management", "weight": 1.0},
+    "sass_services": {"label": "SASS Services", "weight": 0.9},
+    "mental_health_protocol": {"label": "Mental Health Protocols", "weight": 0.9},
+    "eligibility_rules": {"label": "Eligibility Rules", "weight": 1.0},
+    "career_development": {"label": "Career Development Support", "weight": 0.7},
+    "academic_support": {"label": "Academic Support Workflows", "weight": 0.8},
+    "facility_management": {"label": "Facility Management", "weight": 0.9},
+    "event_operations": {"label": "Event Operations", "weight": 1.0},
+    "campus_logistics": {"label": "Campus Logistics", "weight": 0.8},
+    "parking_systems": {"label": "Parking Systems", "weight": 0.6}
   },
-  "scoring": {
-    "beginner": {"min": 0, "max": 40, "label": "Needs Foundational Training"},
-    "intermediate": {"min": 41, "max": 70, "label": "Good Foundation, Some Gaps"},
-    "advanced": {"min": 71, "max": 100, "label": "Strong Knowledge Base"}
-  },
-  "disclaimer": "This assessment is for self-development purposes only. It is NOT an HR evaluation and will not be shared with supervisors. Results are saved to your profile so you can revisit and track your growth."
-}');
+  "scoring_bands": {
+    "beginner": [0, 39],
+    "intermediate": [40, 74],
+    "advanced": [75, 100]
+  }
+}', CURRENT_TIMESTAMP);
