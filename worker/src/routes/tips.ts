@@ -3,19 +3,20 @@ import { Bindings } from '../types';
 
 const tips = new Hono<{ Bindings: Bindings }>();
 
-// GET approved tips (optionally filter by category or tags)
+// GET tips — public returns only approved; pass ?status= to filter by status (for moderation queue)
 tips.get('/', async (c) => {
   const categoryId = c.req.query('category_id');
   const tag = c.req.query('tag');
+  const status = c.req.query('status') ?? 'approved';
 
   let query = `
     SELECT Tips.*, Users.email as author_email, Categories.name as category_name
     FROM Tips
     LEFT JOIN Users ON Tips.author_id = Users.id
     LEFT JOIN Categories ON Tips.category_id = Categories.id
-    WHERE Tips.status = 'approved'
+    WHERE Tips.status = ?
   `;
-  const bindings: unknown[] = [];
+  const bindings: unknown[] = [status];
 
   if (categoryId) {
     query += ' AND Tips.category_id = ?';
@@ -27,11 +28,10 @@ tips.get('/', async (c) => {
     bindings.push(`%${tag}%`);
   }
 
-  query += ' ORDER BY Tips.approved_at DESC';
+  query += ' ORDER BY Tips.approved_at DESC, Tips.submitted_at DESC';
 
   const stmt = c.env.DB.prepare(query);
-  const { results } =
-    bindings.length > 0 ? await stmt.bind(...bindings).all() : await stmt.all();
+  const { results } = await stmt.bind(...bindings).all();
   return c.json({ success: true, data: results });
 });
 
