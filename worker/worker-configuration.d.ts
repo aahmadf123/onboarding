@@ -6,6 +6,12 @@ declare namespace Cloudflare {
 		mainModule: typeof import("./src/index");
 	}
 	interface Env {
+		/** D1 database — all application tables */
+		DB: D1Database;
+		/** Cloudflare Workers AI binding — LLM access for chat and assessment */
+		AI: Ai;
+		/** YouTube Data API v3 key — stored as a Cloudflare Secret */
+		YOUTUBE_API_KEY: string;
 	}
 }
 interface Env extends Cloudflare.Env {}
