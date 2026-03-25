@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import { Bindings } from '../types';
 import { rateLimit } from '../middleware/rate-limit';
 import { chat, ChatMessage } from '../services/ai';
-import { getRelevantContext } from '../services/content-index';
+import { getRelevantContextWithSources } from '../services/content-index';
 
 const aiChat = new Hono<{ Bindings: Bindings }>();
 
@@ -12,7 +12,7 @@ aiChat.use('*', rateLimit(20));
 /**
  * POST /api/ai/chat
  * Body: { messages: ChatMessage[] }
- * Returns: { success: true, data: { reply: string } }
+ * Returns: { success: true, data: { reply: string, sources: string[] } }
  */
 aiChat.post('/', async (c) => {
   const body = await c.req.json<{ messages: ChatMessage[] }>();
@@ -25,13 +25,14 @@ aiChat.post('/', async (c) => {
   const lastUserMsg = [...body.messages]
     .reverse()
     .find((m) => m.role === 'user');
-  const context = lastUserMsg
-    ? await getRelevantContext(c.env.DB, lastUserMsg.content)
-    : '';
+
+  const { context, sources } = lastUserMsg
+    ? await getRelevantContextWithSources(c.env.DB, lastUserMsg.content)
+    : { context: '', sources: [] };
 
   const reply = await chat(c.env.AI, body.messages, context);
 
-  return c.json({ success: true, data: { reply } });
+  return c.json({ success: true, data: { reply, sources } });
 });
 
 export default aiChat;

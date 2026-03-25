@@ -9,6 +9,10 @@
 	"compatibility_flags": [
 		"nodejs_compat"
 	],
+	"assets": {
+		"directory": "../branding",
+		"binding": "ASSETS"
+	},
 	"d1_databases": [
 		{
 			"binding": "DB",

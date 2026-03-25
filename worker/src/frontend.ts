@@ -1,5 +1,5 @@
 // HTML shell that serves the React SPA from the Worker.
-// Toledo branding colors: #003E7E (blue), #FFCE00 (gold), #002855 (dark)
+// Toledo Athletics branding colors: #0B2240 (athletics blue), #FFCD00 (athletics gold)
 
 import { getSharedCode } from './frontend/shared';
 import { getContentCode } from './frontend/content';
@@ -11,28 +11,35 @@ function getIndexHtml(): string {
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Toledo Athletics Onboarding</title>
+  <link rel="icon" href="/branding/Primary_Logo_for_Light_Background.png" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.26.9/babel.min.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <script>
     tailwind.config = {
       theme: {
         extend: {
           colors: {
-            'toledo-blue': '#003E7E',
-            'toledo-gold': '#FFCE00',
-            'toledo-dark': '#002855',
+            'toledo-blue': '#0B2240',
+            'toledo-gold': '#FFCD00',
+            'toledo-dark': '#000F3E',
           }
         }
       }
     }
   </script>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
-    body { font-family: 'Inter', sans-serif; }
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap');
+    body { font-family: 'Poppins', sans-serif; }
     .prose p { margin-bottom: 1rem; line-height: 1.75; }
-    .prose a { color: #003E7E; text-decoration: underline; }
+    .prose a { color: #0B2240; text-decoration: underline; }
+    .prose h1, .prose h2, .prose h3 { font-weight: 700; margin-bottom: 0.5rem; margin-top: 1.25rem; }
+    .prose ul { list-style-type: disc; padding-left: 1.5rem; margin-bottom: 1rem; }
+    .prose ol { list-style-type: decimal; padding-left: 1.5rem; margin-bottom: 1rem; }
+    .prose li { margin-bottom: 0.25rem; }
+    .prose strong { font-weight: 600; }
     .fade-in { animation: fadeIn 0.3s ease-in; }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
   </style>
@@ -345,8 +352,15 @@ function AIChatWidget({ currentUser }) {
         React.createElement(IconSparkles),
         React.createElement('span', { className: 'font-semibold text-sm' }, 'AI Assistant')
       ),
-      React.createElement('button', { onClick: function () { setOpen(false); }, className: 'text-blue-200 hover:text-white' },
-        React.createElement(IconX))
+      React.createElement('div', { className: 'flex items-center gap-2' },
+        messages.length > 0 && React.createElement('button', {
+          onClick: function () { setMessages([]); },
+          className: 'text-blue-200 hover:text-white text-xs px-2 py-0.5 border border-blue-400 rounded',
+          title: 'Clear conversation',
+        }, 'Clear'),
+        React.createElement('button', { onClick: function () { setOpen(false); }, className: 'text-blue-200 hover:text-white' },
+          React.createElement(IconX))
+      )
     ),
     React.createElement('div', { className: 'p-3 bg-yellow-50 border-b text-xs text-yellow-700' },
       'This AI assistant is scoped to Toledo Athletics onboarding topics. Responses are AI-generated and may not be fully accurate.'),
@@ -446,21 +460,34 @@ function AIHubPage({ currentUser, onNavigate }) {
 
   function submitAnswer() {
     if (!answer.trim()) return;
+    var currentAnswer = answer.trim();
+    // Build messages array from session history + new answer
+    var messages = [];
+    for (var i = 0; i < sessionQuestions.length; i++) {
+      if (sessionQuestions[i]) messages.push({ role: 'assistant', content: sessionQuestions[i] });
+      if (sessionAnswers[i]) messages.push({ role: 'user', content: sessionAnswers[i] });
+    }
+    // Append the current question and the new answer
+    if (currentQuestion) messages.push({ role: 'assistant', content: currentQuestion });
+    messages.push({ role: 'user', content: currentAnswer });
+    var newAnswers = sessionAnswers.concat([currentAnswer]);
+    var newQuestions = sessionQuestions.concat([currentQuestion || '']);
+    setSessionAnswers(newAnswers);
+    setSessionQuestions(newQuestions);
+    var isLast = newAnswers.length >= 5;
     setLoading(true);
     api('/ai/assessment/answer', {
       method: 'POST',
       body: JSON.stringify({
         role_archetype: selectedRole,
-        question: currentQuestion,
-        answer: answer.trim(),
-        session_questions: sessionQuestions,
-        session_answers: sessionAnswers,
+        messages: messages,
+        is_last_answer: isLast,
       }),
     }).then(function (r) {
       setLoading(false);
       setAnswer('');
       if (r.success && r.data) {
-        if (r.data.evaluation) {
+        if (r.data.done && r.data.evaluation) {
           setEvaluation(r.data.evaluation);
           setCurrentQuestion(null);
           if (currentUser) {
@@ -469,14 +496,14 @@ function AIHubPage({ currentUser, onNavigate }) {
               body: JSON.stringify({
                 user_id: currentUser.id,
                 role_archetype: selectedRole,
-                evaluation: r.data.evaluation,
+                overall_level: r.data.evaluation.overall_level || 'beginner',
+                score_data: r.data.evaluation.score_data || {},
+                learning_plan: r.data.evaluation.learning_plan || '',
               }),
             });
           }
         } else {
-          setCurrentQuestion(r.data.question);
-          setSessionQuestions(r.data.session_questions || sessionQuestions);
-          setSessionAnswers(r.data.session_answers || sessionAnswers);
+          setCurrentQuestion(r.data.question || null);
         }
       }
     });
@@ -553,29 +580,25 @@ function AIHubPage({ currentUser, onNavigate }) {
       React.createElement('div', { className: 'bg-white rounded-xl border border-gray-200 p-6' },
         React.createElement('h2', { className: 'text-xl font-bold text-gray-900 mb-4 flex items-center gap-2' },
           React.createElement(IconCheckCircle), 'Assessment Complete'),
-        evaluation.level && React.createElement('div', { className: 'mb-4 p-4 bg-toledo-blue/5 rounded-lg' },
+        evaluation.overall_level && React.createElement('div', { className: 'mb-4 p-4 bg-toledo-blue/5 rounded-lg' },
           React.createElement('p', { className: 'text-sm text-gray-600' }, 'Your AI Literacy Level:'),
-          React.createElement('p', { className: 'text-2xl font-bold text-toledo-blue mt-1' }, evaluation.level)
+          React.createElement('p', { className: 'text-2xl font-bold text-toledo-blue mt-1 capitalize' }, evaluation.overall_level)
         ),
-        evaluation.gaps && evaluation.gaps.length > 0 && React.createElement('div', { className: 'mb-4' },
-          React.createElement('h3', { className: 'font-semibold text-gray-900 mb-2' }, 'Skill Gaps Identified'),
-          React.createElement('ul', { className: 'space-y-1' },
-            evaluation.gaps.map(function (gap, i) {
-              return React.createElement('li', { key: i, className: 'flex items-start gap-2 text-sm text-gray-600' },
-                React.createElement('span', { className: 'text-orange-500 mt-0.5' }, '•'), gap);
-            })
-          )
-        ),
-        evaluation.videoRecs && evaluation.videoRecs.length > 0 && React.createElement('div', null,
-          React.createElement('h3', { className: 'font-semibold text-gray-900 mb-2' }, 'Recommended Videos'),
+        evaluation.score_data && Object.keys(evaluation.score_data).length > 0 && React.createElement('div', { className: 'mb-4' },
+          React.createElement('h3', { className: 'font-semibold text-gray-900 mb-2' }, 'Skill Breakdown'),
           React.createElement('div', { className: 'space-y-2' },
-            evaluation.videoRecs.map(function (vid, i) {
-              return React.createElement('div', { key: i, className: 'flex items-center gap-2 p-2 bg-gray-50 rounded-lg' },
-                React.createElement(IconPlay),
-                React.createElement('span', { className: 'text-sm text-gray-700' }, typeof vid === 'string' ? vid : vid.title || vid)
+            Object.entries(evaluation.score_data).map(function (entry, i) {
+              var cat = entry[0]; var data = entry[1];
+              return React.createElement('div', { key: i, className: 'flex items-start gap-2 text-sm' },
+                React.createElement('span', { className: 'font-medium text-gray-700 min-w-0 flex-1' }, (data && data.score !== undefined ? '[' + data.score + '/5] ' : '') + cat),
+                data && data.feedback && React.createElement('span', { className: 'text-gray-500 flex-1' }, data.feedback)
               );
             })
           )
+        ),
+        evaluation.learning_plan && React.createElement('div', { className: 'bg-blue-50 rounded-lg p-4' },
+          React.createElement('h3', { className: 'font-semibold text-gray-900 mb-2' }, 'Recommended Next Steps'),
+          React.createElement('p', { className: 'text-sm text-gray-700' }, evaluation.learning_plan)
         )
       )
     );
@@ -640,12 +663,15 @@ function YouTubeFinderPage({ currentUser, onNavigate }) {
   var _useState8 = useState(null);
   var addedId = _useState8[0];
   var setAddedId = _useState8[1];
+  var _useState9 = useState(null);
+  var searchError = _useState9[0];
+  var setSearchError = _useState9[1];
   var isMod = currentUser && (currentUser.role === 'moderator' || currentUser.role === 'admin');
 
   useEffect(function () {
     if (currentUser && tab === 'plan') {
       setLoadingPlan(true);
-      api('/youtube/plan?user_id=' + encodeURIComponent(currentUser.id)).then(function (r) {
+      api('/youtube/plan/' + encodeURIComponent(currentUser.id)).then(function (r) {
         if (r.success) setPlan(r.data || []);
         setLoadingPlan(false);
       });
@@ -664,10 +690,20 @@ function YouTubeFinderPage({ currentUser, onNavigate }) {
     e.preventDefault();
     if (!query.trim()) return;
     setSearching(true);
+    setSearchError(null);
     api('/youtube/search?q=' + encodeURIComponent(query.trim())).then(function (r) {
       setSearching(false);
-      if (r.success && r.data) setVideos(r.data.videos || []);
-      else setVideos([]);
+      if (r.success && r.data) {
+        setVideos(Array.isArray(r.data) ? r.data : r.data.videos || []);
+        setSearchError(null);
+      } else {
+        setVideos([]);
+        setSearchError(r.error || 'Search failed. Please try again.');
+      }
+    }).catch(function () {
+      setSearching(false);
+      setVideos([]);
+      setSearchError('An error occurred while searching. Please try again.');
     });
   }
 
@@ -731,6 +767,9 @@ function YouTubeFinderPage({ currentUser, onNavigate }) {
           type: 'submit', disabled: searching,
           className: 'px-6 py-2 bg-toledo-blue text-white rounded-lg hover:bg-toledo-dark text-sm font-medium disabled:opacity-50',
         }, searching ? 'Searching...' : 'Search')
+      ),
+      searchError && React.createElement('div', { className: 'mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700' },
+        '⚠️ ' + searchError
       ),
       videos.length > 0 && React.createElement('div', { className: 'space-y-3' },
         videos.map(function (video) {
@@ -1068,7 +1107,7 @@ function Footer({ onNavigate }) {
       React.createElement('div', { className: 'grid grid-cols-1 md:grid-cols-3 gap-8' },
         React.createElement('div', null,
           React.createElement('div', { className: 'flex items-center gap-2 mb-3' },
-            React.createElement('div', { className: 'bg-toledo-gold text-toledo-blue font-extrabold text-sm w-8 h-8 rounded-lg flex items-center justify-center' }, 'UT'),
+            React.createElement('img', { src: '/branding/Primary_Logo_for_Dark_Background.png', alt: 'Toledo Athletics', className: 'h-8 w-auto' }),
             React.createElement('div', null,
               React.createElement('p', { className: 'text-sm font-bold' }, 'Toledo Athletics'),
               React.createElement('p', { className: 'text-xs text-blue-300' }, 'Onboarding Portal')
@@ -1135,11 +1174,41 @@ function App() {
     api('/stats').then(function (r) { if (r.success) setStats(r.data); });
   }, []);
 
-  function navigate(newView, param) {
+  function navigate(newView, param, pushState) {
+    if (pushState !== false) {
+      var url = '/' + newView + (param ? '/' + param : '');
+      window.history.pushState({ view: newView, param: param || null }, '', url);
+    }
+    var titles = {
+      'home': 'Toledo Athletics Onboarding',
+      'categories': 'Browse Categories — Toledo Athletics',
+      'tips': 'Employee Tips — Toledo Athletics',
+      'orgchart': 'Org Chart — Toledo Athletics',
+      'ai-hub': 'AI Literacy Assessment — Toledo Athletics',
+      'youtube': 'Video Learning — Toledo Athletics',
+      'quicklinks': 'Quick Links — Toledo Athletics',
+      'contacts': 'Key Contacts — Toledo Athletics',
+      'policies': 'Policies & Procedures — Toledo Athletics',
+      'systems': 'Systems Directory — Toledo Athletics',
+      'search': 'Search — Toledo Athletics',
+      'submit': 'Contribute — Toledo Athletics',
+      'moderate': 'Moderation — Toledo Athletics',
+    };
+    document.title = titles[newView] || 'Toledo Athletics Onboarding';
     setView(newView);
     setViewParam(param || null);
     window.scrollTo(0, 0);
   }
+
+  useEffect(function () {
+    function handlePopState(e) {
+      if (e.state && e.state.view) {
+        navigate(e.state.view, e.state.param, false);
+      }
+    }
+    window.addEventListener('popstate', handlePopState);
+    return function () { window.removeEventListener('popstate', handlePopState); };
+  }, []);
 
   function handleSearch(query) {
     navigate('search', query);

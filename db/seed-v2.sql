@@ -41,18 +41,18 @@ INSERT INTO OrgChart (id, name, title, department, email, phone, parent_id, disp
 (21, 'Nick Kerver', 'Associate Director of Communications', 'Communications', NULL, NULL, 8, 2, 1),
 (22, 'Jordyn Prok', 'Assistant Director of Communications', 'Communications', NULL, NULL, 8, 3, 1),
 (23, 'Mike Jacobs', 'Head Football Coach', 'Football', NULL, NULL, 3, 10, 1),
-(24, 'Tod Kowalczyk', 'Head Men''s Basketball Coach', 'Men''s Basketball', NULL, NULL, 4, 10, 1),
+(24, 'Tod Kowalczyk', 'Head Men''s Basketball Coach', 'Men''s Basketball', NULL, NULL, 3, 10, 1),
 (25, 'Ginny Boggess', 'Head Women''s Basketball Coach', 'Women''s Basketball', NULL, NULL, 3, 11, 1),
-(26, 'Rob Reinstetle', 'Head Baseball Coach', 'Baseball', NULL, NULL, 9, 10, 1),
-(27, 'Jessica Bracamonte', 'Head Softball Coach', 'Softball', NULL, NULL, 5, 10, 1),
-(28, 'Mark Batman', 'Head Women''s Soccer Coach', 'Women''s Soccer', NULL, NULL, 6, 10, 1),
-(29, 'Brian Wright', 'Head Women''s Volleyball Coach', 'Women''s Volleyball', NULL, NULL, 4, 11, 1),
-(30, 'Andrea Grove-McDonough', 'Head Cross Country and Track and Field Coach', 'Cross Country and Track and Field', NULL, NULL, 6, 11, 1),
-(31, 'Jeff Roope', 'Head Men''s Golf Coach', 'Men''s Golf', NULL, NULL, 7, 10, 1),
-(32, 'Ali Green', 'Head Women''s Golf Coach', 'Women''s Golf', NULL, NULL, 7, 11, 1),
+(26, 'Rob Reinstetle', 'Head Baseball Coach', 'Baseball', NULL, NULL, 3, 10, 1),
+(27, 'Jessica Bracamonte', 'Head Softball Coach', 'Softball', NULL, NULL, 3, 10, 1),
+(28, 'Mark Batman', 'Head Women''s Soccer Coach', 'Women''s Soccer', NULL, NULL, 3, 10, 1),
+(29, 'Brian Wright', 'Head Women''s Volleyball Coach', 'Women''s Volleyball', NULL, NULL, 3, 11, 1),
+(30, 'Andrea Grove-McDonough', 'Head Cross Country and Track and Field Coach', 'Cross Country and Track and Field', NULL, NULL, 3, 11, 1),
+(31, 'Jeff Roope', 'Head Men''s Golf Coach', 'Men''s Golf', NULL, NULL, 3, 10, 1),
+(32, 'Ali Green', 'Head Women''s Golf Coach', 'Women''s Golf', NULL, NULL, 3, 11, 1),
 (33, 'Jacy Dyer', 'Head Women''s Swimming and Diving Coach', 'Women''s Swimming and Diving', NULL, NULL, 3, 12, 1),
-(34, 'Tracy Mauntler', 'Head Women''s Tennis Coach', 'Women''s Tennis', NULL, NULL, 6, 12, 1),
-(35, 'Al Wermer', 'Head Men''s Tennis Coach', 'Men''s Tennis', NULL, NULL, 6, 13, 1),
+(34, 'Tracy Mauntler', 'Head Women''s Tennis Coach', 'Women''s Tennis', NULL, NULL, 3, 12, 1),
+(35, 'Al Wermer', 'Head Men''s Tennis Coach', 'Men''s Tennis', NULL, NULL, 3, 13, 1),
 (36, 'Chris Bailey-Greene', 'Head Women''s Rowing Coach', 'Women''s Rowing', NULL, NULL, 3, 13, 1),
 (37, 'Shelby Tincher', 'Head Cheerleading Coach', 'Cheerleading', NULL, NULL, 9, 11, 1);
 
@@ -225,7 +225,7 @@ INSERT INTO SiteContentIndex (source_type, source_id, source_title, content_text
 -- AI LITERACY RUBRIC
 -- ============================================================
 INSERT OR REPLACE INTO AppConfig (key, value, updated_at) VALUES
-('ai_literacy_rubric', '{
+('ai_assessment_rubric', '{
   "role_archetypes": {
     "coach": {
       "label": "Head/Assistant Coach",
