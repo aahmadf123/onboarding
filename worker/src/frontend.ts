@@ -210,7 +210,8 @@ function OrgChartNode({ node, depth }) {
 
   var hasChildren = node.children && node.children.length > 0;
 
-  return React.createElement('div', { className: 'ml-' + Math.min(depth * 4, 16) + ' mb-1' },
+  var indentPx = Math.min(depth * 16, 64);
+  return React.createElement('div', { className: 'mb-1', style: { marginLeft: indentPx + 'px' } },
     React.createElement('div', { className: 'flex items-center gap-1' },
       hasChildren && React.createElement('button', {
         onClick: function () { setExpanded(!expanded); },
@@ -418,7 +419,7 @@ function AIHubPage({ currentUser, onNavigate }) {
 
   useEffect(function () {
     if (currentUser) {
-      api('/ai/assessment/results/' + currentUser.id).then(function (r) {
+      api('/ai/assessment/results/' + encodeURIComponent(currentUser.id)).then(function (r) {
         if (r.success && r.data) setPastResults(r.data);
       });
     }
@@ -644,7 +645,7 @@ function YouTubeFinderPage({ currentUser, onNavigate }) {
   useEffect(function () {
     if (currentUser && tab === 'plan') {
       setLoadingPlan(true);
-      api('/youtube/plan?user_id=' + currentUser.id).then(function (r) {
+      api('/youtube/plan?user_id=' + encodeURIComponent(currentUser.id)).then(function (r) {
         if (r.success) setPlan(r.data || []);
         setLoadingPlan(false);
       });
@@ -745,7 +746,7 @@ function YouTubeFinderPage({ currentUser, onNavigate }) {
               video.duration && React.createElement('span', { className: 'text-xs text-gray-400' }, video.duration),
               React.createElement('div', { className: 'mt-2 flex gap-2' },
                 React.createElement('a', {
-                  href: 'https://www.youtube.com/watch?v=' + videoId,
+                  href: 'https://www.youtube.com/watch?v=' + encodeURIComponent(videoId),
                   target: '_blank', rel: 'noopener noreferrer',
                   className: 'flex items-center gap-1 text-xs text-toledo-blue hover:underline',
                 }, React.createElement(IconExternalLink), 'Watch on YouTube'),
@@ -781,7 +782,7 @@ function YouTubeFinderPage({ currentUser, onNavigate }) {
                     React.createElement('p', { className: 'text-xs text-gray-500' }, (item.video_channel || '') + (item.video_duration ? ' • ' + item.video_duration : ''))
                   ),
                   React.createElement('a', {
-                    href: 'https://www.youtube.com/watch?v=' + item.youtube_video_id,
+                    href: 'https://www.youtube.com/watch?v=' + encodeURIComponent(item.youtube_video_id),
                     target: '_blank', rel: 'noopener noreferrer',
                     className: 'text-toledo-blue hover:text-toledo-dark flex-shrink-0',
                   }, React.createElement(IconExternalLink))
