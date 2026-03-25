@@ -118,6 +118,51 @@ key TEXT PRIMARY KEY,
 value TEXT NOT NULL,
 updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 )`,
+`CREATE TABLE IF NOT EXISTS QuickLinks (
+id INTEGER PRIMARY KEY AUTOINCREMENT,
+title TEXT NOT NULL,
+description TEXT,
+url TEXT NOT NULL,
+category TEXT,
+display_order INTEGER DEFAULT 0,
+is_active INTEGER DEFAULT 1
+)`,
+`CREATE TABLE IF NOT EXISTS KeyContacts (
+id INTEGER PRIMARY KEY AUTOINCREMENT,
+function_area TEXT,
+department TEXT,
+contact_name TEXT NOT NULL,
+title TEXT,
+email TEXT,
+phone TEXT,
+url TEXT,
+notes TEXT,
+is_active INTEGER DEFAULT 1,
+display_order INTEGER DEFAULT 0
+)`,
+`CREATE TABLE IF NOT EXISTS SystemsDirectory (
+id INTEGER PRIMARY KEY AUTOINCREMENT,
+system_name TEXT NOT NULL,
+category TEXT,
+access_url TEXT,
+login_notes TEXT,
+owner_department TEXT,
+support_contact TEXT,
+description TEXT,
+is_active INTEGER DEFAULT 1,
+display_order INTEGER DEFAULT 0
+)`,
+`CREATE TABLE IF NOT EXISTS PolicyResources (
+id INTEGER PRIMARY KEY AUTOINCREMENT,
+policy_code TEXT,
+title TEXT NOT NULL,
+category TEXT,
+applies_to TEXT,
+url TEXT,
+summary TEXT,
+is_active INTEGER DEFAULT 1,
+display_order INTEGER DEFAULT 0
+)`,
 ];
 
 beforeAll(async () => {
@@ -197,5 +242,65 @@ expect(response.status).toBe(200);
 const json = await response.json() as { success: boolean; data: unknown[] };
 expect(json.success).toBe(true);
 expect(Array.isArray(json.data)).toBe(true);
+});
+
+it('returns JSON from /api/quicklinks', async () => {
+const request = new IncomingRequest('http://example.com/api/quicklinks');
+const ctx = createExecutionContext();
+const response = await worker.fetch(request, env, ctx);
+await waitOnExecutionContext(ctx);
+expect(response.status).toBe(200);
+const json = await response.json() as { success: boolean; data: unknown[] };
+expect(json.success).toBe(true);
+expect(Array.isArray(json.data)).toBe(true);
+});
+
+it('returns JSON from /api/contacts', async () => {
+const request = new IncomingRequest('http://example.com/api/contacts');
+const ctx = createExecutionContext();
+const response = await worker.fetch(request, env, ctx);
+await waitOnExecutionContext(ctx);
+expect(response.status).toBe(200);
+const json = await response.json() as { success: boolean; data: unknown[] };
+expect(json.success).toBe(true);
+expect(Array.isArray(json.data)).toBe(true);
+});
+
+it('returns JSON from /api/systems', async () => {
+const request = new IncomingRequest('http://example.com/api/systems');
+const ctx = createExecutionContext();
+const response = await worker.fetch(request, env, ctx);
+await waitOnExecutionContext(ctx);
+expect(response.status).toBe(200);
+const json = await response.json() as { success: boolean; data: unknown[] };
+expect(json.success).toBe(true);
+expect(Array.isArray(json.data)).toBe(true);
+});
+
+it('returns JSON from /api/policies', async () => {
+const request = new IncomingRequest('http://example.com/api/policies');
+const ctx = createExecutionContext();
+const response = await worker.fetch(request, env, ctx);
+await waitOnExecutionContext(ctx);
+expect(response.status).toBe(200);
+const json = await response.json() as { success: boolean; data: unknown[] };
+expect(json.success).toBe(true);
+expect(Array.isArray(json.data)).toBe(true);
+});
+
+it('SPA shell includes new feature components', async () => {
+const response = await SELF.fetch('https://example.com/');
+const text = await response.text();
+expect(text).toContain('TipsPage');
+expect(text).toContain('OrgChartPage');
+expect(text).toContain('AIChatWidget');
+expect(text).toContain('AIHubPage');
+expect(text).toContain('YouTubeFinderPage');
+expect(text).toContain('QuickLinksPage');
+expect(text).toContain('ContactsPage');
+expect(text).toContain('PoliciesPage');
+expect(text).toContain('SystemsPage');
+expect(text).toContain('FeedbackButton');
+expect(text).toContain('Footer');
 });
 });
