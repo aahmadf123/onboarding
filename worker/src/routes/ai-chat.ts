@@ -1,8 +1,37 @@
 import { Hono } from 'hono';
 import { Bindings } from '../types';
 import { rateLimit } from '../middleware/rate-limit';
-import { chat, ChatMessage } from '../services/ai';
 import { getRelevantContextWithSources } from '../services/content-index';
+
+export interface ChatMessage {
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+}
+
+const AI_MODEL = '@cf/meta/llama-3.3-70b-instruct-fp8';
+
+const SYSTEM_PROMPT = `You are the Toledo Athletics Onboarding Assistant. You help new staff members at the University of Toledo Athletics Department understand their onboarding process, policies, and resources.
+
+IMPORTANT RULES:
+1. Only answer questions based on the provided context from the onboarding materials.
+2. If you don't have relevant information, say so and direct them to the appropriate department.
+3. Never make up information or guess at policies.
+4. Be helpful, professional, and concise.
+5. Do not reveal confidential information like SSNs, salaries, medical data, or passwords.`;
+
+async function chat(ai: Ai, messages: ChatMessage[], context: string): Promise<string> {
+  const systemMessage = context
+    ? `${SYSTEM_PROMPT}\n\nRelevant onboarding context:\n${context}`
+    : SYSTEM_PROMPT;
+
+  const aiMessages = [
+    { role: 'system' as const, content: systemMessage },
+    ...messages,
+  ];
+
+  const response = await ai.run(AI_MODEL, { messages: aiMessages }) as { response?: string };
+  return response?.response ?? 'I was unable to generate a response. Please try again.';
+}
 
 const aiChat = new Hono<{ Bindings: Bindings }>();
 

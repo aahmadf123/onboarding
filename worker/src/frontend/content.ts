@@ -4,6 +4,15 @@ export function getContentCode(): string {
   return `
 // ── HomePage ──────────────────────────────────────────────────────────────────
 function HomePage({ categories, stats, onNavigate, onSearch }) {
+  const [expandedPhase, setExpandedPhase] = useState(null);
+
+  var journeyPhases = [
+    { phase: 'First Day', icon: '☀️', color: 'border-l-green-500', items: ['Get your Rocket ID & UTAD account', 'Set up Multi-Factor Authentication (MFA)', 'Activate MyUT portal access', 'Meet your team and supervisor'] },
+    { phase: 'First Week', icon: '📅', color: 'border-l-blue-500', items: ['Complete parking permit setup via vPermit', 'Set up direct deposit in MyUT', 'Tour athletic facilities', 'Complete systems training (Teamworks, Banner, etc.)'] },
+    { phase: 'First Month', icon: '📋', color: 'border-l-purple-500', items: ['Complete benefits enrollment (30-day window)', 'Finish all required compliance training modules', 'Learn department workflows', 'Connect with key contacts from the directory'] },
+    { phase: 'First 90 Days', icon: '🎯', color: 'border-l-toledo-gold', items: ['Review all compliance policies', 'Build your personal learning plan', 'Check in with supervisor on goals', 'Explore Toledo neighborhoods and local resources'] },
+  ];
+
   return React.createElement('div', { className: 'fade-in' },
     // Hero banner
     React.createElement('div', { className: 'bg-gradient-to-br from-toledo-blue via-toledo-dark to-toledo-blue text-white py-16' },
@@ -22,7 +31,7 @@ function HomePage({ categories, stats, onNavigate, onSearch }) {
           { id: 'guide', icon: '🗺️', label: 'Onboarding Guide', desc: 'Step-by-step journey' },
           { id: 'resources', icon: '🔗', label: 'Resources & Systems', desc: 'Links and tools' },
           { id: 'contacts', icon: '👥', label: 'Key Contacts', desc: 'Who to reach out to' },
-          { id: 'ai-hub', icon: '✨', label: 'AI Assessment', desc: 'Check your AI literacy' },
+          { id: 'checklist', icon: '✅', label: 'My Checklist', desc: 'Track your progress' },
         ].map(function (action) {
           return React.createElement('button', {
             key: action.id, onClick: function () { onNavigate(action.id); },
@@ -39,29 +48,33 @@ function HomePage({ categories, stats, onNavigate, onSearch }) {
     // Getting Started Journey
     React.createElement('div', { className: 'max-w-7xl mx-auto px-4 py-12' },
       React.createElement('h2', { className: 'text-2xl font-bold text-gray-900 mb-2' }, 'Your Onboarding Journey'),
-      React.createElement('p', { className: 'text-gray-500 mb-6' }, "Follow these milestones to get settled in. Don't try to do everything at once!"),
+      React.createElement('p', { className: 'text-gray-500 mb-6' }, "Click any phase to see what's involved. Don't try to do everything at once!"),
       React.createElement('div', { className: 'grid grid-cols-1 md:grid-cols-4 gap-4' },
-        [
-          { phase: 'First Day', icon: '☀️', color: 'border-l-green-500', items: ['Get your Rocket ID & UTAD', 'Set up MFA', 'Activate MyUT access', 'Meet your team'] },
-          { phase: 'First Week', icon: '📅', color: 'border-l-blue-500', items: ['Complete parking setup', 'Set up direct deposit', 'Tour facilities', 'Systems training'] },
-          { phase: 'First Month', icon: '📋', color: 'border-l-purple-500', items: ['Complete benefits enrollment', 'Finish required training', 'Learn department workflows', 'Connect with key contacts'] },
-          { phase: 'First 90 Days', icon: '🎯', color: 'border-l-toledo-gold', items: ['Review compliance policies', 'Complete AI literacy check', 'Build your learning plan', 'Check in with supervisor'] },
-        ].map(function (phase) {
+        journeyPhases.map(function (phase) {
+          var isExpanded = expandedPhase === phase.phase;
           return React.createElement('div', {
             key: phase.phase,
-            className: 'bg-white rounded-xl border border-gray-200 p-5 border-l-4 ' + phase.color,
+            className: 'bg-white rounded-xl border border-gray-200 border-l-4 ' + phase.color + ' transition-all',
           },
-            React.createElement('div', { className: 'flex items-center gap-2 mb-3' },
-              React.createElement('span', { className: 'text-xl' }, phase.icon),
-              React.createElement('h3', { className: 'font-semibold text-gray-900' }, phase.phase)
+            React.createElement('button', {
+              onClick: function () { setExpandedPhase(isExpanded ? null : phase.phase); },
+              className: 'w-full p-5 flex items-center justify-between text-left',
+            },
+              React.createElement('div', { className: 'flex items-center gap-2' },
+                React.createElement('span', { className: 'text-xl' }, phase.icon),
+                React.createElement('h3', { className: 'font-semibold text-gray-900' }, phase.phase)
+              ),
+              React.createElement('span', { className: 'text-gray-400 text-lg transition-transform ' + (isExpanded ? 'rotate-180' : '') }, '▾')
             ),
-            React.createElement('ul', { className: 'space-y-1.5' },
-              phase.items.map(function (item, i) {
-                return React.createElement('li', { key: i, className: 'text-sm text-gray-600 flex items-start gap-2' },
-                  React.createElement('span', { className: 'text-gray-300 mt-0.5' }, '•'),
-                  item
-                );
-              })
+            isExpanded && React.createElement('div', { className: 'px-5 pb-5' },
+              React.createElement('ul', { className: 'space-y-1.5' },
+                phase.items.map(function (item, i) {
+                  return React.createElement('li', { key: i, className: 'text-sm text-gray-600 flex items-start gap-2' },
+                    React.createElement('span', { className: 'text-gray-300 mt-0.5' }, '•'),
+                    item
+                  );
+                })
+              )
             )
           );
         })

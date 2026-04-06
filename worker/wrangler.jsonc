@@ -20,12 +20,9 @@
 			"database_id": "aadabb36-a150-44d6-8734-fe88645147fa"
 		}
 	],
-	// Workers AI — powers Issue #4 (AI Chat) and Issue #5 (AI Assessment Hub)
+	// Workers AI — powers AI Chat widget
 	// No API key needed, this is native to Cloudflare
 	"ai": {
 		"binding": "AI"
 	}
-	// NOTE: YOUTUBE_API_KEY is stored as a Cloudflare Secret (not in this file).
-	// Set it via: npx wrangler secret put YOUTUBE_API_KEY
-	// It will be available in the Worker as c.env.YOUTUBE_API_KEY
 }

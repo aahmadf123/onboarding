@@ -6,7 +6,6 @@ export type Bindings = {
   DB: D1Database;
   AI: Ai;
   ASSETS: Fetcher;
-  YOUTUBE_API_KEY: string;
 };
 
 // ============================================================
@@ -101,43 +100,6 @@ export interface SiteContentIndexRow {
   content_text: string;
   section_path: string | null;
   last_indexed: string;
-}
-
-export interface AIAssessmentResultRow {
-  id: number;
-  user_id: number;
-  role_archetype: string;
-  overall_level: string | null;
-  score_data: string;
-  recommended_videos: string | null;
-  learning_plan: string | null;
-  completed_at: string;
-}
-
-export interface ApprovedYouTubeSourceRow {
-  id: number;
-  source_type: 'channel' | 'playlist';
-  youtube_id: string;
-  display_name: string;
-  description: string | null;
-  category: string | null;
-  added_by: number | null;
-  is_active: number;
-  created_at: string;
-}
-
-export interface UserLearningPlanRow {
-  id: number;
-  user_id: number;
-  youtube_video_id: string;
-  video_title: string;
-  video_channel: string | null;
-  video_duration: string | null;
-  category: string | null;
-  source: string | null;
-  is_completed: number;
-  added_at: string;
-  completed_at: string | null;
 }
 
 export interface AppConfigRow {

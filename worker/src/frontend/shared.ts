@@ -76,11 +76,10 @@ function Header({ currentUser, onNavigate, currentView }) {
     { id: 'guide',      label: 'Guide' },
     { id: 'categories', label: 'Browse' },
     { id: 'orgchart',   label: 'Org Chart' },
-    { id: 'ai-hub',     label: 'AI Hub' },
-    { id: 'youtube',    label: 'Learning' },
     { id: 'resources',  label: 'Resources' },
     { id: 'contacts',   label: 'Contacts' },
     { id: 'policies',   label: 'Policies' },
+    { id: 'checklist',  label: 'Checklist' },
     { id: 'submit',     label: 'Contribute' },
     ...(isMod ? [{ id: 'moderate', label: 'Moderate' }] : []),
   ];
