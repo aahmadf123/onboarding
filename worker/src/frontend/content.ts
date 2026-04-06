@@ -4,9 +4,7 @@ export function getContentCode(): string {
   return `
 // ── HomePage ──────────────────────────────────────────────────────────────────
 function HomePage({ categories, stats, onNavigate, onSearch }) {
-  var _useState = useState(null);
-  var expandedPhase = _useState[0];
-  var setExpandedPhase = _useState[1];
+  const [expandedPhase, setExpandedPhase] = useState(null);
 
   var journeyPhases = [
     { phase: 'First Day', icon: '☀️', color: 'border-l-green-500', items: ['Get your Rocket ID & UTAD account', 'Set up Multi-Factor Authentication (MFA)', 'Activate MyUT portal access', 'Meet your team and supervisor'] },

@@ -413,14 +413,12 @@ var CHECKLIST_PHASES = ['First Day', 'First Week', 'First Month', 'First 90 Days
 
 function ChecklistPage({ currentUser, onNavigate }) {
   var storageKey = 'checklist_' + (currentUser ? currentUser.email : 'guest');
-  var _useState = useState(function () {
+  var [checked, setChecked] = useState(function () {
     try {
       var saved = localStorage.getItem(storageKey);
       return saved ? JSON.parse(saved) : {};
     } catch (e) { return {}; }
   });
-  var checked = _useState[0];
-  var setChecked = _useState[1];
 
   function toggle(id) {
     var next = Object.assign({}, checked, { [id]: !checked[id] });
