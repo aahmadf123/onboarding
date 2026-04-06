@@ -20,7 +20,7 @@ DELETE FROM OrgChart;
 INSERT INTO OrgChart (id, name, title, department, email, phone, parent_id, display_order, is_active) VALUES
 (1, 'Bryan B. Blair', 'Vice President and Director of Athletics', 'Executive', 'bryan.blair@utoledo.edu', NULL, NULL, 1, 1),
 (2, 'Rebecca Lugo', 'Executive Assistant to the Vice President and Director of Athletics', 'Executive', NULL, NULL, 1, 1, 1),
-(3, 'Nicole Harris', 'Deputy Athletic Director / Chief Operating Officer / Senior Woman Administrator', 'Executive', 'nicole.harris@utoledo.edu', NULL, 1, 2, 1),
+(3, 'Nicole Harris', 'Deputy Athletic Director / Chief Operating Officer / Senior Woman Administrator', 'Executive', 'nicole.alderson@utoledo.edu', NULL, 1, 2, 1),
 (4, 'Connor Whelan', 'Deputy Athletic Director / Chief Revenue Officer', 'Executive', NULL, NULL, 1, 3, 1),
 (5, 'Melissa DeAngelo', 'Senior Associate Athletic Director for Business Strategy / Chief Financial Officer', 'Business Office', NULL, NULL, 1, 4, 1),
 (6, 'Brian Lutz', 'Senior Associate Athletic Director for Compliance and Integrity', 'Compliance', 'brian.lutz@utoledo.edu', '419-530-8496', 1, 5, 1),
@@ -31,15 +31,15 @@ INSERT INTO OrgChart (id, name, title, department, email, phone, parent_id, disp
 (11, 'Brian Jones', 'Senior Associate Athletic Director of Health and Wellness', 'Sports Medicine', NULL, NULL, 1, 10, 1),
 (12, 'Michelle McDevitt', 'Director of Title IX and Compliance', 'Title IX Compliance', NULL, NULL, 1, 11, 1),
 (13, 'Ellen Holton', 'Assistant Athletic Director for Creative Services and Brand Strategy', 'Creative Services', NULL, NULL, 3, 1, 1),
-(14, 'Kenneth Schank', 'Assistant Athletic Director for Compliance', 'Compliance', 'kenneth.schank@utoledo.edu', NULL, 6, 1, 1),
-(15, 'Duane Welch', 'Assistant Director of SASS', 'Student-Athlete Development', 'duane.welch@utoledo.edu', NULL, 10, 1, 1),
+(14, 'Kenneth Schank', 'Associate Athletic Director for Compliance', 'Compliance', 'kenneth.schank@utoledo.edu', NULL, 6, 1, 0),
+(15, 'Duane Welch', 'Assistant Director of SASS / Director of Football Advising', 'Student-Athlete Development', 'duane.welch@utoledo.edu', NULL, 10, 1, 1),
 (16, 'Traci Snyder', 'Director of Student-Athlete Development', 'Student-Athlete Development', NULL, NULL, 10, 2, 1),
 (17, 'Brandon Hannum', 'Director of Sports Performance', 'Strength and Conditioning', NULL, NULL, 3, 2, 1),
 (18, 'Brandon Norris', 'Assistant Athletic Director of Equipment', 'Equipment', NULL, NULL, 3, 3, 1),
 (19, 'Christopher Harris', 'Director of Ticket Sales and Operations', 'Ticket Department', NULL, NULL, 4, 1, 1),
-(20, 'Steve Easton', 'Associate Director of Communications', 'Communications', NULL, NULL, 8, 1, 1),
-(21, 'Nick Kerver', 'Associate Director of Communications', 'Communications', NULL, NULL, 8, 2, 1),
-(22, 'Jordyn Prok', 'Assistant Director of Communications', 'Communications', NULL, NULL, 8, 3, 1),
+(20, 'Steve Easton', 'Associate Director of Athletic Communications', 'Communications', NULL, NULL, 8, 1, 1),
+(21, 'Nick Kerver', 'Associate Director of Athletic Communications', 'Communications', NULL, NULL, 8, 2, 1),
+(22, 'Jordyn Prok', 'Assistant Director of Athletic Communications', 'Communications', NULL, NULL, 8, 3, 1),
 (23, 'Mike Jacobs', 'Head Football Coach', 'Football', NULL, NULL, 3, 10, 1),
 (24, 'Tod Kowalczyk', 'Head Men''s Basketball Coach', 'Men''s Basketball', NULL, NULL, 3, 10, 1),
 (25, 'Ginny Boggess', 'Head Women''s Basketball Coach', 'Women''s Basketball', NULL, NULL, 3, 11, 1),
@@ -55,26 +55,6 @@ INSERT INTO OrgChart (id, name, title, department, email, phone, parent_id, disp
 (35, 'Al Wermer', 'Head Men''s Tennis Coach', 'Men''s Tennis', NULL, NULL, 3, 13, 1),
 (36, 'Chris Bailey-Greene', 'Head Women''s Rowing Coach', 'Women''s Rowing', NULL, NULL, 3, 13, 1),
 (37, 'Shelby Tincher', 'Head Cheerleading Coach', 'Cheerleading', NULL, NULL, 9, 11, 1);
-
--- ============================================================
--- APPROVED YOUTUBE SOURCES
--- ============================================================
-DELETE FROM ApprovedYouTubeSources;
-
-INSERT INTO ApprovedYouTubeSources (id, source_type, youtube_id, display_name, description, category, added_by, is_active) VALUES
-(1, 'channel', 'UCncsaFSMwjk2CHpkmvVyntA', 'NCAA', 'Official NCAA channel for compliance updates, rules education, and championships.', 'compliance', 101, 1),
-(2, 'playlist', 'PLBaXSYTHla_Pu6OYBIkzxQP5uaEAaZBZ5', 'NCAA Compliance Education', 'Official NCAA compliance education playlist and interpretations.', 'compliance', 101, 1),
-(3, 'channel', 'UCg-K8ithKxBR_bE1hY5bLhA', 'Title IX & Beyond', 'Title IX education, gender equity, and policy discussions.', 'title-ix', 101, 1),
-(4, 'channel', 'UC0Kl3mQ2VjYnJsxFfcCVizw', 'Opendorse', 'NIL education, athlete branding, and endorsements.', 'nil', 101, 1),
-(5, 'channel', 'UCZiPnQIrKJElIqjuGq_iB_g', 'INFLCR', 'NIL education and athlete brand support.', 'nil', 101, 1),
-(6, 'channel', 'UCqb3-nd3XCjfJ1Kp2KKwFQg', 'Athletes Connected', 'Athlete wellness and mental-health programming.', 'mental-health', 101, 1),
-(7, 'channel', 'UCPa3SKhLfB4sFMFnenBp0YA', 'Jed Foundation', 'Mental-health resources relevant to college students and staff.', 'mental-health', 101, 1),
-(8, 'channel', 'UCrPx4Y9pY6E6D_PMRxCk2Aw', 'Headspace', 'Mindfulness and mental-health support content.', 'mental-health', 101, 1),
-(9, 'channel', 'UCx2oNzN5PEECnYNvxypxdog', 'Simon Sinek', 'Leadership, purpose, and team-building content.', 'leadership', 101, 1),
-(10, 'channel', 'UCfiwagBgPMIXCCWJVUJFIjlg', 'N4A NFCA', 'Academic and professional development for athletics staff.', 'academic', 101, 1),
-(11, 'channel', 'UCBmS9S97CEU5zybnRqGTzdw', 'NACDA', 'Athletic administration and leadership content.', 'leadership', 101, 1),
-(12, 'channel', 'UC_wAT-GlU5h1rP2TPBKF8PA', 'Toledo Rockets', 'Official Toledo Athletics YouTube channel.', 'general', 101, 1),
-(13, 'channel', 'UCL8w_A8p8P1HWI3k6PR5Z6w', 'Two Cents (PBS)', 'Financial literacy content useful for NIL support.', 'nil', 101, 1);
 
 -- ============================================================
 -- SAMPLE TIPS
@@ -122,7 +102,7 @@ INSERT INTO BrandingTokens (id, token_group, token_key, token_value, format, des
 DELETE FROM QuickLinks;
 
 INSERT INTO QuickLinks (id, title, url, category, audience, description, display_order, is_active) VALUES
-(1, 'Welcome to UToledo', 'https://www.utoledo.edu/depts/hr/newemployees/welcome/', 'onboarding', 'all_staff', 'Primary HR onboarding entry point for new employees.', 1, 1),
+(1, 'Welcome to UToledo', 'https://www.utoledo.edu/depts/hr/employment/newemployees.html', 'onboarding', 'all_staff', 'Primary HR onboarding entry point for new employees.', 1, 1),
 (2, 'MyUT Portal', 'https://myut.utoledo.edu/', 'systems', 'all_staff', 'Primary portal for employee access and self-service.', 2, 1),
 (3, 'Employee Self-Service Dashboard', 'https://myut.utoledo.edu/', 'systems', 'all_staff', 'Benefits, earnings, taxes, leave balances, and team information.', 3, 1),
 (4, 'ParkUToledo', 'https://www.utoledo.edu/parkingservices/parkutoledo/', 'parking', 'all_staff', 'Parking permits, portal access, and parking information.', 4, 1),
@@ -134,7 +114,7 @@ INSERT INTO QuickLinks (id, title, url, category, audience, description, display
 (10, 'Benefits and Retirement', 'https://www.utoledo.edu/depts/hr/total-rewards/benefits/', 'benefits', 'benefits_eligible', 'Benefits and retirement information for employees.', 10, 1),
 (11, 'Winter Break Schedule', 'https://www.utoledo.edu/depts/hr/work-life-harmony/winter-break.html', 'calendar', 'all_staff', 'Official winter-break operational schedule.', 11, 1),
 (12, 'IT Help Desk', 'https://www.utoledo.edu/it/', 'support', 'all_staff', 'Central IT support and technology help.', 12, 1),
-(13, 'Rocket Card Office', 'https://www.utoledo.edu/administration/auxiliaryservices/rocketcard/', 'campus_access', 'all_staff', 'Rocket Card, campus identity, and related access info.', 13, 1),
+(13, 'Rocket Card Office', 'https://www.utoledo.edu/rocketcard/', 'campus_access', 'all_staff', 'Rocket Card, campus identity, and related access info.', 13, 1),
 (14, 'Facilities Work Control', 'https://www.utoledo.edu/facilities/', 'facilities', 'all_staff', 'Facilities and work order routing.', 14, 1),
 (15, 'Toledo Rockets Exchange', 'https://utrockets.com/news/2025/9/29/toledo-athletics-partners-with-teamworks-influencer-to-launch-toledo-rockets-exchange-enhancing-nil-opportunities-for-student-athletes', 'nil', 'athletics_staff', 'NIL marketplace launch reference.', 15, 1),
 (16, 'Toledo Athletics Strategic Vision', 'https://utrockets.com/news/2023/8/29/toledo-athletics-unveils-rise-together-a-strategic-vision-that-aims-to-elevate-the-program-into-national-prominence', 'strategy', 'leadership', 'Rise Together strategic vision page.', 16, 1);
@@ -150,7 +130,7 @@ INSERT INTO KeyContacts (id, function_area, department, contact_name, title, ema
 (3, 'IT Help Desk', 'UT Information Technology', NULL, NULL, 'ithelpdesk@utoledo.edu', '419-530-2400', 'https://www.utoledo.edu/it/', 'Technology support and account issues.', 1, 3),
 (4, 'Athletics Compliance', 'Compliance', 'Brian Lutz', 'Senior Associate Athletic Director for Compliance and Integrity', 'brian.lutz@utoledo.edu', '419-530-8496', NULL, 'Primary athletics compliance contact.', 1, 4),
 (5, 'Athletics Communications', 'Communications', 'Paul Helgren', 'Associate Athletic Director of Communications', 'paul.helgren@utoledo.edu', '419-530-4918', NULL, 'Media, communications, and interview routing.', 1, 5),
-(6, 'University Marketing and Communications', 'Marketing', 'Jen Sorgenfrei', 'Executive Director', 'utmarcom@utoledo.edu', '419-530-5546', NULL, 'University-level marketing and branding support.', 1, 6),
+(6, 'University Marketing and Communications', 'Marketing', 'Jen Sorgenfrei', 'Executive Director of Marketing and Communications', 'utmarcom@utoledo.edu', '419-530-5546', NULL, 'University-level marketing and branding support.', 1, 6),
 (7, 'Payroll Services', 'Office of the Controller', NULL, NULL, 'payroll@utoledo.edu', '419-530-8780', NULL, 'Payroll operations and pay-related questions.', 1, 7),
 (8, 'Door Access and Security', 'Auxiliary Services', NULL, NULL, 'dooraccess@utoledo.edu', NULL, NULL, 'Badge and door access plan changes.', 1, 8),
 (9, 'Brand Licensing', 'Marketing and Licensing', 'Kevin Taylor', 'Brand and Licensing Manager', 'kevin.taylor3@utoledo.edu', NULL, NULL, 'Trademark and licensing approvals.', 1, 9),
@@ -165,14 +145,14 @@ INSERT INTO SystemsDirectory (id, system_name, category, access_url, login_notes
 (1, 'MyUT Portal', 'portal', 'https://myut.utoledo.edu/', 'Requires UTAD credentials and MFA.', 'University IT', 'ithelpdesk@utoledo.edu', 'Primary employee gateway into university systems.', 1, 1),
 (2, 'Employee Self-Service Dashboard', 'hr', 'https://myut.utoledo.edu/', 'Available through MyUT employee tab after login.', 'Human Resources', 'HumanResourcesDepartment@utoledo.edu', 'Earnings, benefits, taxes, leave balances, and team data.', 2, 1),
 (3, 'Microsoft 365', 'productivity', 'https://www.office.com/', 'Institutional account access via UTAD.', 'University IT', 'ithelpdesk@utoledo.edu', 'Outlook, Teams, OneDrive, Word, Excel, and related apps.', 3, 1),
-(4, 'Blackboard Learn', 'learning', 'https://blackboard.utoledo.edu/', 'Available via direct sign-in or MyUT.', 'University IT', 'ithelpdesk@utoledo.edu', 'Learning management system used for course-related workflows.', 4, 1),
+(4, 'Blackboard Learn', 'learning', 'https://blackboard.utdl.edu', 'Available via direct sign-in or MyUT.', 'University IT', 'ithelpdesk@utoledo.edu', 'Learning management system used for course-related workflows.', 4, 1),
 (5, 'TimeClock Plus', 'timekeeping', NULL, 'Uses UTAD credentials for supported employee groups.', 'Payroll', 'payroll@utoledo.edu', 'Time reporting and time-off workflow for applicable employees.', 5, 1),
 (6, 'Teamworks', 'athletics_operations', 'https://teamworks.com/', 'Athletics-managed system access.', 'Athletics', 'brian.lutz@utoledo.edu', 'Athletics operating platform used across department workflows.', 6, 1),
 (7, 'Teamworks Compliance / ARMS', 'compliance', 'https://teamworks.com/compliance/', 'Athletics-managed compliance access.', 'Compliance', 'brian.lutz@utoledo.edu', 'Recruiting, CARA logging, prospect visits, and compliance workflow support.', 7, 1),
 (8, 'Teamworks GM', 'athletics_operations', 'https://teamworks.com/general-manager/', 'Athletics-managed access for roster, budget, and modern athletics operations.', 'Athletics', NULL, 'General manager functionality for revenue, roster, and transfer-era operations.', 8, 1),
 (9, 'Toledo Rockets Exchange (INFLCR)', 'nil', 'https://utrockets.com/news/2025/9/29/toledo-athletics-partners-with-teamworks-influencer-to-launch-toledo-rockets-exchange-enhancing-nil-opportunities-for-student-athletes', 'Athletics-managed NIL-related platform.', 'Athletics / NIL', NULL, 'Marketplace and NIL support environment for student-athletes.', 9, 1),
 (10, 'ParkUToledo', 'parking', 'https://www.utoledo.edu/parkingservices/parkutoledo/', 'No athletics-specific login required for public information; employee permit workflows may require authenticated access.', 'Parking Services', NULL, 'Parking permits, visitor rules, and parking guidance.', 10, 1),
-(11, 'Rocket Card / Transact eAccounts', 'campus_access', 'https://www.utoledo.edu/administration/auxiliaryservices/rocketcard/', 'Requires identity setup via UTAD before issuance.', 'Auxiliary Services', 'dooraccess@utoledo.edu', 'Campus ID and mobile credential ecosystem.', 11, 1);
+(11, 'Rocket Card / Transact eAccounts', 'campus_access', 'https://www.utoledo.edu/rocketcard/', 'Requires identity setup via UTAD before issuance.', 'Auxiliary Services', 'dooraccess@utoledo.edu', 'Campus ID and mobile credential ecosystem.', 11, 1);
 
 -- ============================================================
 -- POLICY RESOURCES
@@ -180,8 +160,8 @@ INSERT INTO SystemsDirectory (id, system_name, category, access_url, login_notes
 DELETE FROM PolicyResources;
 
 INSERT INTO PolicyResources (id, policy_code, title, category, applies_to, url, summary, display_order, is_active) VALUES
-(1, '3364-25-07', 'New Employee Orientation', 'onboarding', 'new employees', 'https://www.utoledo.edu/policies/administration/humanresources/pdfs/3364_25_07_New_Employee_Orientation.pdf', 'Mandatory orientation policy for newly hired regular staff.', 1, 1),
-(2, '3364-25-01', 'Standards of Conduct', 'conduct', 'all employees', 'https://www.utoledo.edu/policies/administration/humanresources/pdfs/3364_25_01_Standards_of_Conduct.pdf', 'Broad employee conduct expectations and disciplinary framing.', 2, 1),
+(1, '3364-25-07', 'New Employee Orientation', 'onboarding', 'new employees', 'https://www.utoledo.edu/policies/administration/humanresources/pdfs/3364_25_07.pdf', 'Mandatory orientation policy for newly hired regular staff.', 1, 1),
+(2, '3364-25-01', 'Standards of Conduct', 'conduct', 'all employees', 'https://www.utoledo.edu/policies/administration/humanresources/pdfs/3364_25_01.pdf', 'Broad employee conduct expectations and disciplinary framing.', 2, 1),
 (3, '3364-25-36', 'Vacation Policy', 'leave', 'employees', 'https://www.utoledo.edu/policies/administration/humanresources/pdfs/3364_25_36%20Vacation%20policy.pdf', 'Vacation accrual and usage guidance.', 3, 1),
 (4, '3364-25-123', 'Leaves of Absence and Sick Leave Accrual', 'leave', 'employees', 'https://codes.ohio.gov/ohio-administrative-code/rule-3364-25-123', 'Sick leave accrual and leave-of-absence framing.', 4, 1),
 (5, '3364-25-30', 'Family and Medical Leave Act', 'leave', 'eligible employees', 'https://www.utoledo.edu/policies/administration/humanresources/pdfs/3364_25_30_Family_and_Medical.pdf', 'FMLA eligibility, protections, and process requirements.', 5, 1),

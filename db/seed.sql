@@ -10,7 +10,7 @@ INSERT INTO Categories (name, description) VALUES
   ('Department Overview', 'Leadership, strategic vision, facilities, and organizational structure'),
   ('NCAA Compliance', 'NCAA bylaws, ARMS platform, booster relations, and sports wagering policy'),
   ('Title IX & Gender Equity', 'Federal compliance, reporting obligations, and transgender athlete inclusion'),
-  ('NIL (Name, Image & Likeness)', 'NIL policies, the Liftoff program, Spry, Teamworks GM, and disclosure requirements'),
+  ('NIL (Name, Image & Likeness)', 'NIL policies, Toledo Rockets Exchange (Teamworks Influencer), Campus Ink, and disclosure requirements'),
   ('HR & Benefits', 'Onboarding timeline, benefits elections, retirement plans, and work-life harmony'),
   ('IT & Campus Access', 'UTAD account, Rocket Card, Mobile ID, MFA, and essential apps'),
   ('Parking & Transportation', 'ParkUToledo permits, enforcement schedules, and campus maps'),
@@ -62,12 +62,12 @@ The primary hub for the Athletics Department. Houses the main administrative off
 LARIMER ATHLETIC COMPLEX
 Designated for football operations, strength and conditioning, and Student-Athlete Support Services (SASS). If you are working with student-athletes academically or physically, this is your primary destination.
 
-FINDLAY BUILDING
-The administrative base for the baseball and softball programs.
+FINDLAY ATHLETIC COMPLEX
+Houses locker rooms, equipment rooms, training rooms, and coaches'' offices for both Baseball and Softball at the Scott Park complex.
 
 For campus maps and directions, visit: https://www.utoledo.edu/offices/communications/pdfs/map.pdf
 
-Facilities operations questions should be directed to the facilities management team listed at: https://www.utoledo.edu/facilities/team.html');
+Note: This campus map PDF was last updated in 2011 and may not reflect current building names or layouts. Contact Facilities at 419-530-1000 for current campus information.');
 
 
 -- ============================================================
@@ -78,7 +78,6 @@ INSERT INTO Articles (category_id, title, current_content) VALUES
 (2, 'Compliance Office & Mandatory Acknowledgments',
 'The Office of Athletics Compliance is led by:
 - Brian Lutz — Senior Associate AD for Compliance and Integrity
-- Kenneth Schank — Assistant AD for Compliance
 
 ALL new staff must complete two mandatory acknowledgments:
 1. Digitally sign the Employee Compliance Guide (available through the compliance office)
@@ -197,18 +196,22 @@ Questions about specific situations should be directed to the compliance office 
 -- ============================================================
 
 INSERT INTO Articles (category_id, title, current_content) VALUES
-(4, 'NIL at Toledo — Overview & the Liftoff Program',
-'The University of Toledo was the FIRST MAC institution to launch an organized NIL collective. NIL education is mandatory for all staff.
+(4, 'NIL at Toledo — Overview & Current Ecosystem',
+'The University of Toledo has been proactive in supporting student-athlete NIL opportunities. NIL education is mandatory for all staff.
 
 KEY FACTS:
-- Toledo has secured exclusive apparel partnerships through Campus Ink
-- The department facilitates national brand deals for student-athletes
-- The "Liftoff" program is Toledo''s centralized NIL initiative
+- Toledo has secured exclusive apparel partnerships through Campus Ink (official NIL licensee for merchandise, since May 2023)
+- The department supports student-athletes in navigating NIL opportunities through the NIL Resource Center
+- "Liftoff" was a 2021 NIL education program operated through Opendorse — it was an education initiative, not a collective
+- "Friends of Rocky" was the official Toledo NIL collective, founded June 2022 as the first in the MAC — it is currently concluding operations
+- The current NIL marketplace is the Toledo Rockets Exchange, powered by Teamworks Influencer (launched September 2025)
 
-THE NIL RESOURCE CENTER:
-The NIL Resource Center connects student-athletes with business partners and serves as the hub for all NIL activity. All NIL opportunities should be routed through this center.
+CURRENT NIL ECOSYSTEM:
+- Toledo Rockets Exchange (Teamworks Influencer) — the active NIL marketplace for student-athletes
+- Campus Ink — official NIL merchandise licensee
+- Friends of Rocky collective — concluding operations
 
-Reference: https://utrockets.com/sports/2022/2/16/student-athlete-nil-resource-center');
+Reference: https://utrockets.com/news/2025/9/29/toledo-athletics-partners-with-teamworks-influencer-to-launch-toledo-rockets-exchange-enhancing-nil-opportunities-for-student-athletes');
 
 INSERT INTO Articles (category_id, title, current_content) VALUES
 (4, 'NIL Compliance Rules & Staff Restrictions',
@@ -227,18 +230,18 @@ WHAT YOU NEED TO KNOW:
 When in doubt, contact the compliance office before advising a student-athlete on any NIL matter.');
 
 INSERT INTO Articles (category_id, title, current_content) VALUES
-(4, 'Spry & Teamworks GM — NIL Education Platforms',
-'Toledo uses two external platforms to deliver NIL education and compliance tools to student-athletes. Staff are responsible for knowing how to navigate and administer these platforms.
+(4, 'Toledo Rockets Exchange & Teamworks GM — NIL Platforms',
+'Toledo uses the following platforms for NIL support and compliance tools. Staff should be familiar with both.
 
-SPRY
-Provides NIL compliance education and monitoring for student-athletes. Staff use Spry to track whether athletes have completed required NIL education modules.
-Reference: https://spry.so/nil-education/
+TOLEDO ROCKETS EXCHANGE (Teamworks Influencer)
+The current NIL marketplace for Toledo student-athletes. Launched September 2025, it connects athletes with brand partners and facilitates NIL opportunities.
+Reference: https://utrockets.com/news/2025/9/29/toledo-athletics-partners-with-teamworks-influencer-to-launch-toledo-rockets-exchange-enhancing-nil-opportunities-for-student-athletes
 
 TEAMWORKS GENERAL MANAGER (GM)
 Provides foundational financial literacy, brand management, and compliance courses. All student-athletes are enrolled.
 Reference: https://teamworks.com/blog/toledo-gm/
 
-New staff should request admin access to both platforms from the compliance office during their first week.');
+New staff should request admin access to applicable platforms from the compliance office during their first week.');
 
 
 -- ============================================================
@@ -393,7 +396,7 @@ YOUR PERMIT AS A FULL-TIME ATHLETICS STAFF MEMBER:
 - This is the standard permit for full-time athletics department employees
 
 OTHER PERMIT TYPES:
-- "E" Permit (Executive) — $952/year — For senior leadership only
+- "E" Permit (Executive) — $952/year — For senior leadership only (Note: E Permit pricing is subject to change — contact ParkUToledo at parkutoledo.com to confirm current rates.)
 - "C" Permit (Guest/Daily) — $6.20/day or $62.50/month — For visitors or staff opting out of annual permits (white-lined spaces)
 
 HOW TO PURCHASE:
@@ -406,6 +409,7 @@ INSERT INTO Articles (category_id, title, current_content) VALUES
 'Use the interactive campus map to identify parking areas near your assigned facilities before your first day.
 
 Campus map (PDF): https://www.utoledo.edu/offices/communications/pdfs/map.pdf
+Note: This campus map PDF was last updated in 2011 and may not reflect current building names or layouts. Contact Facilities at 419-530-1000 for current campus information.
 Interactive parking finder: https://www.parkutoledo.com/find-parking
 ParkUToledo news & updates: https://www.parkutoledo.com/parking-news/parking-updates-for-2025-26-school-year
 
@@ -521,7 +525,7 @@ WESTGATE
 Ideal for individuals prioritizing immediate access to high-density retail, diverse dining options, and major grocery chains. More suburban feel with convenient highway access.
 
 For broader neighborhood research:
-https://www.danberry.com/blog/the-11-hottest-neighborhoods-in-the-toledo-area');
+For neighborhood information, search ''Toledo Ohio neighborhoods'' or visit the Toledo Regional Chamber of Commerce at toledochamber.com');
 
 INSERT INTO Articles (category_id, title, current_content) VALUES
 (9, 'Coffee Shops, Dining & Working Remotely in Toledo',

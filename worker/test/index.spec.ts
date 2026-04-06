@@ -79,40 +79,6 @@ content_text TEXT NOT NULL,
 section_path TEXT,
 last_indexed DATETIME DEFAULT CURRENT_TIMESTAMP
 )`,
-`CREATE TABLE IF NOT EXISTS AIAssessmentResults (
-id INTEGER PRIMARY KEY AUTOINCREMENT,
-user_id INTEGER NOT NULL,
-role_archetype TEXT NOT NULL,
-overall_level TEXT,
-score_data TEXT NOT NULL,
-recommended_videos TEXT,
-learning_plan TEXT,
-completed_at DATETIME DEFAULT CURRENT_TIMESTAMP
-)`,
-`CREATE TABLE IF NOT EXISTS ApprovedYouTubeSources (
-id INTEGER PRIMARY KEY AUTOINCREMENT,
-source_type TEXT NOT NULL,
-youtube_id TEXT NOT NULL UNIQUE,
-display_name TEXT NOT NULL,
-description TEXT,
-category TEXT,
-added_by INTEGER,
-is_active INTEGER DEFAULT 1,
-created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-)`,
-`CREATE TABLE IF NOT EXISTS UserLearningPlan (
-id INTEGER PRIMARY KEY AUTOINCREMENT,
-user_id INTEGER NOT NULL,
-youtube_video_id TEXT NOT NULL,
-video_title TEXT NOT NULL,
-video_channel TEXT,
-video_duration TEXT,
-category TEXT,
-source TEXT,
-is_completed INTEGER DEFAULT 0,
-added_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-completed_at DATETIME
-)`,
 `CREATE TABLE IF NOT EXISTS AppConfig (
 key TEXT PRIMARY KEY,
 value TEXT NOT NULL,
@@ -294,8 +260,7 @@ const text = await response.text();
 expect(text).toContain('OnboardingGuidePage');
 expect(text).toContain('OrgChartPage');
 expect(text).toContain('AIChatWidget');
-expect(text).toContain('AIHubPage');
-expect(text).toContain('YouTubeFinderPage');
+expect(text).toContain('ChecklistPage');
 expect(text).toContain('ResourcesPage');
 expect(text).toContain('ContactsPage');
 expect(text).toContain('PoliciesPage');

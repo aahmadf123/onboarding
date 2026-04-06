@@ -389,510 +389,109 @@ function AIChatWidget({ currentUser }) {
   );
 }
 
-// ── AIHubPage ─────────────────────────────────────────────────────────────────
-// Pre-built custom assessment questions per role
-var ASSESSMENT_QUESTIONS = {
-  Coach: [
-    { question: 'A high school recruit messages you on social media asking about your program. What steps do you take before responding, and what NCAA rules apply to this contact?', category: 'Recruiting Compliance' },
-    { question: 'You notice an athletics booster offering to take a prospective student-athlete out for dinner during an unofficial visit. How do you handle this situation?', category: 'Booster Rules' },
-    { question: 'A student-athlete on your team has been offered a NIL deal from a local business. What do you need to know about NIL rules, and what should you advise them?', category: 'NIL Fundamentals' },
-    { question: 'One of your athletes seems withdrawn and their performance has dropped significantly. What is the proper protocol for referring them to mental health support?', category: 'Mental Health Referral' },
-    { question: 'How do you ensure your team practice hours stay within CARA (Countable Athletically Related Activities) limits, and what tools do you use to log them?', category: 'CARA Logging' },
-  ],
-  Administrator: [
-    { question: 'A new employee asks you to help them get set up with university systems. Walk through the correct order of account setup from Rocket ID to full MyUT access.', category: 'IT Setup' },
-    { question: 'An employee missed the 30-day benefits enrollment window and wants to sign up now. What are their options, and what policy applies?', category: 'HR Processes' },
-    { question: 'You receive an email asking for a student-athlete academic record to share with a media outlet. How do you handle this under FERPA guidelines?', category: 'General Compliance' },
-    { question: 'A colleague is creating a department flyer and asks whether to use the University blue or the Athletics blue. How do you advise them on brand standards?', category: 'Campus Navigation' },
-    { question: 'Someone reports witnessing potential harassment in the workplace. What is the proper reporting procedure and which offices need to be involved?', category: 'Title IX Basics' },
-  ],
-  'Compliance Officer': [
-    { question: 'A coach reports that a booster provided transportation to a recruit during a visit without prior approval. What steps do you take to investigate and report this?', category: 'NCAA Bylaws' },
-    { question: 'A student-athlete has signed an NIL deal that may conflict with a university sponsorship. How do you evaluate this under current NIL governance rules?', category: 'NIL Advanced' },
-    { question: 'Walk through how you would use Teamworks Compliance / ARMS to monitor and document recruiting contacts for an upcoming evaluation period.', category: 'ARMS Platform' },
-    { question: 'A Title IX complaint has been filed involving a student-athlete and a staff member. What is the compliance office role versus the Title IX coordinator role?', category: 'Title IX Advanced' },
-    { question: 'An alumni group wants to start a booster organization to support the athletics department. What compliance framework needs to be established before they can operate?', category: 'Booster Management' },
-  ],
-  'Athletic Trainer': [
-    { question: 'A student-athlete discloses suicidal thoughts to you during a treatment session. What is the immediate protocol and who do you contact?', category: 'Mental Health Protocol' },
-    { question: 'A coach pressures you to clear an athlete for competition even though you have concerns about their injury recovery. How do you handle this situation?', category: 'SASS Services' },
-    { question: 'An athlete is transferring to another university and requests their medical records. What rules govern this transfer of information?', category: 'Eligibility Rules' },
-    { question: 'How do you document and track concussion protocols using department systems, and what reporting requirements exist for return-to-play decisions?', category: 'Academic Support' },
-    { question: 'A student-athlete wants to participate in a charity run organized by a local business as part of an NIL deal. What considerations apply from a sports medicine perspective?', category: 'Career Development' },
-  ],
-  'Academic Advisor': [
-    { question: 'A student-athlete is falling behind in classes and is at risk of losing eligibility. What support services through SASS can you connect them with?', category: 'SASS Services' },
-    { question: 'A student-athlete is considering transferring. What are the current eligibility rules for transfers, and what information can you share with the student and receiving institution?', category: 'Eligibility Rules' },
-    { question: 'An athlete tells you they are experiencing severe anxiety and it is affecting their academic performance. What mental health referral pathway do you follow?', category: 'Mental Health Protocol' },
-    { question: 'A senior student-athlete is preparing for life after college sports. What career development resources and NIL-related opportunities can you guide them toward?', category: 'Career Development' },
-    { question: 'How do you coordinate with compliance to ensure that academic support activities do not inadvertently create CARA violations?', category: 'Academic Support' },
-  ],
-  'Operations Staff': [
-    { question: 'A visiting team arrives for a competition and their bus needs parking near the venue. Walk through how you coordinate this using campus logistics and parking systems.', category: 'Parking Systems' },
-    { question: 'You discover a facilities issue (water leak) in the athletics building on a game day. What is your escalation procedure through work control?', category: 'Facility Management' },
-    { question: 'You are planning a home game event that requires coordination with multiple departments. What steps do you take for event operations planning?', category: 'Event Operations' },
-    { question: 'A media crew needs temporary access to restricted areas of the athletics facility. How do you handle door access and credential requests?', category: 'Campus Logistics' },
-    { question: 'During a compliance training session, you learn about new NCAA rules that might affect how events are managed. How do you apply compliance awareness to operations?', category: 'General Compliance' },
-  ],
-};
+// ── ChecklistPage ─────────────────────────────────────────────────────────────
+var CHECKLIST_ITEMS = [
+  { id: 'rocket-id', phase: 'First Day', label: 'Get your Rocket ID & UTAD account' },
+  { id: 'mfa', phase: 'First Day', label: 'Set up Multi-Factor Authentication (MFA)' },
+  { id: 'myut', phase: 'First Day', label: 'Activate MyUT portal access' },
+  { id: 'meet-team', phase: 'First Day', label: 'Meet your team and supervisor' },
+  { id: 'parking', phase: 'First Week', label: 'Complete parking permit setup via vPermit' },
+  { id: 'direct-deposit', phase: 'First Week', label: 'Set up direct deposit in MyUT' },
+  { id: 'facilities-tour', phase: 'First Week', label: 'Tour athletic facilities' },
+  { id: 'systems-training', phase: 'First Week', label: 'Complete systems training (Teamworks, Banner, etc.)' },
+  { id: 'benefits', phase: 'First Month', label: 'Complete benefits enrollment (30-day window)' },
+  { id: 'compliance-training', phase: 'First Month', label: 'Finish all required compliance training modules' },
+  { id: 'dept-workflows', phase: 'First Month', label: 'Learn department workflows' },
+  { id: 'key-contacts', phase: 'First Month', label: 'Connect with key contacts from the directory' },
+  { id: 'compliance-policies', phase: 'First 90 Days', label: 'Review all compliance policies' },
+  { id: 'learning-plan', phase: 'First 90 Days', label: 'Build your personal learning plan' },
+  { id: 'supervisor-checkin', phase: 'First 90 Days', label: 'Check in with supervisor on goals' },
+  { id: 'toledo-explore', phase: 'First 90 Days', label: 'Explore Toledo neighborhoods and local resources' },
+];
 
-function AIHubPage({ currentUser, onNavigate }) {
-  var _useState = useState(null);
-  var selectedRole = _useState[0];
-  var setSelectedRole = _useState[1];
-  var _useState2 = useState(0);
-  var questionIndex = _useState2[0];
-  var setQuestionIndex = _useState2[1];
-  var _useState3 = useState([]);
-  var answers = _useState3[0];
-  var setAnswers = _useState3[1];
-  var _useState4 = useState('');
-  var answer = _useState4[0];
-  var setAnswer = _useState4[1];
-  var _useState5 = useState(false);
-  var loading = _useState5[0];
-  var setLoading = _useState5[1];
-  var _useState6 = useState(null);
-  var evaluation = _useState6[0];
-  var setEvaluation = _useState6[1];
-  var _useState7 = useState(null);
-  var pastResults = _useState7[0];
-  var setPastResults = _useState7[1];
-  var _useState8 = useState(false);
-  var showPast = _useState8[0];
-  var setShowPast = _useState8[1];
-  var _useState9 = useState(null);
-  var aiError = _useState9[0];
-  var setAiError = _useState9[1];
+var CHECKLIST_PHASES = ['First Day', 'First Week', 'First Month', 'First 90 Days'];
 
-  useEffect(function () {
-    if (currentUser) {
-      api('/ai/assessment/results/' + encodeURIComponent(currentUser.id)).then(function (r) {
-        if (r.success && r.data) setPastResults(r.data);
-      });
-    }
-  }, [currentUser]);
+function ChecklistPage({ currentUser, onNavigate }) {
+  var storageKey = 'checklist_' + (currentUser ? currentUser.email : 'guest');
+  var _useState = useState(function () {
+    try {
+      var saved = localStorage.getItem(storageKey);
+      return saved ? JSON.parse(saved) : {};
+    } catch (e) { return {}; }
+  });
+  var checked = _useState[0];
+  var setChecked = _useState[1];
 
-  function startAssessment(role) {
-    setSelectedRole(role);
-    setQuestionIndex(0);
-    setAnswers([]);
-    setEvaluation(null);
-    setAiError(null);
+  function toggle(id) {
+    var next = Object.assign({}, checked, { [id]: !checked[id] });
+    setChecked(next);
+    try { localStorage.setItem(storageKey, JSON.stringify(next)); } catch (e) {}
   }
 
-  function submitAnswer() {
-    if (!answer.trim()) return;
-    var currentAnswer = answer.trim();
-    var questions = ASSESSMENT_QUESTIONS[selectedRole] || [];
-    var newAnswers = answers.concat([currentAnswer]);
-    setAnswers(newAnswers);
-    setAnswer('');
+  function reset() {
+    setChecked({});
+    try { localStorage.setItem(storageKey, JSON.stringify({})); } catch (e) {}
+  }
 
-    // If all questions answered, send to AI for evaluation
-    if (newAnswers.length >= questions.length) {
-      setLoading(true);
-      // Build messages from Q&A for AI evaluation
-      var messages = [];
-      for (var i = 0; i < questions.length; i++) {
-        messages.push({ role: 'assistant', content: questions[i].question });
-        if (newAnswers[i]) messages.push({ role: 'user', content: newAnswers[i] });
-      }
-      api('/ai/assessment/answer', {
-        method: 'POST',
-        body: JSON.stringify({
-          role_archetype: selectedRole,
-          messages: messages,
-          is_last_answer: true,
-        }),
-      }).then(function (r) {
-        setLoading(false);
-        if (r.success && r.data && r.data.evaluation) {
-          setEvaluation(r.data.evaluation);
-          if (currentUser) {
-            api('/ai/assessment/save', {
-              method: 'POST',
-              body: JSON.stringify({
-                user_id: currentUser.id,
-                role_archetype: selectedRole,
-                overall_level: r.data.evaluation.overall_level || 'beginner',
-                score_data: r.data.evaluation.score_data || {},
-                learning_plan: r.data.evaluation.learning_plan || '',
+  var total = CHECKLIST_ITEMS.length;
+  var done = CHECKLIST_ITEMS.filter(function (item) { return checked[item.id]; }).length;
+  var pct = Math.round((done / total) * 100);
+
+  return React.createElement('div', { className: 'max-w-3xl mx-auto px-4 py-8 fade-in' },
+    React.createElement('div', { className: 'flex items-center justify-between mb-6' },
+      React.createElement('div', null,
+        React.createElement('h1', { className: 'text-2xl font-bold text-gray-900' }, '✅ Onboarding Checklist'),
+        React.createElement('p', { className: 'text-gray-500 text-sm mt-1' }, 'Track your onboarding progress. Your progress is saved automatically.')
+      ),
+      React.createElement('button', {
+        onClick: reset,
+        className: 'text-xs text-gray-400 hover:text-red-500 border border-gray-200 px-3 py-1.5 rounded-lg transition-colors',
+      }, 'Reset Checklist')
+    ),
+
+    React.createElement('div', { className: 'bg-white rounded-xl border border-gray-200 p-5 mb-6' },
+      React.createElement('div', { className: 'flex justify-between items-center mb-2' },
+        React.createElement('span', { className: 'text-sm font-medium text-gray-700' }, done + ' of ' + total + ' completed'),
+        React.createElement('span', { className: 'text-sm font-semibold text-toledo-blue' }, pct + '%')
+      ),
+      React.createElement('div', { className: 'w-full bg-gray-100 rounded-full h-3' },
+        React.createElement('div', {
+          className: 'bg-toledo-blue h-3 rounded-full transition-all duration-300',
+          style: { width: pct + '%' },
+        })
+      ),
+      done === total && React.createElement('p', { className: 'text-center text-green-600 font-semibold mt-3 text-sm' }, '🎉 You\'ve completed all onboarding tasks!')
+    ),
+
+    CHECKLIST_PHASES.map(function (phase) {
+      var items = CHECKLIST_ITEMS.filter(function (item) { return item.phase === phase; });
+      var phaseDone = items.filter(function (item) { return checked[item.id]; }).length;
+      return React.createElement('div', { key: phase, className: 'bg-white rounded-xl border border-gray-200 p-5 mb-4' },
+        React.createElement('div', { className: 'flex items-center justify-between mb-3' },
+          React.createElement('h2', { className: 'font-semibold text-gray-900' }, phase),
+          React.createElement('span', { className: 'text-xs text-gray-400' }, phaseDone + '/' + items.length)
+        ),
+        React.createElement('div', { className: 'space-y-2' },
+          items.map(function (item) {
+            var isChecked = !!checked[item.id];
+            return React.createElement('label', {
+              key: item.id,
+              className: 'flex items-center gap-3 cursor-pointer group',
+            },
+              React.createElement('input', {
+                type: 'checkbox',
+                checked: isChecked,
+                onChange: function () { toggle(item.id); },
+                className: 'w-4 h-4 rounded border-gray-300 text-toledo-blue focus:ring-toledo-blue cursor-pointer',
               }),
-            });
-          }
-        } else {
-          setAiError('Unable to evaluate your responses. The AI service may be temporarily unavailable. Your answers have been recorded.');
-        }
-      }).catch(function () {
-        setLoading(false);
-        setAiError('Unable to connect to the AI evaluation service. Please try again later.');
-      });
-    } else {
-      setQuestionIndex(newAnswers.length);
-    }
-  }
-
-  // Role selection screen
-  if (!selectedRole && !showPast) {
-    return React.createElement('div', { className: 'max-w-4xl mx-auto px-4 py-8 fade-in' },
-      React.createElement('button', { onClick: function () { onNavigate('home'); }, className: 'flex items-center gap-2 text-toledo-blue hover:text-toledo-dark mb-6 text-sm font-medium' },
-        React.createElement(IconArrowLeft), 'Back to Home'),
-      React.createElement('h1', { className: 'text-2xl font-bold text-gray-900 flex items-center gap-2 mb-1' },
-        React.createElement(IconSparkles), 'AI Literacy Assessment'),
-      React.createElement('p', { className: 'text-gray-500 text-sm mb-2' }, 'Assess your knowledge with scenario-based questions tailored to your role. AI evaluates your responses.'),
-      React.createElement('div', { className: 'bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-6 text-sm text-yellow-800' },
-        '⚠️ This assessment is for self-development purposes only, not for HR evaluation. Results are private and meant to guide your learning.'),
-      pastResults && pastResults.length > 0 && React.createElement('button', {
-        onClick: function () { setShowPast(true); },
-        className: 'mb-6 text-sm text-toledo-blue hover:underline',
-      }, '📊 View Past Results'),
-      React.createElement('h2', { className: 'text-lg font-semibold text-gray-900 mb-4' }, 'Select Your Role'),
-      React.createElement('div', { className: 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4' },
-        ROLE_ARCHETYPES.map(function (role) {
-          return React.createElement('button', {
-            key: role.id,
-            onClick: function () { startAssessment(role.id); },
-            className: 'bg-white rounded-xl border border-gray-200 p-5 text-left hover:shadow-md hover:border-toledo-blue/30 transition-all group',
-          },
-            React.createElement('h3', { className: 'font-semibold text-gray-900 group-hover:text-toledo-blue transition-colors mb-1' }, role.label),
-            React.createElement('p', { className: 'text-sm text-gray-500' }, role.desc)
-          );
-        })
-      )
-    );
-  }
-
-  // Past results screen
-  if (showPast) {
-    return React.createElement('div', { className: 'max-w-4xl mx-auto px-4 py-8 fade-in' },
-      React.createElement('button', { onClick: function () { setShowPast(false); }, className: 'flex items-center gap-2 text-toledo-blue hover:text-toledo-dark mb-6 text-sm font-medium' },
-        React.createElement(IconArrowLeft), 'Back to Assessment'),
-      React.createElement('h1', { className: 'text-2xl font-bold text-gray-900 mb-6' }, 'Past Assessment Results'),
-      pastResults && Array.isArray(pastResults) && pastResults.length > 0
-        ? React.createElement('div', { className: 'space-y-4' },
-            pastResults.map(function (result, i) {
-              return React.createElement('div', { key: i, className: 'bg-white rounded-xl border border-gray-200 p-5' },
-                React.createElement('div', { className: 'flex items-center justify-between mb-3' },
-                  React.createElement('h3', { className: 'font-semibold text-gray-900' }, result.role_archetype || 'Assessment'),
-                  result.completed_at && React.createElement('span', { className: 'text-xs text-gray-400' }, new Date(result.completed_at).toLocaleDateString())
-                ),
-                result.overall_level && React.createElement('p', { className: 'text-sm mb-2' },
-                  React.createElement('span', { className: 'font-medium text-gray-700' }, 'Level: '),
-                  React.createElement('span', { className: 'text-toledo-blue font-semibold capitalize' }, result.overall_level)
-                ),
-                result.learning_plan && React.createElement('p', { className: 'text-sm text-gray-600' }, result.learning_plan)
-              );
-            })
-          )
-        : React.createElement('p', { className: 'text-gray-400 text-center py-8' }, 'No past results found.')
-    );
-  }
-
-  // Evaluation results
-  if (evaluation) {
-    return React.createElement('div', { className: 'max-w-4xl mx-auto px-4 py-8 fade-in' },
-      React.createElement('button', { onClick: function () { setSelectedRole(null); setEvaluation(null); }, className: 'flex items-center gap-2 text-toledo-blue hover:text-toledo-dark mb-6 text-sm font-medium' },
-        React.createElement(IconArrowLeft), 'Take Another Assessment'),
-      React.createElement('div', { className: 'bg-white rounded-xl border border-gray-200 p-6' },
-        React.createElement('h2', { className: 'text-xl font-bold text-gray-900 mb-4 flex items-center gap-2' },
-          React.createElement(IconCheckCircle), 'Assessment Complete'),
-        evaluation.overall_level && React.createElement('div', { className: 'mb-4 p-4 bg-toledo-blue/5 rounded-lg' },
-          React.createElement('p', { className: 'text-sm text-gray-600' }, 'Your AI Literacy Level:'),
-          React.createElement('p', { className: 'text-2xl font-bold text-toledo-blue mt-1 capitalize' }, evaluation.overall_level)
-        ),
-        evaluation.score_data && Object.keys(evaluation.score_data).length > 0 && React.createElement('div', { className: 'mb-4' },
-          React.createElement('h3', { className: 'font-semibold text-gray-900 mb-2' }, 'Skill Breakdown'),
-          React.createElement('div', { className: 'space-y-2' },
-            Object.entries(evaluation.score_data).map(function (entry, i) {
-              var cat = entry[0]; var data = entry[1];
-              return React.createElement('div', { key: i, className: 'flex items-start gap-2 text-sm' },
-                React.createElement('span', { className: 'font-medium text-gray-700 min-w-0 flex-1' }, (data && data.score !== undefined ? '[' + data.score + '/5] ' : '') + cat),
-                data && data.feedback && React.createElement('span', { className: 'text-gray-500 flex-1' }, data.feedback)
-              );
-            })
-          )
-        ),
-        evaluation.learning_plan && React.createElement('div', { className: 'bg-blue-50 rounded-lg p-4' },
-          React.createElement('h3', { className: 'font-semibold text-gray-900 mb-2' }, 'Recommended Next Steps'),
-          React.createElement('p', { className: 'text-sm text-gray-700' }, evaluation.learning_plan)
+              React.createElement('span', {
+                className: 'text-sm ' + (isChecked ? 'line-through text-gray-400' : 'text-gray-700 group-hover:text-toledo-blue'),
+              }, item.label)
+            );
+          })
         )
-      )
-    );
-  }
-
-  // Assessment question flow with pre-built questions
-  var questions = ASSESSMENT_QUESTIONS[selectedRole] || [];
-  var currentQ = questions[questionIndex];
-
-  if (aiError) {
-    return React.createElement('div', { className: 'max-w-2xl mx-auto px-4 py-8 fade-in' },
-      React.createElement('button', { onClick: function () { setSelectedRole(null); setAiError(null); }, className: 'flex items-center gap-2 text-toledo-blue hover:text-toledo-dark mb-6 text-sm font-medium' },
-        React.createElement(IconArrowLeft), 'Back to Role Selection'),
-      React.createElement('div', { className: 'bg-white rounded-xl border border-gray-200 p-6 text-center' },
-        React.createElement('p', { className: 'text-gray-700 mb-4' }, aiError),
-        React.createElement('button', {
-          onClick: function () { setSelectedRole(null); setAiError(null); },
-          className: 'px-6 py-2 bg-toledo-blue text-white rounded-lg hover:bg-toledo-dark text-sm font-medium',
-        }, 'Try Again')
-      )
-    );
-  }
-
-  return React.createElement('div', { className: 'max-w-2xl mx-auto px-4 py-8 fade-in' },
-    React.createElement('button', { onClick: function () { setSelectedRole(null); }, className: 'flex items-center gap-2 text-toledo-blue hover:text-toledo-dark mb-6 text-sm font-medium' },
-      React.createElement(IconArrowLeft), 'Cancel Assessment'),
-    React.createElement('div', { className: 'bg-white rounded-xl border border-gray-200 p-6' },
-      React.createElement('div', { className: 'flex items-center gap-2 mb-4' },
-        React.createElement(IconSparkles),
-        React.createElement('h2', { className: 'font-semibold text-gray-900' }, 'AI Literacy Assessment'),
-        React.createElement('span', { className: 'ml-auto px-2 py-0.5 bg-toledo-blue/10 text-toledo-blue text-xs rounded-full' }, selectedRole)
-      ),
-      // Progress bar
-      React.createElement('div', { className: 'mb-4' },
-        React.createElement('div', { className: 'flex justify-between text-xs text-gray-500 mb-1' },
-          React.createElement('span', null, 'Question ' + (questionIndex + 1) + ' of ' + questions.length),
-          React.createElement('span', null, Math.round(((questionIndex) / questions.length) * 100) + '% complete')
-        ),
-        React.createElement('div', { className: 'w-full bg-gray-200 rounded-full h-2' },
-          React.createElement('div', { className: 'bg-toledo-blue h-2 rounded-full transition-all', style: { width: ((questionIndex) / questions.length * 100) + '%' } })
-        )
-      ),
-      loading
-        ? React.createElement('div', { className: 'text-center py-8 text-gray-500' }, 'Evaluating your responses with AI...')
-        : React.createElement('div', null,
-            currentQ && React.createElement('div', { className: 'mb-4' },
-              React.createElement('span', { className: 'inline-block px-2 py-0.5 bg-purple-100 text-purple-700 text-xs rounded-full mb-2' }, currentQ.category),
-              React.createElement('div', { className: 'p-4 bg-gray-50 rounded-lg' },
-                React.createElement('p', { className: 'text-sm text-gray-700' }, currentQ.question)
-              )
-            ),
-            React.createElement('textarea', {
-              value: answer, onChange: function (e) { setAnswer(e.target.value); },
-              placeholder: 'Type your answer here...',
-              rows: 4,
-              className: 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-toledo-blue text-sm resize-y',
-            }),
-            React.createElement('button', {
-              onClick: submitAnswer, disabled: !answer.trim() || loading,
-              className: 'mt-3 w-full py-2 bg-toledo-blue text-white rounded-lg hover:bg-toledo-dark text-sm font-medium disabled:opacity-50',
-            }, questionIndex + 1 >= questions.length ? 'Submit & Get AI Evaluation' : 'Submit Answer')
-          ),
-      questionIndex === 0 && React.createElement('p', { className: 'mt-4 text-xs text-gray-400 text-center' },
-        'Note: This is a self-development exercise, NOT an HR evaluation.')
-    )
-  );
-}
-
-// ── YouTubeFinderPage ─────────────────────────────────────────────────────────
-function YouTubeFinderPage({ currentUser, onNavigate }) {
-  var _useState = useState('search');
-  var tab = _useState[0];
-  var setTab = _useState[1];
-  var _useState2 = useState('');
-  var query = _useState2[0];
-  var setQuery = _useState2[1];
-  var _useState3 = useState([]);
-  var videos = _useState3[0];
-  var setVideos = _useState3[1];
-  var _useState4 = useState(false);
-  var searching = _useState4[0];
-  var setSearching = _useState4[1];
-  var _useState5 = useState([]);
-  var plan = _useState5[0];
-  var setPlan = _useState5[1];
-  var _useState6 = useState(false);
-  var loadingPlan = _useState6[0];
-  var setLoadingPlan = _useState6[1];
-  var _useState7 = useState([]);
-  var sources = _useState7[0];
-  var setSources = _useState7[1];
-  var _useState8 = useState(null);
-  var addedId = _useState8[0];
-  var setAddedId = _useState8[1];
-  var _useState9 = useState(null);
-  var searchError = _useState9[0];
-  var setSearchError = _useState9[1];
-  var isMod = currentUser && (currentUser.role === 'moderator' || currentUser.role === 'admin');
-
-  useEffect(function () {
-    if (currentUser && tab === 'plan') {
-      setLoadingPlan(true);
-      api('/youtube/plan/' + encodeURIComponent(currentUser.id)).then(function (r) {
-        if (r.success) setPlan(r.data || []);
-        setLoadingPlan(false);
-      });
-    }
-  }, [tab, currentUser]);
-
-  useEffect(function () {
-    if (tab === 'sources') {
-      api('/youtube/sources').then(function (r) {
-        if (r.success) setSources(r.data || []);
-      });
-    }
-  }, [tab]);
-
-  function handleSearch(e) {
-    e.preventDefault();
-    if (!query.trim()) return;
-    setSearching(true);
-    setSearchError(null);
-    api('/youtube/search?q=' + encodeURIComponent(query.trim())).then(function (r) {
-      setSearching(false);
-      if (r.success && r.data) {
-        setVideos(Array.isArray(r.data) ? r.data : r.data.videos || []);
-        setSearchError(null);
-      } else {
-        setVideos([]);
-        setSearchError(r.error || 'Search failed. Please try again.');
-      }
-    }).catch(function () {
-      setSearching(false);
-      setVideos([]);
-      setSearchError('An error occurred while searching. Please try again.');
-    });
-  }
-
-  function addToPlan(video) {
-    api('/youtube/plan', {
-      method: 'POST',
-      body: JSON.stringify({
-        user_id: currentUser.id,
-        youtube_video_id: video.id || video.youtube_video_id,
-        video_title: video.title,
-        video_channel: video.channel,
-        video_duration: video.duration,
-        category: video.category || 'General',
-        source: video.source || video.channel,
-      }),
-    }).then(function (r) {
-      if (r.success) setAddedId(video.id || video.youtube_video_id);
-    });
-  }
-
-  function toggleComplete(planItem) {
-    api('/youtube/plan/' + planItem.id + '/complete', { method: 'PUT' }).then(function (r) {
-      if (r.success) {
-        setPlan(function (prev) {
-          return prev.map(function (p) {
-            return p.id === planItem.id ? Object.assign({}, p, { completed: !p.completed }) : p;
-          });
-        });
-      }
-    });
-  }
-
-  return React.createElement('div', { className: 'max-w-4xl mx-auto px-4 py-8 fade-in' },
-    React.createElement('button', { onClick: function () { onNavigate('home'); }, className: 'flex items-center gap-2 text-toledo-blue hover:text-toledo-dark mb-6 text-sm font-medium' },
-      React.createElement(IconArrowLeft), 'Back to Home'),
-    React.createElement('h1', { className: 'text-2xl font-bold text-gray-900 flex items-center gap-2 mb-1' },
-      React.createElement(IconVideo), 'Video Learning'),
-    React.createElement('p', { className: 'text-gray-500 text-sm mb-6' }, 'Find training videos and build your learning plan.'),
-
-    React.createElement('div', { className: 'flex gap-1 mb-6 bg-gray-100 p-1 rounded-lg w-fit' },
-      [
-        { id: 'search', label: 'Search Videos' },
-        { id: 'plan', label: 'My Learning Plan' },
-      ].concat(isMod ? [{ id: 'sources', label: 'Sources' }] : []).map(function (t) {
-        return React.createElement('button', {
-          key: t.id,
-          onClick: function () { setTab(t.id); },
-          className: 'px-4 py-1.5 rounded-md text-sm font-medium transition-colors ' + (tab === t.id ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'),
-        }, t.label);
-      })
-    ),
-
-    tab === 'search' && React.createElement('div', null,
-      React.createElement('form', { onSubmit: handleSearch, className: 'flex gap-2 mb-6' },
-        React.createElement('input', {
-          type: 'text', value: query, onChange: function (e) { setQuery(e.target.value); },
-          placeholder: 'Search for training videos...',
-          className: 'flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-toledo-blue text-sm',
-        }),
-        React.createElement('button', {
-          type: 'submit', disabled: searching,
-          className: 'px-6 py-2 bg-toledo-blue text-white rounded-lg hover:bg-toledo-dark text-sm font-medium disabled:opacity-50',
-        }, searching ? 'Searching...' : 'Search')
-      ),
-      searchError && React.createElement('div', { className: 'mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700' },
-        '⚠️ ' + searchError
-      ),
-      videos.length > 0 && React.createElement('div', { className: 'space-y-3' },
-        videos.map(function (video) {
-          var videoId = video.id || video.youtube_video_id;
-          return React.createElement('div', { key: videoId, className: 'bg-white rounded-xl border border-gray-200 p-4 flex gap-4 items-start' },
-            video.thumbnail && React.createElement('img', {
-              src: video.thumbnail, alt: video.title,
-              className: 'w-32 h-20 object-cover rounded-lg flex-shrink-0 hidden sm:block',
-            }),
-            React.createElement('div', { className: 'flex-1 min-w-0' },
-              React.createElement('h3', { className: 'font-semibold text-gray-900 text-sm' }, video.title),
-              React.createElement('p', { className: 'text-xs text-gray-500 mt-1' }, video.channel),
-              video.duration && React.createElement('span', { className: 'text-xs text-gray-400' }, video.duration),
-              React.createElement('div', { className: 'mt-2 flex gap-2' },
-                React.createElement('a', {
-                  href: 'https://www.youtube.com/watch?v=' + encodeURIComponent(videoId),
-                  target: '_blank', rel: 'noopener noreferrer',
-                  className: 'flex items-center gap-1 text-xs text-toledo-blue hover:underline',
-                }, React.createElement(IconExternalLink), 'Watch on YouTube'),
-                currentUser && (addedId === videoId
-                  ? React.createElement('span', { className: 'flex items-center gap-1 text-xs text-green-600' }, React.createElement(IconCheck), 'Added!')
-                  : React.createElement('button', {
-                      onClick: function () { addToPlan(video); },
-                      className: 'flex items-center gap-1 text-xs text-toledo-blue hover:underline',
-                    }, React.createElement(IconBookmark), 'Add to My Plan')
-                )
-              )
-            )
-          );
-        })
-      ),
-      videos.length === 0 && !searching && query && React.createElement('p', { className: 'text-center text-gray-400 py-8' }, 'No videos found. Try a different search term.')
-    ),
-
-    tab === 'plan' && React.createElement('div', null,
-      loadingPlan
-        ? React.createElement('p', { className: 'text-center text-gray-500 py-8' }, 'Loading your learning plan...')
-        : plan.length === 0
-          ? React.createElement('p', { className: 'text-center text-gray-400 py-8' }, 'Your learning plan is empty. Search for videos to add them.')
-          : React.createElement('div', { className: 'space-y-3' },
-              plan.map(function (item) {
-                return React.createElement('div', { key: item.id, className: 'bg-white rounded-xl border border-gray-200 p-4 flex items-center gap-4 ' + (item.completed ? 'opacity-60' : '') },
-                  React.createElement('button', {
-                    onClick: function () { toggleComplete(item); },
-                    className: 'w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 ' + (item.completed ? 'bg-green-500 border-green-500 text-white' : 'border-gray-300 hover:border-toledo-blue'),
-                  }, item.completed && React.createElement(IconCheck)),
-                  React.createElement('div', { className: 'flex-1 min-w-0' },
-                    React.createElement('h3', { className: 'font-medium text-gray-900 text-sm ' + (item.completed ? 'line-through' : '') }, item.video_title),
-                    React.createElement('p', { className: 'text-xs text-gray-500' }, (item.video_channel || '') + (item.video_duration ? ' • ' + item.video_duration : ''))
-                  ),
-                  React.createElement('a', {
-                    href: 'https://www.youtube.com/watch?v=' + encodeURIComponent(item.youtube_video_id),
-                    target: '_blank', rel: 'noopener noreferrer',
-                    className: 'text-toledo-blue hover:text-toledo-dark flex-shrink-0',
-                  }, React.createElement(IconExternalLink))
-                );
-              })
-            )
-    ),
-
-    tab === 'sources' && React.createElement('div', null,
-      React.createElement('h2', { className: 'text-lg font-semibold text-gray-900 mb-4' }, 'Approved Video Sources'),
-      sources.length === 0
-        ? React.createElement('p', { className: 'text-center text-gray-400 py-8' }, 'No approved sources configured.')
-        : React.createElement('div', { className: 'space-y-2' },
-            sources.map(function (src, i) {
-              return React.createElement('div', { key: i, className: 'bg-white rounded-lg border border-gray-200 p-4 flex items-center gap-3' },
-                React.createElement(IconPlay),
-                React.createElement('div', null,
-                  React.createElement('p', { className: 'font-medium text-sm text-gray-900' }, src.name || src.channel_name || src.title),
-                  src.url && React.createElement('a', { href: src.url, target: '_blank', rel: 'noopener noreferrer', className: 'text-xs text-toledo-blue hover:underline' }, src.url)
-                )
-              );
-            })
-          )
-    )
+      );
+    })
   );
 }
 
@@ -1172,8 +771,7 @@ function Footer({ onNavigate }) {
               { id: 'home', label: 'Home' },
               { id: 'guide', label: 'Onboarding Guide' },
               { id: 'orgchart', label: 'Org Chart' },
-              { id: 'ai-hub', label: 'AI Hub' },
-              { id: 'youtube', label: 'Learning' },
+              { id: 'checklist', label: 'Checklist' },
               { id: 'resources', label: 'Resources' },
               { id: 'contacts', label: 'Contacts' },
               { id: 'policies', label: 'Policies' },
@@ -1233,8 +831,7 @@ function App() {
       'guide': 'Onboarding Guide — Toledo Athletics',
       'categories': 'Browse Categories — Toledo Athletics',
       'orgchart': 'Org Chart — Toledo Athletics',
-      'ai-hub': 'AI Literacy Assessment — Toledo Athletics',
-      'youtube': 'Video Learning — Toledo Athletics',
+      'checklist': 'Onboarding Checklist — Toledo Athletics',
       'resources': 'Resources & Systems — Toledo Athletics',
       'contacts': 'Key Contacts — Toledo Athletics',
       'policies': 'Policies & Procedures — Toledo Athletics',
@@ -1319,11 +916,8 @@ function App() {
     case 'orgchart':
       content = React.createElement(OrgChartPage, { onNavigate: navigate });
       break;
-    case 'ai-hub':
-      content = React.createElement(AIHubPage, { currentUser: currentUser, onNavigate: navigate });
-      break;
-    case 'youtube':
-      content = React.createElement(YouTubeFinderPage, { currentUser: currentUser, onNavigate: navigate });
+    case 'checklist':
+      content = React.createElement(ChecklistPage, { currentUser: currentUser, onNavigate: navigate });
       break;
     case 'resources':
       content = React.createElement(ResourcesPage, { onNavigate: navigate });
