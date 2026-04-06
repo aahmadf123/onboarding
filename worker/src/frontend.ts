@@ -458,7 +458,7 @@ function ChecklistPage({ currentUser, onNavigate }) {
           style: { width: pct + '%' },
         })
       ),
-      done === total && React.createElement('p', { className: 'text-center text-green-600 font-semibold mt-3 text-sm' }, '🎉 You\'ve completed all onboarding tasks!')
+      done === total && React.createElement('p', { className: 'text-center text-green-600 font-semibold mt-3 text-sm' }, "🎉 You've completed all onboarding tasks!")
     ),
 
     CHECKLIST_PHASES.map(function (phase) {
