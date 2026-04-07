@@ -113,7 +113,7 @@ function OnboardingGuidePage({ currentUser, onNavigate }) {
         { id: 'benefits', title: 'Complete Benefits Enrollment', priority: 'required', description: 'You have 30 days from your start date to elect or waive benefits in MyUT. Silence is NOT a waiver — you must actively make selections for health, dental, vision, and life insurance.' },
         { id: 'compliance-training', title: 'Finish All Required Training', priority: 'required', description: 'Complete all mandatory training modules assigned through Blackboard or HR, including NCAA compliance-specific courses. These have hard deadlines.' },
         { id: 'dept-workflows', title: 'Learn Department Workflows', priority: 'recommended', description: 'Understand the standard processes for your role: communication channels, approval workflows, reporting structures, and how Athletics interfaces with the broader university.' },
-        { id: 'key-contacts', title: 'Connect with Key Contacts', priority: 'recommended', description: 'Build relationships with people you\'ll work with regularly. Use the Key Contacts page for reference. Introduce yourself, especially to compliance, facilities, and communications staff.' },
+        { id: 'key-contacts', title: 'Connect with Key Contacts', priority: 'recommended', description: "Build relationships with people you'll work with regularly. Use the Key Contacts page for reference. Introduce yourself, especially to compliance, facilities, and communications staff." },
       ]
     },
     {
@@ -124,7 +124,7 @@ function OnboardingGuidePage({ currentUser, onNavigate }) {
       tasks: [
         { id: 'compliance-policies', title: 'Review All Compliance Policies', priority: 'required', description: 'Read through Standards of Conduct (3364-25-01), FERPA, Information Security policies, and NCAA compliance rules specific to your role. When in doubt, always contact Compliance first.' },
         { id: 'learning-plan', title: 'Build Your Personal Learning Plan', priority: 'recommended', description: 'Use the Video Learning resources to find relevant training and create a personal development plan aligned with your goals and role.' },
-        { id: 'supervisor-checkin', title: 'Formal Supervisor Check-In', priority: 'recommended', description: 'Schedule a check-in with your supervisor to review your onboarding experience, ask open questions, set 90-day goals, and confirm you\'re on track.' },
+        { id: 'supervisor-checkin', title: 'Formal Supervisor Check-In', priority: 'recommended', description: "Schedule a check-in with your supervisor to review your onboarding experience, ask open questions, set 90-day goals, and confirm you're on track." },
         { id: 'toledo-explore', title: 'Explore Toledo Neighborhoods & Resources', priority: 'optional', description: 'Get comfortable with the city. Staff commonly live in areas like Ottawa Hills, Sylvania Township, Perrysburg, and Maumee. Toledo has affordable housing and a growing food/arts scene.' },
       ]
     },

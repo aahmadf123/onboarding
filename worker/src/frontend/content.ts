@@ -70,7 +70,7 @@ function HomePage({ categories, stats, onNavigate, onSearch, currentUser }) {
         checklistProgress.done === checklistProgress.total
           ? React.createElement('p', { className: 'text-green-600 font-semibold text-sm mb-3' }, "🎉 You've completed all onboarding tasks!")
           : React.createElement('p', { className: 'text-sm text-gray-400 mb-3' },
-              checklistProgress.done === 0 ? "Start by clicking 'My Onboarding' above." : 'Keep going — you\'re making great progress!'
+              checklistProgress.done === 0 ? "Start by clicking 'My Onboarding' above." : "Keep going — you're making great progress!"
             ),
         React.createElement('button', {
           onClick: function () { onNavigate('guide'); },
