@@ -67,7 +67,7 @@ const ROLE_ARCHETYPES = [
 ];
 
 // ── Header ────────────────────────────────────────────────────────────────────
-function Header({ currentUser, onNavigate, currentView }) {
+function Header({ currentUser, onNavigate, currentView, onSignOut }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const isMod = currentUser && (currentUser.role === 'moderator' || currentUser.role === 'admin');
 
@@ -113,6 +113,10 @@ function Header({ currentUser, onNavigate, currentView }) {
             ),
             React.createElement('span', { className: 'text-xs text-blue-200 hidden md:block max-w-[130px] truncate' }, currentUser.email)
           ),
+          currentUser && onSignOut && React.createElement('button', {
+            onClick: onSignOut,
+            className: 'hidden sm:flex items-center gap-1 text-xs text-blue-200 hover:text-white border border-blue-400/30 hover:border-white/40 px-2.5 py-1 rounded-lg transition-colors flex-shrink-0',
+          }, '↩ Sign out'),
           React.createElement('button', {
             className: 'lg:hidden p-1.5 rounded-lg text-blue-200 hover:bg-white/10',
             onClick: () => setMenuOpen(m => !m),
@@ -124,8 +128,14 @@ function Header({ currentUser, onNavigate, currentView }) {
         )
       ),
       // Mobile menu
-      menuOpen && React.createElement('div', { className: 'lg:hidden border-t border-white/20 py-2 pb-3 grid grid-cols-3 gap-1' },
-        navItems.map(navBtn)
+      menuOpen && React.createElement('div', { className: 'lg:hidden border-t border-white/20 py-2 pb-3' },
+        React.createElement('div', { className: 'grid grid-cols-3 gap-1 mb-2' },
+          navItems.map(navBtn)
+        ),
+        onSignOut && React.createElement('button', {
+          onClick: function () { setMenuOpen(false); onSignOut(); },
+          className: 'w-full mt-1 py-1.5 text-xs text-red-300 hover:text-white border border-red-400/30 hover:border-red-300/60 rounded-lg transition-colors',
+        }, '↩ Sign Out')
       )
     )
   );

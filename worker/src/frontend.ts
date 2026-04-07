@@ -130,6 +130,23 @@ function OnboardingGuidePage({ currentUser, onNavigate }) {
     },
   ];
 
+  var taskLinks = {
+    'rocket-id':          { view: 'category', param: 6 },
+    'mfa':                { view: 'category', param: 6 },
+    'myut':               { view: 'category', param: 6 },
+    'systems-training':   { view: 'category', param: 6 },
+    'parking':            { view: 'category', param: 7 },
+    'direct-deposit':     { view: 'category', param: 5 },
+    'benefits':           { view: 'category', param: 5 },
+    'meet-team':          { view: 'category', param: 1 },
+    'facilities-tour':    { view: 'category', param: 1 },
+    'dept-workflows':     { view: 'category', param: 1 },
+    'compliance-training':{ view: 'category', param: 2 },
+    'compliance-policies':{ view: 'category', param: 2 },
+    'key-contacts':       { view: 'contacts',  param: null },
+    'toledo-explore':     { view: 'category', param: 9 },
+  };
+
   var allTasks = phases.flatMap(function(p) { return p.tasks; });
   var total = allTasks.length;
   var done = allTasks.filter(function(t) { return checked[t.id]; }).length;
@@ -220,7 +237,14 @@ function OnboardingGuidePage({ currentUser, onNavigate }) {
               ),
               // Expanded details
               isExpanded && React.createElement('div', { className: 'px-4 pb-4 pt-0 border-t border-gray-100' },
-                React.createElement('p', { className: 'text-sm text-gray-600 pt-3' }, task.description)
+                React.createElement('p', { className: 'text-sm text-gray-600 pt-3 leading-relaxed' }, task.description),
+                taskLinks[task.id] && React.createElement('button', {
+                  onClick: function () {
+                    var link = taskLinks[task.id];
+                    onNavigate(link.view, link.param);
+                  },
+                  className: 'mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-toledo-blue hover:text-toledo-dark border border-toledo-blue/30 hover:border-toledo-blue hover:bg-toledo-blue/5 px-3 py-1.5 rounded-lg transition-colors',
+                }, '📂 Explore full details →')
               )
             );
           })
@@ -729,7 +753,13 @@ function Footer({ onNavigate }) {
 
 // ── App (Router) ──────────────────────────────────────────────────────────────
 function App() {
-  var _useState = useState(null);
+  var _useState = useState(function () {
+    try {
+      var saved = localStorage.getItem('toledo_auth_user');
+      if (saved) { var u = JSON.parse(saved); _currentUserId = u.id; return u; }
+    } catch (e) {}
+    return null;
+  });
   var currentUser = _useState[0];
   var setCurrentUser = _useState[1];
   var _useState2 = useState('home');
@@ -775,9 +805,12 @@ function App() {
   }
 
   useEffect(function () {
+    window.history.replaceState({ view: 'home', param: null }, '', window.location.pathname);
     function handlePopState(e) {
       if (e.state && e.state.view) {
         navigate(e.state.view, e.state.param, false);
+      } else {
+        navigate('home', null, false);
       }
     }
     window.addEventListener('popstate', handlePopState);
@@ -791,6 +824,13 @@ function App() {
   function handleLogin(user) {
     _currentUserId = user.id;
     setCurrentUser(user);
+    try { localStorage.setItem('toledo_auth_user', JSON.stringify(user)); } catch (e) {}
+  }
+
+  function handleSignOut() {
+    _currentUserId = null;
+    setCurrentUser(null);
+    try { localStorage.removeItem('toledo_auth_user'); } catch (e) {}
   }
 
   if (!currentUser) {
@@ -862,7 +902,7 @@ function App() {
   }
 
   return React.createElement('div', { className: 'min-h-screen bg-gray-50 flex flex-col' },
-    React.createElement(Header, { currentUser: currentUser, onNavigate: navigate, currentView: view }),
+    React.createElement(Header, { currentUser: currentUser, onNavigate: navigate, currentView: view, onSignOut: handleSignOut }),
     React.createElement('main', { className: 'flex-1' }, content),
     React.createElement(Footer, { onNavigate: navigate }),
     React.createElement(AIChatWidget, { currentUser: currentUser }),
