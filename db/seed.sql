@@ -349,6 +349,13 @@ INSERT INTO Articles (category_id, title, current_content) VALUES
 (6, 'Getting Your Rocket Card & Mobile ID',
 'The Rocket Card is your physical and digital identity credential at UToledo.
 
+ACCOUNT SETUP:
+Before getting your Rocket Card, you must create or activate your UTAD account at https://myutaccount.utoledo.edu/
+
+- New account creation / activation: https://myutaccount.utoledo.edu/Home/NewAccount
+- Forgot username or password / need to reset: https://myutaccount.utoledo.edu/Home/PasswordReset
+- Manage account services (once activated): https://myutaccount.utoledo.edu/UTAD/ManageServices
+
 STEPS TO GET YOUR ROCKET CARD:
 1. Activate your UTAD account and set up MFA (must be done first)
 2. Log into the MyUT portal
