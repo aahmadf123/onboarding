@@ -161,7 +161,7 @@ function QuickTour({ onDone, onNavigate }) {
           React.createElement('button', {
             onClick: advance,
             className: 'flex-1 py-2.5 text-sm font-semibold text-white bg-toledo-blue hover:bg-toledo-dark rounded-xl transition-colors',
-          }, isLast ? '🎉 Let\'s go!' : 'Next →')
+          }, isLast ? '\uD83C\uDF89 Lets go!' : 'Next \u2192')
         ),
 
         // Skip
