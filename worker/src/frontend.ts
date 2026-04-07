@@ -1037,6 +1037,11 @@ function App() {
     React.createElement('main', { className: 'flex-1' }, content),
     React.createElement(Footer, { onNavigate: navigate }),
     React.createElement(AIChatWidget, { currentUser: currentUser }),
+    !showTour && React.createElement('button', {
+      onClick: function () { setShowTour(true); },
+      className: 'fixed bottom-24 right-6 w-9 h-9 bg-white border border-gray-200 text-gray-500 rounded-full shadow-md hover:bg-toledo-blue hover:text-white hover:border-toledo-blue transition-colors flex items-center justify-center z-40 font-bold text-sm',
+      title: 'Quick Tour',
+    }, '?'),
     React.createElement(FeedbackButton, { currentUser: currentUser })
   );
 }
