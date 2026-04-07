@@ -8,7 +8,7 @@ export interface ChatMessage {
   content: string;
 }
 
-const AI_MODEL = '@cf/meta/llama-3.3-70b-instruct-fp8';
+const AI_MODEL = '@cf/meta/llama-3.3-70b-instruct-fp8-fast';
 
 const SYSTEM_PROMPT = `You are the Toledo Athletics Onboarding Assistant. You help new staff members at the University of Toledo Athletics Department understand their onboarding process, policies, and resources.
 

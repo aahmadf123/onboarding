@@ -35,7 +35,8 @@ export async function getRelevantContextWithSources(
     .toLowerCase()
     .split(/\s+/)
     .filter((t) => t.length > 2)
-    .slice(0, 10);
+    .slice(0, 10)
+    .map((t) => t.replace(/'/g, "''"));
 
   if (terms.length === 0) return { context: '', sources: [] };
 
