@@ -57,140 +57,176 @@ ${getFeatureCode()}
 
 function getFeatureCode(): string {
   return `
-// ── OnboardingGuidePage ────────────────────────────────────────────────────────
-function OnboardingGuidePage({ onNavigate }) {
-  var _useState = useState('first-day');
-  var activePhase = _useState[0];
-  var setActivePhase = _useState[1];
+// ── OnboardingGuidePage (unified guide + checklist) ───────────────────────────
+function OnboardingGuidePage({ currentUser, onNavigate }) {
+  var storageKey = 'checklist_' + (currentUser ? currentUser.email : 'guest');
+  var [checked, setChecked] = useState(function () {
+    try {
+      var saved = localStorage.getItem(storageKey);
+      return saved ? JSON.parse(saved) : {};
+    } catch (e) { return {}; }
+  });
+  var [expandedItem, setExpandedItem] = useState(null);
+
+  function toggle(id) {
+    var next = Object.assign({}, checked, { [id]: !checked[id] });
+    setChecked(next);
+    try { localStorage.setItem(storageKey, JSON.stringify(next)); } catch (e) {}
+  }
+
+  function reset() {
+    setChecked({});
+    try { localStorage.setItem(storageKey, JSON.stringify({})); } catch (e) {}
+  }
 
   var phases = [
     {
       id: 'first-day',
       label: 'First Day',
       icon: '☀️',
-      description: 'Get your essentials set up and meet the team.',
+      color: 'border-l-green-500',
       tasks: [
-        { title: 'Get Your Rocket ID', description: 'Visit the Rocket Card Office to obtain your campus ID. This is required before you can access most university systems.', priority: 'required' },
-        { title: 'Activate UTAD Account', description: 'Your University of Toledo Account Domain (UTAD) is needed for email, Wi-Fi, and all digital resources. Follow the activation link sent to your personal email.', priority: 'required' },
-        { title: 'Set Up MFA (Multi-Factor Authentication)', description: 'Install Microsoft Authenticator on your phone and register it with your UTAD account. This is required for secure login to university systems.', priority: 'required' },
-        { title: 'Access MyUT Portal', description: 'Log into myut.utoledo.edu to verify your account works. This is your primary gateway to employee self-service.', priority: 'required' },
-        { title: 'Meet Your Team', description: 'Your supervisor will introduce you to your immediate team members and provide a brief overview of daily operations.', priority: 'recommended' },
-        { title: 'Facility Tour', description: 'Get oriented with your building, office location, restrooms, break areas, and emergency exits.', priority: 'recommended' },
+        { id: 'rocket-id', title: 'Get Your Rocket ID & UTAD Account', priority: 'required', description: 'Visit the Rocket Card Office to obtain your campus ID. Your UTAD account is also activated here — you need it for email, Wi-Fi, and all digital resources. Follow the activation link sent to your personal email.' },
+        { id: 'mfa', title: 'Set Up Multi-Factor Authentication (MFA)', priority: 'required', description: 'Install Microsoft Authenticator on your phone and register it with your UTAD account. This is required for secure login to university systems.' },
+        { id: 'myut', title: 'Activate MyUT Portal Access', priority: 'required', description: 'Log into myut.utoledo.edu to verify your account works. This is your primary gateway to employee self-service — payroll, benefits, and HR tools all live here.' },
+        { id: 'meet-team', title: 'Meet Your Team & Supervisor', priority: 'recommended', description: 'Your supervisor will introduce you to your immediate team and provide an overview of daily operations and your first-week schedule.' },
       ]
     },
     {
       id: 'first-week',
       label: 'First Week',
       icon: '📅',
-      description: 'Complete essential setup and begin learning department workflows.',
+      color: 'border-l-blue-500',
       tasks: [
-        { title: 'Set Up Parking', description: 'Apply for your parking permit through ParkUToledo. Lots near Savage Arena fill up fast before 9am. Consider using daily C permit option until your A permit arrives.', priority: 'required' },
-        { title: 'Configure Direct Deposit & Taxes', description: 'In MyUT, go to Employee Self-Service to set up direct deposit and verify your tax withholding information.', priority: 'required' },
-        { title: 'Complete New Employee Orientation', description: 'Attend or complete the mandatory HR orientation session as scheduled by Human Resources.', priority: 'required' },
-        { title: 'Set Up Microsoft 365', description: 'Access Office.com with your UTAD credentials. Set up Outlook email, Teams, and OneDrive for file storage.', priority: 'required' },
-        { title: 'Learn Teamworks', description: 'If applicable to your role, get access to Teamworks — the athletics department operating platform used across all workflows.', priority: 'recommended' },
-        { title: 'Review Department Org Chart', description: 'Familiarize yourself with the organizational structure so you know who handles what.', priority: 'recommended' },
+        { id: 'parking', title: 'Set Up Parking via vPermit', priority: 'required', description: 'Apply for your parking permit through ParkUToledo. Lots near Savage Arena fill fast before 9am. Consider a daily C permit until your A permit arrives. A Permit: $329/year, C Permit: $6.20/day.' },
+        { id: 'direct-deposit', title: 'Set Up Direct Deposit & Taxes', priority: 'required', description: 'In MyUT, go to Employee Self-Service to configure direct deposit into your bank account and verify your tax withholding (W-4).' },
+        { id: 'facilities-tour', title: 'Tour Athletic Facilities', priority: 'recommended', description: 'Get oriented with all athletic facilities including Savage Arena, Glass Bowl, the Crissey Athletic Complex, and Scott Park. Knowing your way around is essential.' },
+        { id: 'systems-training', title: 'Complete Systems Setup', priority: 'required', description: 'Set up Microsoft 365 (Outlook, Teams, OneDrive) via Office.com with your UTAD credentials. If applicable to your role, get access to Teamworks — the athletics department operating platform.' },
       ]
     },
     {
       id: 'first-month',
       label: 'First Month',
       icon: '📋',
-      description: 'Complete benefits, training, and deepen your understanding of the department.',
+      color: 'border-l-purple-500',
       tasks: [
-        { title: 'Complete Benefits Enrollment', description: 'You have 30 days from your start date to elect or waive benefits in MyUT. Note: silence is NOT a waiver — you must actively make selections.', priority: 'required' },
-        { title: 'Complete Required Training', description: 'Finish all mandatory training modules assigned in Blackboard or through HR, including any compliance-specific courses.', priority: 'required' },
-        { title: 'Understand Compliance Basics', description: 'Review NCAA compliance fundamentals. If uncertain about recruiting, NIL, booster, or eligibility matters, always contact Compliance before acting.', priority: 'required' },
-        { title: 'Learn Department Workflows', description: 'Understand the standard processes for your role including communication channels, approval workflows, and reporting structures.', priority: 'recommended' },
-        { title: 'Connect with Key Contacts', description: 'Build relationships with the people you will work with regularly across departments. Use the Key Contacts page for reference.', priority: 'recommended' },
-        { title: 'Review Brand Standards', description: 'Understand Toledo Athletics branding guidelines, approved identifiers, and the difference between Athletics and University branding.', priority: 'recommended' },
+        { id: 'benefits', title: 'Complete Benefits Enrollment', priority: 'required', description: 'You have 30 days from your start date to elect or waive benefits in MyUT. Silence is NOT a waiver — you must actively make selections for health, dental, vision, and life insurance.' },
+        { id: 'compliance-training', title: 'Finish All Required Training', priority: 'required', description: 'Complete all mandatory training modules assigned through Blackboard or HR, including NCAA compliance-specific courses. These have hard deadlines.' },
+        { id: 'dept-workflows', title: 'Learn Department Workflows', priority: 'recommended', description: 'Understand the standard processes for your role: communication channels, approval workflows, reporting structures, and how Athletics interfaces with the broader university.' },
+        { id: 'key-contacts', title: 'Connect with Key Contacts', priority: 'recommended', description: 'Build relationships with people you\'ll work with regularly. Use the Key Contacts page for reference. Introduce yourself, especially to compliance, facilities, and communications staff.' },
       ]
     },
     {
       id: 'first-90-days',
       label: 'First 90 Days',
       icon: '🎯',
-      description: 'Establish yourself, explore growth opportunities, and confirm long-term setup.',
+      color: 'border-l-toledo-gold',
       tasks: [
-        { title: 'Retirement Plan Election', description: 'Eligible full-time employees have a 120-day window to elect an alternative retirement plan. Review your options and make a selection.', priority: 'required' },
-        { title: 'Review All Applicable Policies', description: 'Read through key policies including Standards of Conduct, FERPA, Information Security, and any athletics-specific compliance rules.', priority: 'required' },
-        { title: 'Complete AI Literacy Assessment', description: 'Take the AI literacy self-assessment in the AI Hub to identify growth areas and get personalized learning resources.', priority: 'recommended' },
-        { title: 'Build Your Learning Plan', description: 'Use the Video Learning section to find relevant training content and create a personal development plan.', priority: 'recommended' },
-        { title: 'Supervisor Check-In', description: 'Schedule a formal check-in with your supervisor to discuss your onboarding experience, ask questions, and set goals.', priority: 'recommended' },
-        { title: 'Contribute Knowledge', description: 'If you have insights that could help future new hires, use the Contribute page to submit content for review.', priority: 'optional' },
+        { id: 'compliance-policies', title: 'Review All Compliance Policies', priority: 'required', description: 'Read through Standards of Conduct (3364-25-01), FERPA, Information Security policies, and NCAA compliance rules specific to your role. When in doubt, always contact Compliance first.' },
+        { id: 'learning-plan', title: 'Build Your Personal Learning Plan', priority: 'recommended', description: 'Use the Video Learning resources to find relevant training and create a personal development plan aligned with your goals and role.' },
+        { id: 'supervisor-checkin', title: 'Formal Supervisor Check-In', priority: 'recommended', description: 'Schedule a check-in with your supervisor to review your onboarding experience, ask open questions, set 90-day goals, and confirm you\'re on track.' },
+        { id: 'toledo-explore', title: 'Explore Toledo Neighborhoods & Resources', priority: 'optional', description: 'Get comfortable with the city. Staff commonly live in areas like Ottawa Hills, Sylvania Township, Perrysburg, and Maumee. Toledo has affordable housing and a growing food/arts scene.' },
       ]
     },
   ];
 
-  var currentPhase = phases.find(function (p) { return p.id === activePhase; }) || phases[0];
+  var allTasks = phases.flatMap(function(p) { return p.tasks; });
+  var total = allTasks.length;
+  var done = allTasks.filter(function(t) { return checked[t.id]; }).length;
+  var pct = Math.round((done / total) * 100);
 
-  return React.createElement('div', { className: 'max-w-4xl mx-auto px-4 py-8 fade-in' },
-    React.createElement('button', { onClick: function () { onNavigate('home'); }, className: 'flex items-center gap-2 text-toledo-blue hover:text-toledo-dark mb-6 text-sm font-medium' },
-      React.createElement(IconArrowLeft), 'Back to Home'),
-    React.createElement('h1', { className: 'text-2xl font-bold text-gray-900 flex items-center gap-2 mb-1' },
-      '🗺️', ' Onboarding Guide'),
-    React.createElement('p', { className: 'text-gray-500 text-sm mb-6' }, 'Follow this timeline at your own pace. Focus on one phase at a time.'),
+  var priorityStyles = {
+    required: 'border-l-red-400',
+    recommended: 'border-l-blue-400',
+    optional: 'border-l-gray-300',
+  };
+  var priorityColors = {
+    required: 'bg-red-100 text-red-700',
+    recommended: 'bg-blue-100 text-blue-700',
+    optional: 'bg-gray-100 text-gray-600',
+  };
+  var priorityLabels = { required: 'Required', recommended: 'Recommended', optional: 'Optional' };
 
-    // Phase tabs
-    React.createElement('div', { className: 'flex gap-2 mb-8 overflow-x-auto pb-2' },
-      phases.map(function (phase) {
-        return React.createElement('button', {
-          key: phase.id,
-          onClick: function () { setActivePhase(phase.id); },
-          className: 'flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-medium transition-all whitespace-nowrap ' +
-            (activePhase === phase.id
-              ? 'bg-toledo-blue text-white shadow-md'
-              : 'bg-white border border-gray-200 text-gray-700 hover:border-toledo-blue/30 hover:shadow-sm'),
-        },
-          React.createElement('span', null, phase.icon),
-          phase.label
-        );
-      })
+  return React.createElement('div', { className: 'max-w-3xl mx-auto px-4 py-8 fade-in' },
+    React.createElement('div', { className: 'flex items-center justify-between mb-2' },
+      React.createElement('button', { onClick: function () { onNavigate('home'); }, className: 'flex items-center gap-2 text-toledo-blue hover:text-toledo-dark text-sm font-medium' },
+        React.createElement(IconArrowLeft), 'Back to Home'),
+      React.createElement('button', {
+        onClick: reset,
+        className: 'text-xs text-gray-400 hover:text-red-500 border border-gray-200 px-3 py-1.5 rounded-lg transition-colors',
+      }, 'Reset Progress')
+    ),
+    React.createElement('h1', { className: 'text-2xl font-bold text-gray-900 mt-4 mb-1' }, '🗺️ My Onboarding'),
+    React.createElement('p', { className: 'text-gray-500 text-sm mb-6' }, 'Work through each phase at your own pace. Expand any task to learn how to complete it, then check it off.'),
+
+    // Progress bar
+    React.createElement('div', { className: 'bg-white rounded-xl border border-gray-200 p-5 mb-8' },
+      React.createElement('div', { className: 'flex justify-between items-center mb-2' },
+        React.createElement('span', { className: 'text-sm font-medium text-gray-700' }, done + ' of ' + total + ' completed'),
+        React.createElement('span', { className: 'text-sm font-semibold text-toledo-blue' }, pct + '%')
+      ),
+      React.createElement('div', { className: 'w-full bg-gray-100 rounded-full h-3' },
+        React.createElement('div', {
+          className: 'bg-toledo-blue h-3 rounded-full transition-all duration-300',
+          style: { width: pct + '%' },
+        })
+      ),
+      done === total && React.createElement('p', { className: 'text-center text-green-600 font-semibold mt-3 text-sm' }, "🎉 You've completed all onboarding tasks!")
     ),
 
-    // Phase content
-    React.createElement('div', { className: 'bg-white rounded-xl border border-gray-200 p-6 mb-6' },
-      React.createElement('div', { className: 'flex items-center gap-3 mb-2' },
-        React.createElement('span', { className: 'text-3xl' }, currentPhase.icon),
-        React.createElement('div', null,
-          React.createElement('h2', { className: 'text-xl font-bold text-gray-900' }, currentPhase.label),
-          React.createElement('p', { className: 'text-sm text-gray-500' }, currentPhase.description)
+    // Phases
+    phases.map(function (phase) {
+      var phaseDone = phase.tasks.filter(function(t) { return checked[t.id]; }).length;
+      var phaseComplete = phaseDone === phase.tasks.length;
+      return React.createElement('div', { key: phase.id, className: 'mb-6' },
+        React.createElement('div', { className: 'flex items-center gap-2 mb-3' },
+          React.createElement('span', { className: 'text-xl' }, phase.icon),
+          React.createElement('h2', { className: 'text-lg font-bold text-gray-900 flex-1' }, phase.label),
+          React.createElement('span', { className: 'text-xs font-medium px-2 py-0.5 rounded-full ' + (phaseComplete ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500') },
+            phaseDone + '/' + phase.tasks.length
+          )
+        ),
+        React.createElement('div', { className: 'space-y-2' },
+          phase.tasks.map(function (task) {
+            var isChecked = !!checked[task.id];
+            var isExpanded = expandedItem === task.id;
+            return React.createElement('div', {
+              key: task.id,
+              className: 'bg-white rounded-xl border border-gray-200 border-l-4 ' + (priorityStyles[task.priority] || '') +
+                (isChecked ? ' opacity-60' : ''),
+            },
+              // Task header row
+              React.createElement('div', { className: 'flex items-center gap-3 p-4' },
+                React.createElement('input', {
+                  type: 'checkbox',
+                  checked: isChecked,
+                  onChange: function () { toggle(task.id); },
+                  className: 'w-4 h-4 rounded border-gray-300 text-toledo-blue focus:ring-toledo-blue cursor-pointer flex-shrink-0',
+                }),
+                React.createElement('button', {
+                  onClick: function () { setExpandedItem(isExpanded ? null : task.id); },
+                  className: 'flex-1 flex items-center justify-between text-left min-w-0 group',
+                },
+                  React.createElement('span', {
+                    className: 'text-sm font-medium ' + (isChecked ? 'line-through text-gray-400' : 'text-gray-900 group-hover:text-toledo-blue'),
+                  }, task.title),
+                  React.createElement('div', { className: 'flex items-center gap-2 flex-shrink-0 ml-3' },
+                    React.createElement('span', { className: 'text-xs px-2 py-0.5 rounded-full font-medium hidden sm:inline-block ' + (priorityColors[task.priority] || '') },
+                      priorityLabels[task.priority] || ''
+                    ),
+                    React.createElement('span', { className: 'text-gray-400 text-sm transition-transform ' + (isExpanded ? 'rotate-180 inline-block' : 'inline-block') }, '▾')
+                  )
+                )
+              ),
+              // Expanded details
+              isExpanded && React.createElement('div', { className: 'px-4 pb-4 pt-0 border-t border-gray-100' },
+                React.createElement('p', { className: 'text-sm text-gray-600 pt-3' }, task.description)
+              )
+            );
+          })
         )
-      )
-    ),
-
-    // Tasks
-    React.createElement('div', { className: 'space-y-3' },
-      currentPhase.tasks.map(function (task, i) {
-        var priorityStyles = {
-          required: 'border-l-red-400 bg-red-50/30',
-          recommended: 'border-l-blue-400 bg-blue-50/30',
-          optional: 'border-l-gray-300 bg-gray-50/30',
-        };
-        var priorityLabels = {
-          required: 'Required',
-          recommended: 'Recommended',
-          optional: 'Optional',
-        };
-        var priorityColors = {
-          required: 'bg-red-100 text-red-700',
-          recommended: 'bg-blue-100 text-blue-700',
-          optional: 'bg-gray-100 text-gray-600',
-        };
-        return React.createElement('div', {
-          key: i,
-          className: 'bg-white rounded-xl border border-gray-200 border-l-4 p-5 ' + (priorityStyles[task.priority] || ''),
-        },
-          React.createElement('div', { className: 'flex items-start justify-between mb-1' },
-            React.createElement('h3', { className: 'font-semibold text-gray-900 text-sm' }, task.title),
-            React.createElement('span', {
-              className: 'px-2 py-0.5 text-xs rounded-full font-medium flex-shrink-0 ml-3 ' + (priorityColors[task.priority] || ''),
-            }, priorityLabels[task.priority] || 'Info')
-          ),
-          React.createElement('p', { className: 'text-sm text-gray-600 mt-1' }, task.description)
-        );
-      })
-    )
+      );
+    })
   );
 }
 
@@ -386,110 +422,6 @@ function AIChatWidget({ currentUser }) {
         className: 'p-2 bg-toledo-blue text-white rounded-lg hover:bg-toledo-dark disabled:opacity-50 transition-colors',
       }, React.createElement(IconSend))
     )
-  );
-}
-
-// ── ChecklistPage ─────────────────────────────────────────────────────────────
-var CHECKLIST_ITEMS = [
-  { id: 'rocket-id', phase: 'First Day', label: 'Get your Rocket ID & UTAD account' },
-  { id: 'mfa', phase: 'First Day', label: 'Set up Multi-Factor Authentication (MFA)' },
-  { id: 'myut', phase: 'First Day', label: 'Activate MyUT portal access' },
-  { id: 'meet-team', phase: 'First Day', label: 'Meet your team and supervisor' },
-  { id: 'parking', phase: 'First Week', label: 'Complete parking permit setup via vPermit' },
-  { id: 'direct-deposit', phase: 'First Week', label: 'Set up direct deposit in MyUT' },
-  { id: 'facilities-tour', phase: 'First Week', label: 'Tour athletic facilities' },
-  { id: 'systems-training', phase: 'First Week', label: 'Complete systems training (Teamworks, Banner, etc.)' },
-  { id: 'benefits', phase: 'First Month', label: 'Complete benefits enrollment (30-day window)' },
-  { id: 'compliance-training', phase: 'First Month', label: 'Finish all required compliance training modules' },
-  { id: 'dept-workflows', phase: 'First Month', label: 'Learn department workflows' },
-  { id: 'key-contacts', phase: 'First Month', label: 'Connect with key contacts from the directory' },
-  { id: 'compliance-policies', phase: 'First 90 Days', label: 'Review all compliance policies' },
-  { id: 'learning-plan', phase: 'First 90 Days', label: 'Build your personal learning plan' },
-  { id: 'supervisor-checkin', phase: 'First 90 Days', label: 'Check in with supervisor on goals' },
-  { id: 'toledo-explore', phase: 'First 90 Days', label: 'Explore Toledo neighborhoods and local resources' },
-];
-
-var CHECKLIST_PHASES = ['First Day', 'First Week', 'First Month', 'First 90 Days'];
-
-function ChecklistPage({ currentUser, onNavigate }) {
-  var storageKey = 'checklist_' + (currentUser ? currentUser.email : 'guest');
-  var [checked, setChecked] = useState(function () {
-    try {
-      var saved = localStorage.getItem(storageKey);
-      return saved ? JSON.parse(saved) : {};
-    } catch (e) { return {}; }
-  });
-
-  function toggle(id) {
-    var next = Object.assign({}, checked, { [id]: !checked[id] });
-    setChecked(next);
-    try { localStorage.setItem(storageKey, JSON.stringify(next)); } catch (e) {}
-  }
-
-  function reset() {
-    setChecked({});
-    try { localStorage.setItem(storageKey, JSON.stringify({})); } catch (e) {}
-  }
-
-  var total = CHECKLIST_ITEMS.length;
-  var done = CHECKLIST_ITEMS.filter(function (item) { return checked[item.id]; }).length;
-  var pct = Math.round((done / total) * 100);
-
-  return React.createElement('div', { className: 'max-w-3xl mx-auto px-4 py-8 fade-in' },
-    React.createElement('div', { className: 'flex items-center justify-between mb-6' },
-      React.createElement('div', null,
-        React.createElement('h1', { className: 'text-2xl font-bold text-gray-900' }, '✅ Onboarding Checklist'),
-        React.createElement('p', { className: 'text-gray-500 text-sm mt-1' }, 'Track your onboarding progress. Your progress is saved automatically.')
-      ),
-      React.createElement('button', {
-        onClick: reset,
-        className: 'text-xs text-gray-400 hover:text-red-500 border border-gray-200 px-3 py-1.5 rounded-lg transition-colors',
-      }, 'Reset Checklist')
-    ),
-
-    React.createElement('div', { className: 'bg-white rounded-xl border border-gray-200 p-5 mb-6' },
-      React.createElement('div', { className: 'flex justify-between items-center mb-2' },
-        React.createElement('span', { className: 'text-sm font-medium text-gray-700' }, done + ' of ' + total + ' completed'),
-        React.createElement('span', { className: 'text-sm font-semibold text-toledo-blue' }, pct + '%')
-      ),
-      React.createElement('div', { className: 'w-full bg-gray-100 rounded-full h-3' },
-        React.createElement('div', {
-          className: 'bg-toledo-blue h-3 rounded-full transition-all duration-300',
-          style: { width: pct + '%' },
-        })
-      ),
-      done === total && React.createElement('p', { className: 'text-center text-green-600 font-semibold mt-3 text-sm' }, "🎉 You've completed all onboarding tasks!")
-    ),
-
-    CHECKLIST_PHASES.map(function (phase) {
-      var items = CHECKLIST_ITEMS.filter(function (item) { return item.phase === phase; });
-      var phaseDone = items.filter(function (item) { return checked[item.id]; }).length;
-      return React.createElement('div', { key: phase, className: 'bg-white rounded-xl border border-gray-200 p-5 mb-4' },
-        React.createElement('div', { className: 'flex items-center justify-between mb-3' },
-          React.createElement('h2', { className: 'font-semibold text-gray-900' }, phase),
-          React.createElement('span', { className: 'text-xs text-gray-400' }, phaseDone + '/' + items.length)
-        ),
-        React.createElement('div', { className: 'space-y-2' },
-          items.map(function (item) {
-            var isChecked = !!checked[item.id];
-            return React.createElement('label', {
-              key: item.id,
-              className: 'flex items-center gap-3 cursor-pointer group',
-            },
-              React.createElement('input', {
-                type: 'checkbox',
-                checked: isChecked,
-                onChange: function () { toggle(item.id); },
-                className: 'w-4 h-4 rounded border-gray-300 text-toledo-blue focus:ring-toledo-blue cursor-pointer',
-              }),
-              React.createElement('span', {
-                className: 'text-sm ' + (isChecked ? 'line-through text-gray-400' : 'text-gray-700 group-hover:text-toledo-blue'),
-              }, item.label)
-            );
-          })
-        )
-      );
-    })
   );
 }
 
@@ -767,9 +699,8 @@ function Footer({ onNavigate }) {
           React.createElement('div', { className: 'grid grid-cols-2 gap-1' },
             [
               { id: 'home', label: 'Home' },
-              { id: 'guide', label: 'Onboarding Guide' },
+              { id: 'guide', label: 'My Onboarding' },
               { id: 'orgchart', label: 'Org Chart' },
-              { id: 'checklist', label: 'Checklist' },
               { id: 'resources', label: 'Resources' },
               { id: 'contacts', label: 'Contacts' },
               { id: 'policies', label: 'Policies' },
@@ -826,10 +757,10 @@ function App() {
     }
     var titles = {
       'home': 'Toledo Athletics Onboarding',
-      'guide': 'Onboarding Guide — Toledo Athletics',
+      'guide': 'My Onboarding — Toledo Athletics',
       'categories': 'Browse Categories — Toledo Athletics',
       'orgchart': 'Org Chart — Toledo Athletics',
-      'checklist': 'Onboarding Checklist — Toledo Athletics',
+      'checklist': 'My Onboarding — Toledo Athletics',
       'resources': 'Resources & Systems — Toledo Athletics',
       'contacts': 'Key Contacts — Toledo Athletics',
       'policies': 'Policies & Procedures — Toledo Athletics',
@@ -869,10 +800,10 @@ function App() {
   var content;
   switch (view) {
     case 'home':
-      content = React.createElement(HomePage, { categories: categories, stats: stats, onNavigate: navigate, onSearch: handleSearch });
+      content = React.createElement(HomePage, { categories: categories, stats: stats, onNavigate: navigate, onSearch: handleSearch, currentUser: currentUser });
       break;
     case 'guide':
-      content = React.createElement(OnboardingGuidePage, { onNavigate: navigate });
+      content = React.createElement(OnboardingGuidePage, { currentUser: currentUser, onNavigate: navigate });
       break;
     case 'categories':
       content = React.createElement('div', { className: 'max-w-7xl mx-auto px-4 py-8 fade-in' },
@@ -915,7 +846,7 @@ function App() {
       content = React.createElement(OrgChartPage, { onNavigate: navigate });
       break;
     case 'checklist':
-      content = React.createElement(ChecklistPage, { currentUser: currentUser, onNavigate: navigate });
+      content = React.createElement(OnboardingGuidePage, { currentUser: currentUser, onNavigate: navigate });
       break;
     case 'resources':
       content = React.createElement(ResourcesPage, { onNavigate: navigate });

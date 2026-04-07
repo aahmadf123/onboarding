@@ -73,13 +73,12 @@ function Header({ currentUser, onNavigate, currentView }) {
 
   const navItems = [
     { id: 'home',       label: 'Home' },
-    { id: 'guide',      label: 'Guide' },
+    { id: 'guide',      label: 'My Onboarding' },
     { id: 'categories', label: 'Browse' },
     { id: 'orgchart',   label: 'Org Chart' },
     { id: 'resources',  label: 'Resources' },
     { id: 'contacts',   label: 'Contacts' },
     { id: 'policies',   label: 'Policies' },
-    { id: 'checklist',  label: 'Checklist' },
     { id: 'submit',     label: 'Contribute' },
     ...(isMod ? [{ id: 'moderate', label: 'Moderate' }] : []),
   ];

@@ -3,15 +3,19 @@
 export function getContentCode(): string {
   return `
 // ── HomePage ──────────────────────────────────────────────────────────────────
-function HomePage({ categories, stats, onNavigate, onSearch }) {
-  const [expandedPhase, setExpandedPhase] = useState(null);
+function HomePage({ categories, stats, onNavigate, onSearch, currentUser }) {
 
-  var journeyPhases = [
-    { phase: 'First Day', icon: '☀️', color: 'border-l-green-500', items: ['Get your Rocket ID & UTAD account', 'Set up Multi-Factor Authentication (MFA)', 'Activate MyUT portal access', 'Meet your team and supervisor'] },
-    { phase: 'First Week', icon: '📅', color: 'border-l-blue-500', items: ['Complete parking permit setup via vPermit', 'Set up direct deposit in MyUT', 'Tour athletic facilities', 'Complete systems training (Teamworks, Banner, etc.)'] },
-    { phase: 'First Month', icon: '📋', color: 'border-l-purple-500', items: ['Complete benefits enrollment (30-day window)', 'Finish all required compliance training modules', 'Learn department workflows', 'Connect with key contacts from the directory'] },
-    { phase: 'First 90 Days', icon: '🎯', color: 'border-l-toledo-gold', items: ['Review all compliance policies', 'Build your personal learning plan', 'Check in with supervisor on goals', 'Explore Toledo neighborhoods and local resources'] },
-  ];
+  // Read checklist progress from localStorage
+  var storageKey = 'checklist_' + (currentUser ? currentUser.email : 'guest');
+  var checklistProgress = (function() {
+    try {
+      var saved = localStorage.getItem(storageKey);
+      var checked = saved ? JSON.parse(saved) : {};
+      var total = 16;
+      var done = Object.values(checked).filter(Boolean).length;
+      return { done: done, total: total, pct: Math.round((done / total) * 100) };
+    } catch (e) { return { done: 0, total: 16, pct: 0 }; }
+  })();
 
   return React.createElement('div', { className: 'fade-in' },
     // Hero banner
@@ -28,10 +32,10 @@ function HomePage({ categories, stats, onNavigate, onSearch }) {
     React.createElement('div', { className: 'max-w-7xl mx-auto px-4 -mt-8 relative z-10' },
       React.createElement('div', { className: 'grid grid-cols-2 md:grid-cols-4 gap-4' },
         [
-          { id: 'guide', icon: '🗺️', label: 'Onboarding Guide', desc: 'Step-by-step journey' },
+          { id: 'guide', icon: '🗺️', label: 'My Onboarding', desc: 'Guide + checklist' },
           { id: 'resources', icon: '🔗', label: 'Resources & Systems', desc: 'Links and tools' },
           { id: 'contacts', icon: '👥', label: 'Key Contacts', desc: 'Who to reach out to' },
-          { id: 'checklist', icon: '✅', label: 'My Checklist', desc: 'Track your progress' },
+          { id: 'orgchart', icon: '🏛️', label: 'Org Chart', desc: 'Department structure' },
         ].map(function (action) {
           return React.createElement('button', {
             key: action.id, onClick: function () { onNavigate(action.id); },
@@ -45,45 +49,33 @@ function HomePage({ categories, stats, onNavigate, onSearch }) {
       )
     ),
 
-    // Getting Started Journey
-    React.createElement('div', { className: 'max-w-7xl mx-auto px-4 py-12' },
-      React.createElement('h2', { className: 'text-2xl font-bold text-gray-900 mb-2' }, 'Your Onboarding Journey'),
-      React.createElement('p', { className: 'text-gray-500 mb-6' }, "Click any phase to see what's involved. Don't try to do everything at once!"),
-      React.createElement('div', { className: 'grid grid-cols-1 md:grid-cols-4 gap-4' },
-        journeyPhases.map(function (phase) {
-          var isExpanded = expandedPhase === phase.phase;
-          return React.createElement('div', {
-            key: phase.phase,
-            className: 'bg-white rounded-xl border border-gray-200 border-l-4 ' + phase.color + ' transition-all',
-          },
-            React.createElement('button', {
-              onClick: function () { setExpandedPhase(isExpanded ? null : phase.phase); },
-              className: 'w-full p-5 flex items-center justify-between text-left',
-            },
-              React.createElement('div', { className: 'flex items-center gap-2' },
-                React.createElement('span', { className: 'text-xl' }, phase.icon),
-                React.createElement('h3', { className: 'font-semibold text-gray-900' }, phase.phase)
-              ),
-              React.createElement('span', { className: 'text-gray-400 text-lg transition-transform ' + (isExpanded ? 'rotate-180' : '') }, '▾')
-            ),
-            isExpanded && React.createElement('div', { className: 'px-5 pb-5' },
-              React.createElement('ul', { className: 'space-y-1.5' },
-                phase.items.map(function (item, i) {
-                  return React.createElement('li', { key: i, className: 'text-sm text-gray-600 flex items-start gap-2' },
-                    React.createElement('span', { className: 'text-gray-300 mt-0.5' }, '•'),
-                    item
-                  );
-                })
-              )
+    // Onboarding Progress Widget
+    React.createElement('div', { className: 'max-w-7xl mx-auto px-4 py-10' },
+      React.createElement('div', { className: 'bg-white rounded-xl border border-gray-200 shadow-sm p-6' },
+        React.createElement('div', { className: 'flex items-center justify-between mb-3' },
+          React.createElement('div', null,
+            React.createElement('h2', { className: 'text-lg font-bold text-gray-900' }, 'Your Onboarding Progress'),
+            React.createElement('p', { className: 'text-sm text-gray-500 mt-0.5' },
+              checklistProgress.done + ' of ' + checklistProgress.total + ' tasks completed'
             )
-          );
-        })
-      ),
-      React.createElement('div', { className: 'text-center mt-6' },
+          ),
+          React.createElement('span', { className: 'text-2xl font-bold text-toledo-blue' }, checklistProgress.pct + '%')
+        ),
+        React.createElement('div', { className: 'w-full bg-gray-100 rounded-full h-3 mb-4' },
+          React.createElement('div', {
+            className: 'bg-toledo-blue h-3 rounded-full transition-all duration-500',
+            style: { width: checklistProgress.pct + '%' },
+          })
+        ),
+        checklistProgress.done === checklistProgress.total
+          ? React.createElement('p', { className: 'text-green-600 font-semibold text-sm mb-3' }, "🎉 You've completed all onboarding tasks!")
+          : React.createElement('p', { className: 'text-sm text-gray-400 mb-3' },
+              checklistProgress.done === 0 ? "Start by clicking 'My Onboarding' above." : 'Keep going — you\'re making great progress!'
+            ),
         React.createElement('button', {
           onClick: function () { onNavigate('guide'); },
-          className: 'px-6 py-3 bg-toledo-blue text-white rounded-lg hover:bg-toledo-dark transition-colors font-medium text-sm',
-        }, '📖 View Full Onboarding Guide')
+          className: 'px-5 py-2 bg-toledo-blue text-white rounded-lg hover:bg-toledo-dark transition-colors font-medium text-sm',
+        }, checklistProgress.done === 0 ? '▶ Start Onboarding' : '▶ Continue Onboarding')
       )
     ),
 
