@@ -10,6 +10,7 @@ PRAGMA foreign_keys = OFF;
 DELETE FROM Submissions;
 DELETE FROM Articles;
 DELETE FROM Categories;
+DELETE FROM sqlite_sequence WHERE name IN ('Submissions', 'Articles', 'Categories');
 PRAGMA foreign_keys = ON;
 
 -- ============================================================
