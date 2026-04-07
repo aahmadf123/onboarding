@@ -57,6 +57,123 @@ ${getFeatureCode()}
 
 function getFeatureCode(): string {
   return `
+// ── QuickTour ─────────────────────────────────────────────────────────────────
+var TOUR_STEPS = [
+  {
+    icon: '👋',
+    title: 'Welcome to Toledo Athletics!',
+    body: 'This portal has everything you need to get settled in — from your first-day checklist to policies, org chart, key contacts, and more. This quick tour will show you around.',
+    cta: null,
+  },
+  {
+    icon: '🗺️',
+    title: 'My Onboarding',
+    body: 'Your personal onboarding checklist walks you through every phase — First Day, First Week, First Month, and First 90 Days. Check tasks off as you complete them and track your progress.',
+    cta: { label: 'Go to My Onboarding', view: 'guide', param: null },
+  },
+  {
+    icon: '📚',
+    title: 'Explore by Topic',
+    body: 'Browse 9 topic areas: Department Overview, NCAA Compliance, IT & Campus Access, HR & Benefits, Parking, and more. Each topic has detailed articles written for Athletics staff.',
+    cta: { label: 'Browse Topics', view: 'categories', param: null },
+  },
+  {
+    icon: '👥',
+    title: 'Key Contacts & Resources',
+    body: 'Not sure who to call? The Contacts page lists key people across the department. The Resources page has direct links to every system you need — MyUT, Teamworks, TimeClock Plus, and more.',
+    cta: { label: 'See Key Contacts', view: 'contacts', param: null },
+  },
+  {
+    icon: '🏛️',
+    title: 'Org Chart',
+    body: 'Get to know the department structure. See who reports to whom, find email addresses, and understand how Athletics is organized from the Director down to each sport program.',
+    cta: { label: 'View Org Chart', view: 'orgchart', param: null },
+  },
+  {
+    icon: '✨',
+    title: 'AI Assistant',
+    body: 'See the blue chat button in the bottom-right corner? That is your AI assistant, scoped to Toledo Athletics onboarding topics. Ask it anything — policies, procedures, who to contact, how to set up parking.',
+    cta: null,
+  },
+];
+
+function QuickTour({ onDone, onNavigate }) {
+  var _useState = useState(0);
+  var step = _useState[0];
+  var setStep = _useState[1];
+
+  var current = TOUR_STEPS[step];
+  var isLast = step === TOUR_STEPS.length - 1;
+
+  function advance() {
+    if (isLast) { onDone(); } else { setStep(function (s) { return s + 1; }); }
+  }
+
+  function goAndDone(view, param) {
+    onDone();
+    onNavigate(view, param);
+  }
+
+  return React.createElement('div', { className: 'fixed inset-0 z-[100] flex items-center justify-center p-4', style: { background: 'rgba(11,34,64,0.75)', backdropFilter: 'blur(4px)' } },
+    React.createElement('div', { className: 'bg-white rounded-2xl shadow-2xl w-full max-w-md fade-in overflow-hidden' },
+
+      // Progress bar
+      React.createElement('div', { className: 'h-1 bg-gray-100' },
+        React.createElement('div', {
+          className: 'h-1 bg-toledo-blue transition-all duration-500',
+          style: { width: (((step + 1) / TOUR_STEPS.length) * 100) + '%' },
+        })
+      ),
+
+      React.createElement('div', { className: 'p-8' },
+        // Step indicator
+        React.createElement('div', { className: 'flex items-center justify-between mb-6' },
+          React.createElement('div', { className: 'flex gap-1.5' },
+            TOUR_STEPS.map(function (_, i) {
+              return React.createElement('div', {
+                key: i,
+                className: 'h-1.5 rounded-full transition-all duration-300 ' + (i === step ? 'w-6 bg-toledo-blue' : i < step ? 'w-1.5 bg-toledo-blue/40' : 'w-1.5 bg-gray-200'),
+              });
+            })
+          ),
+          React.createElement('span', { className: 'text-xs text-gray-400 font-medium' }, (step + 1) + ' / ' + TOUR_STEPS.length)
+        ),
+
+        // Icon
+        React.createElement('div', { className: 'w-16 h-16 bg-toledo-blue/8 rounded-2xl flex items-center justify-center text-4xl mb-5 mx-auto' }, current.icon),
+
+        // Content
+        React.createElement('h2', { className: 'text-xl font-bold text-gray-900 text-center mb-3' }, current.title),
+        React.createElement('p', { className: 'text-sm text-gray-500 text-center leading-relaxed mb-6' }, current.body),
+
+        // CTA (optional per step)
+        current.cta && React.createElement('button', {
+          onClick: function () { goAndDone(current.cta.view, current.cta.param); },
+          className: 'w-full mb-3 py-2.5 border-2 border-toledo-blue text-toledo-blue rounded-xl text-sm font-semibold hover:bg-toledo-blue hover:text-white transition-colors',
+        }, current.cta.label),
+
+        // Navigation
+        React.createElement('div', { className: 'flex items-center gap-3' },
+          step > 0 && React.createElement('button', {
+            onClick: function () { setStep(function (s) { return s - 1; }); },
+            className: 'flex-1 py-2.5 text-sm font-medium text-gray-500 hover:text-gray-700 border border-gray-200 rounded-xl transition-colors',
+          }, '← Back'),
+          React.createElement('button', {
+            onClick: advance,
+            className: 'flex-1 py-2.5 text-sm font-semibold text-white bg-toledo-blue hover:bg-toledo-dark rounded-xl transition-colors',
+          }, isLast ? '🎉 Let\'s go!' : 'Next →')
+        ),
+
+        // Skip
+        !isLast && React.createElement('button', {
+          onClick: onDone,
+          className: 'w-full mt-3 text-xs text-gray-400 hover:text-gray-600 transition-colors py-1',
+        }, 'Skip tour')
+      )
+    )
+  );
+}
+
 // ── OnboardingGuidePage (unified guide + checklist) ───────────────────────────
 function OnboardingGuidePage({ currentUser, onNavigate }) {
   var storageKey = 'checklist_' + (currentUser ? currentUser.email : 'guest');
@@ -774,6 +891,12 @@ function App() {
   var _useState5 = useState(null);
   var stats = _useState5[0];
   var setStats = _useState5[1];
+  var tourKey = 'toledo_tour_done_v1';
+  var _useState6 = useState(function () {
+    try { return !localStorage.getItem(tourKey); } catch (e) { return false; }
+  });
+  var showTour = _useState6[0];
+  var setShowTour = _useState6[1];
 
   useEffect(function () {
     api('/categories').then(function (r) { if (r.success) setCategories(r.data); });
@@ -825,6 +948,13 @@ function App() {
     _currentUserId = user.id;
     setCurrentUser(user);
     try { localStorage.setItem('toledo_auth_user', JSON.stringify(user)); } catch (e) {}
+    // Show tour only for brand-new users (no tour flag set yet)
+    try { if (!localStorage.getItem(tourKey)) setShowTour(true); } catch (e) {}
+  }
+
+  function dismissTour() {
+    setShowTour(false);
+    try { localStorage.setItem(tourKey, '1'); } catch (e) {}
   }
 
   function handleSignOut() {
@@ -902,6 +1032,7 @@ function App() {
   }
 
   return React.createElement('div', { className: 'min-h-screen bg-gray-50 flex flex-col' },
+    showTour && React.createElement(QuickTour, { onDone: dismissTour, onNavigate: navigate }),
     React.createElement(Header, { currentUser: currentUser, onNavigate: navigate, currentView: view, onSignOut: handleSignOut }),
     React.createElement('main', { className: 'flex-1' }, content),
     React.createElement(Footer, { onNavigate: navigate }),
