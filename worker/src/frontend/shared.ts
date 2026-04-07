@@ -67,7 +67,7 @@ const ROLE_ARCHETYPES = [
 ];
 
 // ── Header ────────────────────────────────────────────────────────────────────
-function Header({ currentUser, onNavigate, currentView, onSignOut }) {
+function Header({ currentUser, onNavigate, currentView, onSignOut, onStartTour }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const isMod = currentUser && (currentUser.role === 'moderator' || currentUser.role === 'admin');
 
@@ -113,6 +113,11 @@ function Header({ currentUser, onNavigate, currentView, onSignOut }) {
             ),
             React.createElement('span', { className: 'text-xs text-blue-200 hidden md:block max-w-[130px] truncate' }, currentUser.email)
           ),
+          onStartTour && React.createElement('button', {
+            onClick: onStartTour,
+            className: 'hidden sm:flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold text-blue-200 hover:text-white border border-blue-400/30 hover:border-white/40 transition-colors flex-shrink-0',
+            title: 'Quick Tour',
+          }, '?'),
           currentUser && onSignOut && React.createElement('button', {
             onClick: onSignOut,
             className: 'hidden sm:flex items-center gap-1 text-xs text-blue-200 hover:text-white border border-blue-400/30 hover:border-white/40 px-2.5 py-1 rounded-lg transition-colors flex-shrink-0',
@@ -132,10 +137,16 @@ function Header({ currentUser, onNavigate, currentView, onSignOut }) {
         React.createElement('div', { className: 'grid grid-cols-3 gap-1 mb-2' },
           navItems.map(navBtn)
         ),
-        onSignOut && React.createElement('button', {
-          onClick: function () { setMenuOpen(false); onSignOut(); },
-          className: 'w-full mt-1 py-1.5 text-xs text-red-300 hover:text-white border border-red-400/30 hover:border-red-300/60 rounded-lg transition-colors',
-        }, '↩ Sign Out')
+        React.createElement('div', { className: 'flex gap-2 mt-1' },
+          onStartTour && React.createElement('button', {
+            onClick: function () { setMenuOpen(false); onStartTour(); },
+            className: 'flex-1 py-1.5 text-xs text-blue-200 hover:text-white border border-blue-400/30 hover:border-white/40 rounded-lg transition-colors',
+          }, '? Quick Tour'),
+          onSignOut && React.createElement('button', {
+            onClick: function () { setMenuOpen(false); onSignOut(); },
+            className: 'flex-1 py-1.5 text-xs text-red-300 hover:text-white border border-red-400/30 hover:border-red-300/60 rounded-lg transition-colors',
+          }, '↩ Sign Out')
+        )
       )
     )
   );
