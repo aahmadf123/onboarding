@@ -62,37 +62,43 @@ var TOUR_STEPS = [
   {
     icon: '👋',
     title: 'Welcome to Toledo Athletics!',
-    body: 'This portal has everything you need to get settled in — from your first-day checklist to policies, org chart, key contacts, and more. This quick tour will show you around.',
+    body: 'This portal has everything you need to get settled in — from your first-day checklist to policies, key contacts, and more. This quick tour will show you around.',
+    target: null,
     cta: null,
   },
   {
     icon: '🗺️',
     title: 'My Onboarding',
     body: 'Your personal onboarding checklist walks you through every phase — First Day, First Week, First Month, and First 90 Days. Check tasks off as you complete them and track your progress.',
+    target: '[data-tour="guide"]',
     cta: { label: 'Go to My Onboarding', view: 'guide', param: null },
   },
   {
     icon: '📚',
     title: 'Explore by Topic',
     body: 'Browse 9 topic areas: Department Overview, NCAA Compliance, IT & Campus Access, HR & Benefits, Parking, and more. Each topic has detailed articles written for Athletics staff.',
+    target: '[data-tour="categories"]',
     cta: { label: 'Browse Topics', view: 'categories', param: null },
   },
   {
     icon: '👥',
     title: 'Key Contacts & Resources',
     body: 'Not sure who to call? The Contacts page lists key people across the department. The Resources page has direct links to every system you need — MyUT, Teamworks, TimeClock Plus, and more.',
+    target: '[data-tour="contacts"]',
     cta: { label: 'See Key Contacts', view: 'contacts', param: null },
   },
   {
-    icon: '🏛️',
-    title: 'Org Chart',
-    body: 'Get to know the department structure. See who reports to whom, find email addresses, and understand how Athletics is organized from the Director down to each sport program.',
-    cta: { label: 'View Org Chart', view: 'orgchart', param: null },
+    icon: '✏️',
+    title: 'Contribute Knowledge',
+    body: 'Have insights to share? Use the Contribute page to propose new articles or suggest edits to existing ones. All submissions are reviewed before publishing.',
+    target: '[data-tour="submit"]',
+    cta: { label: 'Contribute', view: 'submit', param: null },
   },
   {
     icon: '✨',
     title: 'AI Assistant',
     body: 'See the blue chat button in the bottom-right corner? That is your AI assistant, scoped to Toledo Athletics onboarding topics. Ask it anything — policies, procedures, who to contact, how to set up parking.',
+    target: '[data-tour="ai-chat"]',
     cta: null,
   },
 ];
@@ -101,9 +107,34 @@ function QuickTour({ onDone, onNavigate }) {
   var _useState = useState(0);
   var step = _useState[0];
   var setStep = _useState[1];
+  var _useState2 = useState(null);
+  var spotlightRect = _useState2[0];
+  var setSpotlightRect = _useState2[1];
 
   var current = TOUR_STEPS[step];
   var isLast = step === TOUR_STEPS.length - 1;
+
+  // Find and measure the target element for the spotlight
+  useEffect(function () {
+    if (!current.target) {
+      setSpotlightRect(null);
+      return;
+    }
+    var el = document.querySelector(current.target);
+    if (el) {
+      var rect = el.getBoundingClientRect();
+      setSpotlightRect({
+        top: rect.top + window.scrollY - 6,
+        left: rect.left - 6,
+        width: rect.width + 12,
+        height: rect.height + 12,
+      });
+      // Scroll element into view
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    } else {
+      setSpotlightRect(null);
+    }
+  }, [step]);
 
   function advance() {
     if (isLast) { onDone(); } else { setStep(function (s) { return s + 1; }); }
@@ -114,62 +145,136 @@ function QuickTour({ onDone, onNavigate }) {
     onNavigate(view, param);
   }
 
-  return React.createElement('div', { className: 'fixed inset-0 z-[100] flex items-center justify-center p-4', style: { background: 'rgba(11,34,64,0.75)', backdropFilter: 'blur(4px)' } },
-    React.createElement('div', { className: 'bg-white rounded-2xl shadow-2xl w-full max-w-md fade-in overflow-hidden' },
+  // Calculate tooltip position based on spotlight
+  var tooltipStyle = {};
+  if (spotlightRect) {
+    var viewportW = window.innerWidth;
+    var tooltipW = Math.min(360, viewportW - 32);
+    // Position tooltip below the spotlight, centered
+    var leftPos = spotlightRect.left + (spotlightRect.width / 2) - (tooltipW / 2);
+    if (leftPos < 16) leftPos = 16;
+    if (leftPos + tooltipW > viewportW - 16) leftPos = viewportW - tooltipW - 16;
+    tooltipStyle = {
+      position: 'absolute',
+      top: (spotlightRect.top + spotlightRect.height + 16) + 'px',
+      left: leftPos + 'px',
+      width: tooltipW + 'px',
+      zIndex: 110,
+    };
+  }
 
-      // Progress bar
-      React.createElement('div', { className: 'h-1 bg-gray-100' },
-        React.createElement('div', {
-          className: 'h-1 bg-toledo-blue transition-all duration-500',
-          style: { width: (((step + 1) / TOUR_STEPS.length) * 100) + '%' },
-        })
-      ),
+  // Spotlight overlay using CSS clip-path (or center modal when no target)
+  var overlayStyle = { position: 'fixed', inset: 0, zIndex: 100 };
 
-      React.createElement('div', { className: 'p-8' },
-        // Step indicator
-        React.createElement('div', { className: 'flex items-center justify-between mb-6' },
-          React.createElement('div', { className: 'flex gap-1.5' },
-            TOUR_STEPS.map(function (_, i) {
-              return React.createElement('div', {
-                key: i,
-                className: 'h-1.5 rounded-full transition-all duration-300 ' + (i === step ? 'w-6 bg-toledo-blue' : i < step ? 'w-1.5 bg-toledo-blue/40' : 'w-1.5 bg-gray-200'),
-              });
-            })
-          ),
-          React.createElement('span', { className: 'text-xs text-gray-400 font-medium' }, (step + 1) + ' / ' + TOUR_STEPS.length)
-        ),
-
-        // Icon
-        React.createElement('div', { className: 'w-16 h-16 bg-toledo-blue/8 rounded-2xl flex items-center justify-center text-4xl mb-5 mx-auto' }, current.icon),
-
-        // Content
-        React.createElement('h2', { className: 'text-xl font-bold text-gray-900 text-center mb-3' }, current.title),
-        React.createElement('p', { className: 'text-sm text-gray-500 text-center leading-relaxed mb-6' }, current.body),
-
-        // CTA (optional per step)
-        current.cta && React.createElement('button', {
-          onClick: function () { goAndDone(current.cta.view, current.cta.param); },
-          className: 'w-full mb-3 py-2.5 border-2 border-toledo-blue text-toledo-blue rounded-xl text-sm font-semibold hover:bg-toledo-blue hover:text-white transition-colors',
-        }, current.cta.label),
-
-        // Navigation
-        React.createElement('div', { className: 'flex items-center gap-3' },
-          step > 0 && React.createElement('button', {
-            onClick: function () { setStep(function (s) { return s - 1; }); },
-            className: 'flex-1 py-2.5 text-sm font-medium text-gray-500 hover:text-gray-700 border border-gray-200 rounded-xl transition-colors',
-          }, '← Back'),
-          React.createElement('button', {
-            onClick: advance,
-            className: 'flex-1 py-2.5 text-sm font-semibold text-white bg-toledo-blue hover:bg-toledo-dark rounded-xl transition-colors',
-          }, isLast ? '\uD83C\uDF89 Lets go!' : 'Next \u2192')
-        ),
-
-        // Skip
-        !isLast && React.createElement('button', {
-          onClick: onDone,
-          className: 'w-full mt-3 text-xs text-gray-400 hover:text-gray-600 transition-colors py-1',
-        }, 'Skip tour')
+  if (!spotlightRect) {
+    // No target: full overlay with centered card
+    return React.createElement('div', { style: overlayStyle },
+      // Dark backdrop
+      React.createElement('div', {
+        className: 'fixed inset-0 transition-all duration-500',
+        style: { background: 'rgba(11,34,64,0.75)', zIndex: 100 },
+        onClick: function (e) { e.stopPropagation(); },
+      }),
+      // Centered card
+      React.createElement('div', {
+        className: 'fixed inset-0 flex items-center justify-center p-4',
+        style: { zIndex: 110 },
+      },
+        renderTourCard(current, step, isLast, advance, goAndDone, onDone, setStep)
       )
+    );
+  }
+
+  // With target: spotlight with cutout
+  var clipPath = 'polygon(0% 0%, 0% 100%, ' +
+    spotlightRect.left + 'px 100%, ' +
+    spotlightRect.left + 'px ' + spotlightRect.top + 'px, ' +
+    (spotlightRect.left + spotlightRect.width) + 'px ' + spotlightRect.top + 'px, ' +
+    (spotlightRect.left + spotlightRect.width) + 'px ' + (spotlightRect.top + spotlightRect.height) + 'px, ' +
+    spotlightRect.left + 'px ' + (spotlightRect.top + spotlightRect.height) + 'px, ' +
+    spotlightRect.left + 'px 100%, 100% 100%, 100% 0%)';
+
+  return React.createElement('div', { style: { position: 'absolute', inset: 0, zIndex: 100, minHeight: '100%', pointerEvents: 'none' } },
+    // Dark backdrop with cutout
+    React.createElement('div', {
+      style: {
+        position: 'absolute', inset: 0, minHeight: document.documentElement.scrollHeight + 'px',
+        background: 'rgba(11,34,64,0.7)',
+        clipPath: clipPath,
+        transition: 'clip-path 0.5s ease-in-out',
+        pointerEvents: 'auto',
+        zIndex: 100,
+      },
+      onClick: function (e) { e.stopPropagation(); },
+    }),
+    // Spotlight ring
+    React.createElement('div', {
+      style: {
+        position: 'absolute',
+        top: spotlightRect.top + 'px', left: spotlightRect.left + 'px',
+        width: spotlightRect.width + 'px', height: spotlightRect.height + 'px',
+        borderRadius: '8px',
+        boxShadow: '0 0 0 3px rgba(255,205,0,0.8), 0 0 20px rgba(255,205,0,0.3)',
+        transition: 'all 0.5s ease-in-out',
+        pointerEvents: 'none',
+        zIndex: 105,
+      },
+    }),
+    // Tooltip card positioned near spotlight
+    React.createElement('div', { style: Object.assign({}, tooltipStyle, { pointerEvents: 'auto' }) },
+      renderTourCard(current, step, isLast, advance, goAndDone, onDone, setStep)
+    )
+  );
+}
+
+function renderTourCard(current, step, isLast, advance, goAndDone, onDone, setStep) {
+  return React.createElement('div', { className: 'bg-white rounded-2xl shadow-2xl w-full max-w-md fade-in overflow-hidden' },
+    // Progress bar
+    React.createElement('div', { className: 'h-1 bg-gray-100' },
+      React.createElement('div', {
+        className: 'h-1 bg-toledo-blue transition-all duration-500',
+        style: { width: (((step + 1) / TOUR_STEPS.length) * 100) + '%' },
+      })
+    ),
+    React.createElement('div', { className: 'p-6' },
+      // Step indicator
+      React.createElement('div', { className: 'flex items-center justify-between mb-4' },
+        React.createElement('div', { className: 'flex gap-1.5' },
+          TOUR_STEPS.map(function (_, i) {
+            return React.createElement('div', {
+              key: i,
+              className: 'h-1.5 rounded-full transition-all duration-300 ' + (i === step ? 'w-6 bg-toledo-blue' : i < step ? 'w-1.5 bg-toledo-blue/40' : 'w-1.5 bg-gray-200'),
+            });
+          })
+        ),
+        React.createElement('span', { className: 'text-xs text-gray-400 font-medium' }, (step + 1) + ' / ' + TOUR_STEPS.length)
+      ),
+      // Icon
+      React.createElement('div', { className: 'w-12 h-12 bg-toledo-blue/8 rounded-xl flex items-center justify-center text-2xl mb-4 mx-auto' }, current.icon),
+      // Content
+      React.createElement('h2', { className: 'text-lg font-bold text-gray-900 text-center mb-2' }, current.title),
+      React.createElement('p', { className: 'text-sm text-gray-500 text-center leading-relaxed mb-5' }, current.body),
+      // CTA
+      current.cta && React.createElement('button', {
+        onClick: function () { goAndDone(current.cta.view, current.cta.param); },
+        className: 'w-full mb-3 py-2 border-2 border-toledo-blue text-toledo-blue rounded-xl text-sm font-semibold hover:bg-toledo-blue hover:text-white transition-colors',
+      }, current.cta.label),
+      // Navigation
+      React.createElement('div', { className: 'flex items-center gap-3' },
+        step > 0 && React.createElement('button', {
+          onClick: function () { setStep(function (s) { return s - 1; }); },
+          className: 'flex-1 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 border border-gray-200 rounded-xl transition-colors',
+        }, '\u2190 Back'),
+        React.createElement('button', {
+          onClick: advance,
+          className: 'flex-1 py-2 text-sm font-semibold text-white bg-toledo-blue hover:bg-toledo-dark rounded-xl transition-colors',
+        }, isLast ? '\uD83C\uDF89 Lets go!' : 'Next \u2192')
+      ),
+      // Skip
+      !isLast && React.createElement('button', {
+        onClick: onDone,
+        className: 'w-full mt-3 text-xs text-gray-400 hover:text-gray-600 transition-colors py-1',
+      }, 'Skip tour')
     )
   );
 }
@@ -371,86 +476,7 @@ function OnboardingGuidePage({ currentUser, onNavigate }) {
   );
 }
 
-// ── OrgChartPage ──────────────────────────────────────────────────────────────
-function OrgChartNode({ node, depth }) {
-  var _useState = useState(depth < 1);
-  var expanded = _useState[0];
-  var setExpanded = _useState[1];
-  var _useState2 = useState(false);
-  var showDetails = _useState2[0];
-  var setShowDetails = _useState2[1];
-
-  var hasChildren = node.children && node.children.length > 0;
-
-  var indentPx = Math.min(depth * 16, 64);
-  return React.createElement('div', { className: 'mb-1', style: { marginLeft: indentPx + 'px' } },
-    React.createElement('div', { className: 'flex items-center gap-1' },
-      hasChildren && React.createElement('button', {
-        onClick: function () { setExpanded(!expanded); },
-        className: 'p-0.5 rounded hover:bg-gray-200 transition-colors flex-shrink-0',
-      }, expanded ? React.createElement(IconChevronDown) : React.createElement(IconChevronRight)),
-      !hasChildren && React.createElement('div', { className: 'w-5' }),
-      React.createElement('button', {
-        onClick: function () { setShowDetails(!showDetails); },
-        className: 'flex items-center gap-2 px-3 py-2 rounded-lg text-left hover:bg-toledo-blue/5 transition-colors flex-1 min-w-0',
-      },
-        React.createElement('div', { className: 'w-8 h-8 bg-toledo-blue/10 text-toledo-blue rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0' },
-          node.name ? node.name.charAt(0).toUpperCase() : '?'
-        ),
-        React.createElement('div', { className: 'min-w-0' },
-          React.createElement('p', { className: 'font-medium text-gray-900 text-sm truncate' }, node.name),
-          React.createElement('p', { className: 'text-xs text-gray-500 truncate' }, node.title || node.department || '')
-        )
-      )
-    ),
-    showDetails && React.createElement('div', { className: 'ml-10 mt-1 mb-2 bg-white rounded-lg border border-gray-200 p-4 shadow-sm' },
-      React.createElement('p', { className: 'font-semibold text-gray-900 text-sm' }, node.name),
-      node.title && React.createElement('p', { className: 'text-sm text-gray-600' }, node.title),
-      node.department && React.createElement('p', { className: 'text-xs text-gray-500 mt-1' }, 'Department: ' + node.department),
-      node.email && React.createElement('p', { className: 'text-xs text-gray-500' }, 'Email: ' + node.email),
-      node.phone && React.createElement('p', { className: 'text-xs text-gray-500' }, 'Phone: ' + node.phone)
-    ),
-    expanded && hasChildren && React.createElement('div', { className: 'mt-1' },
-      node.children.map(function (child, i) {
-        return React.createElement(OrgChartNode, { key: child.id || i, node: child, depth: depth + 1 });
-      })
-    )
-  );
-}
-
-function OrgChartPage({ onNavigate }) {
-  var _useState = useState(null);
-  var data = _useState[0];
-  var setData = _useState[1];
-  var _useState2 = useState(true);
-  var loading = _useState2[0];
-  var setLoading = _useState2[1];
-
-  useEffect(function () {
-    api('/orgchart').then(function (r) {
-      if (r.success) setData(r.data);
-      setLoading(false);
-    });
-  }, []);
-
-  if (loading) return React.createElement('div', { className: 'max-w-4xl mx-auto px-4 py-12 text-center text-gray-500' }, 'Loading org chart...');
-
-  return React.createElement('div', { className: 'max-w-4xl mx-auto px-4 py-8 fade-in' },
-    React.createElement('button', { onClick: function () { onNavigate('home'); }, className: 'flex items-center gap-2 text-toledo-blue hover:text-toledo-dark mb-6 text-sm font-medium' },
-      React.createElement(IconArrowLeft), 'Back to Home'),
-    React.createElement('h1', { className: 'text-2xl font-bold text-gray-900 flex items-center gap-2 mb-1' },
-      React.createElement(IconUsers), 'Organizational Chart'),
-    React.createElement('p', { className: 'text-gray-500 text-sm mb-6' }, 'Click a name to view details. Click the arrow to expand/collapse.'),
-    React.createElement('div', { className: 'bg-white rounded-xl border border-gray-200 p-4 overflow-x-auto' },
-      data
-        ? (Array.isArray(data)
-            ? data.map(function (node, i) { return React.createElement(OrgChartNode, { key: node.id || i, node: node, depth: 0 }); })
-            : React.createElement(OrgChartNode, { node: data, depth: 0 })
-          )
-        : React.createElement('p', { className: 'text-gray-400 text-center py-8' }, 'No organizational data available.')
-    )
-  );
-}
+// (Org Chart page removed — info available via Executive Leadership & Organizational Structure page)
 
 // ── AIChatWidget ──────────────────────────────────────────────────────────────
 function AIChatWidget({ currentUser }) {
@@ -506,6 +532,7 @@ function AIChatWidget({ currentUser }) {
   if (!open) {
     return React.createElement('button', {
       onClick: function () { setOpen(true); },
+      'data-tour': 'ai-chat',
       className: 'fixed bottom-6 right-6 w-14 h-14 bg-toledo-blue text-white rounded-full shadow-lg hover:bg-toledo-dark transition-colors flex items-center justify-center z-50',
       title: 'AI Assistant',
     }, React.createElement(IconMessageCircle));
@@ -627,32 +654,31 @@ function ResourcesPage({ onNavigate }) {
                   React.createElement('h3', { className: 'font-semibold text-gray-900 group-hover:text-toledo-blue transition-colors text-sm' }, link.title),
                   React.createElement(IconExternalLink)
                 ),
-                link.description && React.createElement('p', { className: 'text-sm text-gray-500 mb-3 line-clamp-2' }, link.description),
-                link.category && React.createElement('span', { className: 'inline-block px-2 py-0.5 bg-toledo-blue/10 text-toledo-blue text-xs rounded-full' }, link.category)
+                link.description && React.createElement('p', { className: 'text-sm text-gray-500 line-clamp-2' }, link.description)
               );
             })
           )
     ),
 
-    // Systems Tab
+    // Systems Tab — clickable buttons like Quick Links
     tab === 'systems' && React.createElement('div', null,
       systems.length === 0
         ? React.createElement('p', { className: 'text-center text-gray-400 py-8' }, 'No systems available.')
-        : React.createElement('div', { className: 'grid grid-cols-1 md:grid-cols-2 gap-4' },
+        : React.createElement('div', { className: 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4' },
             systems.map(function (sys, i) {
-              return React.createElement('div', { key: sys.id || i, className: 'bg-white rounded-xl border border-gray-200 p-5' },
+              return React.createElement('a', {
+                key: sys.id || i,
+                href: sys.access_url || '#',
+                target: sys.access_url ? '_blank' : undefined,
+                rel: sys.access_url ? 'noopener noreferrer' : undefined,
+                className: 'bg-white rounded-xl border border-gray-200 p-5 hover:shadow-md hover:border-toledo-blue/30 transition-all group block',
+              },
                 React.createElement('div', { className: 'flex items-start justify-between mb-2' },
-                  React.createElement('h3', { className: 'font-semibold text-gray-900 text-sm' }, sys.system_name),
-                  sys.category && React.createElement('span', { className: 'px-2 py-0.5 bg-toledo-blue/10 text-toledo-blue text-xs rounded-full flex-shrink-0' }, sys.category)
+                  React.createElement('h3', { className: 'font-semibold text-gray-900 group-hover:text-toledo-blue transition-colors text-sm' }, sys.system_name),
+                  sys.access_url && React.createElement(IconExternalLink)
                 ),
-                sys.description && React.createElement('p', { className: 'text-sm text-gray-500 mb-3 line-clamp-2' }, sys.description),
-                sys.login_notes && React.createElement('div', { className: 'bg-yellow-50 rounded-lg p-2 mb-3' },
-                  React.createElement('p', { className: 'text-xs text-yellow-700' }, '💡 ' + sys.login_notes)
-                ),
-                sys.access_url && React.createElement('a', {
-                  href: sys.access_url, target: '_blank', rel: 'noopener noreferrer',
-                  className: 'flex items-center gap-1 text-sm text-toledo-blue hover:underline',
-                }, React.createElement(IconExternalLink), 'Access System')
+                sys.description && React.createElement('p', { className: 'text-sm text-gray-500 mb-2 line-clamp-2' }, sys.description),
+                sys.login_notes && React.createElement('p', { className: 'text-xs text-yellow-700 bg-yellow-50 rounded-lg px-2 py-1' }, '\uD83D\uDCA1 ' + sys.login_notes)
               );
             })
           )
@@ -696,8 +722,7 @@ function ContactsPage({ onNavigate }) {
                 React.createElement('div', { className: 'min-w-0' },
                   React.createElement('h3', { className: 'font-semibold text-gray-900 text-sm' }, contact.contact_name),
                   contact.title && React.createElement('p', { className: 'text-xs text-gray-500' }, contact.title),
-                  contact.department && React.createElement('p', { className: 'text-xs text-gray-400' }, contact.department),
-                  contact.function_area && React.createElement('span', { className: 'inline-block mt-1 px-2 py-0.5 bg-toledo-blue/10 text-toledo-blue text-xs rounded-full' }, contact.function_area)
+                  contact.department && React.createElement('p', { className: 'text-xs text-gray-400' }, contact.department)
                 )
               ),
               React.createElement('div', { className: 'mt-3 pt-3 border-t border-gray-100 space-y-1' },
@@ -744,11 +769,7 @@ function PoliciesPage({ onNavigate }) {
             return React.createElement('div', { key: policy.id || i, className: 'bg-white rounded-xl border border-gray-200 p-5' },
               React.createElement('div', { className: 'flex items-start justify-between' },
                 React.createElement('div', { className: 'flex-1 min-w-0' },
-                  React.createElement('div', { className: 'flex items-center gap-2 mb-1 flex-wrap' },
-                    policy.policy_code && React.createElement('span', { className: 'px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full font-mono' }, policy.policy_code),
-                    policy.category && React.createElement('span', { className: 'px-2 py-0.5 bg-toledo-blue/10 text-toledo-blue text-xs rounded-full' }, policy.category)
-                  ),
-                  React.createElement('h3', { className: 'font-semibold text-gray-900 text-sm mt-1' }, policy.title),
+                  React.createElement('h3', { className: 'font-semibold text-gray-900 text-sm' }, policy.title),
                   policy.summary && React.createElement('p', { className: 'text-sm text-gray-500 mt-1 line-clamp-2' }, policy.summary)
                 ),
                 policy.url && React.createElement('a', {
@@ -763,6 +784,173 @@ function PoliciesPage({ onNavigate }) {
 }
 
 // (Systems moved into ResourcesPage)
+
+// ── SuperAdminDashboard ───────────────────────────────────────────────────────
+function SuperAdminDashboard({ currentUser, onNavigate }) {
+  var _useState = useState([]);
+  var submissions = _useState[0];
+  var setSubmissions = _useState[1];
+  var _useState2 = useState([]);
+  var users = _useState2[0];
+  var setUsers = _useState2[1];
+  var _useState3 = useState('submissions');
+  var tab = _useState3[0];
+  var setTab = _useState3[1];
+  var _useState4 = useState('pending');
+  var filter = _useState4[0];
+  var setFilter = _useState4[1];
+  var _useState5 = useState(null);
+  var processing = _useState5[0];
+  var setProcessing = _useState5[1];
+  var _useState6 = useState('');
+  var reviewNotes = _useState6[0];
+  var setReviewNotes = _useState6[1];
+
+  function loadSubmissions() {
+    api('/submissions?status=' + filter).then(function (r) { if (r.success) setSubmissions(r.data || []); });
+  }
+  function loadUsers() {
+    api('/users').then(function (r) { if (r.success) setUsers(r.data || []); });
+  }
+
+  useEffect(function () {
+    loadSubmissions();
+    loadUsers();
+  }, [filter]);
+
+  function handleAction(id, action) {
+    setProcessing(id);
+    api('/submissions/' + id + '/' + action, {
+      method: 'PUT',
+      body: JSON.stringify({ reviewed_by: currentUser.id, review_notes: reviewNotes }),
+    }).then(function () {
+      setReviewNotes('');
+      setProcessing(null);
+      loadSubmissions();
+    });
+  }
+
+  return React.createElement('div', { className: 'max-w-5xl mx-auto px-4 py-8 fade-in' },
+    React.createElement('button', { onClick: function () { onNavigate('home'); }, className: 'flex items-center gap-2 text-toledo-blue hover:text-toledo-dark mb-6 text-sm font-medium' },
+      React.createElement(IconArrowLeft), 'Back to Home'),
+    React.createElement('div', { className: 'flex items-center gap-3 mb-1' },
+      React.createElement('span', { className: 'text-2xl' }, '\uD83D\uDD12'),
+      React.createElement('h1', { className: 'text-2xl font-bold text-gray-900' }, 'Super Admin Dashboard')
+    ),
+    React.createElement('p', { className: 'text-gray-500 text-sm mb-6' }, 'Manage submissions, tips, and users across the platform.'),
+
+    // Tabs
+    React.createElement('div', { className: 'flex gap-1 mb-6 bg-gray-100 p-1 rounded-lg w-fit' },
+      [
+        { id: 'submissions', label: '\uD83D\uDCDD Submissions' },
+        { id: 'users', label: '\uD83D\uDC65 Users' },
+      ].map(function (t) {
+        return React.createElement('button', {
+          key: t.id,
+          onClick: function () { setTab(t.id); },
+          className: 'px-4 py-1.5 rounded-md text-sm font-medium transition-colors ' + (tab === t.id ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'),
+        }, t.label);
+      })
+    ),
+
+    // Submissions Tab
+    tab === 'submissions' && React.createElement('div', null,
+      React.createElement('div', { className: 'flex gap-2 mb-4' },
+        ['pending', 'approved', 'rejected'].map(function (s) {
+          return React.createElement('button', {
+            key: s, onClick: function () { setFilter(s); },
+            className: 'px-4 py-2 rounded-lg text-sm font-medium transition-colors ' +
+              (filter === s
+                ? (s === 'pending' ? 'bg-orange-100 text-orange-700' : s === 'approved' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700')
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'),
+          }, s.charAt(0).toUpperCase() + s.slice(1));
+        })
+      ),
+      submissions.length === 0
+        ? React.createElement('p', { className: 'text-center text-gray-400 py-8' }, 'No ' + filter + ' submissions.')
+        : React.createElement('div', { className: 'space-y-4' },
+            submissions.map(function (item) {
+              return React.createElement('div', { key: item.id, className: 'bg-white rounded-xl border border-gray-200 p-5' },
+                React.createElement('div', { className: 'flex items-start justify-between mb-3' },
+                  React.createElement('div', { className: 'flex-1 min-w-0' },
+                    React.createElement('h3', { className: 'font-semibold text-gray-900' },
+                      item.proposed_title || (item.article_title ? 'Edit: ' + item.article_title : 'Submission #' + item.id)
+                    ),
+                    React.createElement('div', { className: 'flex flex-wrap gap-3 mt-1 text-xs text-gray-500' },
+                      React.createElement('span', null, 'By: ' + (item.author_email || 'Unknown')),
+                      React.createElement('span', null, new Date(item.submitted_at).toLocaleString())
+                    )
+                  ),
+                  React.createElement('span', {
+                    className: 'ml-3 flex-shrink-0 px-2 py-0.5 rounded-full text-xs font-medium ' +
+                      (item.status === 'pending' ? 'bg-orange-100 text-orange-700' : item.status === 'approved' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'),
+                  }, item.status)
+                ),
+                React.createElement('div', { className: 'bg-gray-50 rounded-lg p-4 text-sm text-gray-700 whitespace-pre-wrap max-h-48 overflow-y-auto mb-3' },
+                  item.proposed_content || item.content
+                ),
+                item.review_notes && React.createElement('div', { className: 'bg-blue-50 rounded-lg p-3 text-sm text-blue-700 mb-3' },
+                  React.createElement('strong', null, 'Review notes: '), item.review_notes
+                ),
+                filter === 'pending' && React.createElement('div', { className: 'space-y-3' },
+                  React.createElement('textarea', {
+                    value: processing === item.id ? reviewNotes : '',
+                    onChange: function (e) { setProcessing(item.id); setReviewNotes(e.target.value); },
+                    placeholder: 'Optional review notes...',
+                    rows: 2,
+                    className: 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-toledo-blue',
+                  }),
+                  React.createElement('div', { className: 'flex gap-2' },
+                    React.createElement('button', {
+                      onClick: function () { handleAction(item.id, 'approve'); },
+                      disabled: !!processing,
+                      className: 'flex items-center gap-1 px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-50',
+                    }, React.createElement(IconCheck), 'Approve & Publish'),
+                    React.createElement('button', {
+                      onClick: function () { handleAction(item.id, 'reject'); },
+                      disabled: !!processing,
+                      className: 'flex items-center gap-1 px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 disabled:opacity-50',
+                    }, React.createElement(IconX), 'Reject')
+                  )
+                )
+              );
+            })
+          )
+    ),
+
+    // Users Tab
+    tab === 'users' && React.createElement('div', null,
+      React.createElement('p', { className: 'text-sm text-gray-500 mb-4' }, 'Total users: ' + users.length),
+      users.length === 0
+        ? React.createElement('p', { className: 'text-center text-gray-400 py-8' }, 'No users registered.')
+        : React.createElement('div', { className: 'bg-white rounded-xl border border-gray-200 overflow-hidden' },
+            React.createElement('table', { className: 'w-full' },
+              React.createElement('thead', null,
+                React.createElement('tr', { className: 'bg-gray-50 border-b border-gray-200' },
+                  React.createElement('th', { className: 'px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase' }, 'Email'),
+                  React.createElement('th', { className: 'px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase' }, 'Role'),
+                  React.createElement('th', { className: 'px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase' }, 'Joined')
+                )
+              ),
+              React.createElement('tbody', null,
+                users.map(function (u) {
+                  return React.createElement('tr', { key: u.id, className: 'border-b border-gray-100 last:border-0' },
+                    React.createElement('td', { className: 'px-4 py-3 text-sm text-gray-900' }, u.email),
+                    React.createElement('td', { className: 'px-4 py-3' },
+                      React.createElement('span', {
+                        className: 'px-2 py-0.5 rounded-full text-xs font-medium ' +
+                          (u.role === 'admin' ? 'bg-purple-100 text-purple-700' : u.role === 'moderator' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'),
+                      }, u.role)
+                    ),
+                    React.createElement('td', { className: 'px-4 py-3 text-sm text-gray-500' }, new Date(u.created_at).toLocaleDateString())
+                  );
+                })
+              )
+            )
+          )
+    )
+  );
+}
 
 // ── FeedbackButton ────────────────────────────────────────────────────────────
 function FeedbackButton({ currentUser }) {
@@ -841,10 +1029,10 @@ function Footer({ onNavigate }) {
             [
               { id: 'home', label: 'Home' },
               { id: 'guide', label: 'My Onboarding' },
-              { id: 'orgchart', label: 'Org Chart' },
               { id: 'resources', label: 'Resources' },
               { id: 'contacts', label: 'Contacts' },
               { id: 'policies', label: 'Policies' },
+              { id: 'submit', label: 'Contribute' },
             ].map(function (item) {
               return React.createElement('button', {
                 key: item.id,
@@ -912,7 +1100,6 @@ function App() {
       'home': 'Toledo Athletics Onboarding',
       'guide': 'My Onboarding — Toledo Athletics',
       'categories': 'Browse Categories — Toledo Athletics',
-      'orgchart': 'Org Chart — Toledo Athletics',
       'checklist': 'My Onboarding — Toledo Athletics',
       'resources': 'Resources & Systems — Toledo Athletics',
       'contacts': 'Key Contacts — Toledo Athletics',
@@ -920,6 +1107,7 @@ function App() {
       'search': 'Search — Toledo Athletics',
       'submit': 'Contribute — Toledo Athletics',
       'moderate': 'Moderation — Toledo Athletics',
+      'admin': 'Super Admin — Toledo Athletics',
     };
     document.title = titles[newView] || 'Toledo Athletics Onboarding';
     setView(newView);
@@ -948,6 +1136,11 @@ function App() {
     _currentUserId = user.id;
     setCurrentUser(user);
     try { localStorage.setItem('toledo_auth_user', JSON.stringify(user)); } catch (e) {}
+    // Superadmin: redirect to admin dashboard
+    if (user.email === 'utdata@utoledo.edu') {
+      navigate('admin');
+      return;
+    }
     // Show tour only for brand-new users (no tour flag set yet)
     try { if (!localStorage.getItem(tourKey)) setShowTour(true); } catch (e) {}
   }
@@ -1012,8 +1205,8 @@ function App() {
     case 'moderate':
       content = React.createElement(ModerationDashboard, { currentUser: currentUser, onNavigate: navigate });
       break;
-    case 'orgchart':
-      content = React.createElement(OrgChartPage, { onNavigate: navigate });
+    case 'admin':
+      content = React.createElement(SuperAdminDashboard, { currentUser: currentUser, onNavigate: navigate });
       break;
     case 'checklist':
       content = React.createElement(OnboardingGuidePage, { currentUser: currentUser, onNavigate: navigate });

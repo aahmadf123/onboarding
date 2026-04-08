@@ -37,12 +37,24 @@ users.post('/', async (c) => {
   )
     .bind(body.email)
     .first();
-  if (existing) return c.json({ success: true, data: existing });
 
+  if (existing) {
+    // Ensure superadmin always has admin role
+    if (body.email === 'utdata@utoledo.edu' && existing.role !== 'admin') {
+      await c.env.DB.prepare('UPDATE Users SET role = ? WHERE id = ?')
+        .bind('admin', existing.id)
+        .run();
+      return c.json({ success: true, data: { ...existing, role: 'admin' } });
+    }
+    return c.json({ success: true, data: existing });
+  }
+
+  // Assign admin role for superadmin email, staff for everyone else
+  const role = body.email === 'utdata@utoledo.edu' ? 'admin' : 'staff';
   const info = await c.env.DB.prepare(
-    'INSERT INTO Users (email) VALUES (?)'
+    'INSERT INTO Users (email, role) VALUES (?, ?)'
   )
-    .bind(body.email)
+    .bind(body.email, role)
     .run();
   const user = await c.env.DB.prepare(
     'SELECT id, email, role, created_at FROM Users WHERE id = ?'

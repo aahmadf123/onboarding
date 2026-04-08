@@ -35,7 +35,7 @@ function HomePage({ categories, stats, onNavigate, onSearch, currentUser }) {
           { id: 'guide', icon: '🗺️', label: 'My Onboarding', desc: 'Guide + checklist' },
           { id: 'resources', icon: '🔗', label: 'Resources & Systems', desc: 'Links and tools' },
           { id: 'contacts', icon: '👥', label: 'Key Contacts', desc: 'Who to reach out to' },
-          { id: 'orgchart', icon: '🏛️', label: 'Org Chart', desc: 'Department structure' },
+          { id: 'policies', icon: '📋', label: 'Policies', desc: 'Compliance & procedures' },
         ].map(function (action) {
           return React.createElement('button', {
             key: action.id, onClick: function () { onNavigate(action.id); },
