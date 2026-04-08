@@ -199,15 +199,14 @@ expect(json.success).toBe(true);
 expect(Array.isArray(json.data)).toBe(true);
 });
 
-it('returns JSON from /api/orgchart', async () => {
+it('orgchart API route has been removed (falls to SPA)', async () => {
 const request = new IncomingRequest('http://example.com/api/orgchart');
 const ctx = createExecutionContext();
 const response = await worker.fetch(request, env, ctx);
 await waitOnExecutionContext(ctx);
-expect(response.status).toBe(200);
-const json = await response.json() as { success: boolean; data: unknown[] };
-expect(json.success).toBe(true);
-expect(Array.isArray(json.data)).toBe(true);
+// The route was removed; /api/orgchart now falls through to the SPA shell
+const text = await response.text();
+expect(text).toContain('<div id="root">');
 });
 
 it('returns JSON from /api/quicklinks', async () => {
@@ -258,13 +257,14 @@ it('SPA shell includes new feature components', async () => {
 const response = await SELF.fetch('https://example.com/');
 const text = await response.text();
 expect(text).toContain('OnboardingGuidePage');
-expect(text).toContain('OrgChartPage');
 expect(text).toContain('AIChatWidget');
-expect(text).toContain('ChecklistPage');
 expect(text).toContain('ResourcesPage');
 expect(text).toContain('ContactsPage');
 expect(text).toContain('PoliciesPage');
 expect(text).toContain('FeedbackButton');
 expect(text).toContain('Footer');
+expect(text).toContain('SuperAdminDashboard');
+// OrgChartPage has been removed
+expect(text).not.toContain('OrgChartPage');
 });
 });

@@ -70,21 +70,23 @@ const ROLE_ARCHETYPES = [
 function Header({ currentUser, onNavigate, currentView, onSignOut, onStartTour }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const isMod = currentUser && (currentUser.role === 'moderator' || currentUser.role === 'admin');
+  const isSuperAdmin = currentUser && currentUser.role === 'admin';
 
   const navItems = [
     { id: 'home',       label: 'Home' },
     { id: 'guide',      label: 'My Onboarding' },
     { id: 'categories', label: 'Browse' },
-    { id: 'orgchart',   label: 'Org Chart' },
     { id: 'resources',  label: 'Resources' },
     { id: 'contacts',   label: 'Contacts' },
     { id: 'policies',   label: 'Policies' },
     { id: 'submit',     label: 'Contribute' },
     ...(isMod ? [{ id: 'moderate', label: 'Moderate' }] : []),
+    ...(isSuperAdmin ? [{ id: 'admin', label: '\uD83D\uDD12 Admin' }] : []),
   ];
 
   const navBtn = (item) => React.createElement('button', {
     key: item.id,
+    'data-tour': item.id,
     onClick: () => { onNavigate(item.id); setMenuOpen(false); },
     className: 'px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ' +
       (currentView === item.id ? 'bg-white/20 text-white' : 'text-blue-200 hover:bg-white/10 hover:text-white'),
