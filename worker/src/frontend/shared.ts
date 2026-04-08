@@ -70,7 +70,7 @@ const ROLE_ARCHETYPES = [
 function Header({ currentUser, onNavigate, currentView, onSignOut, onStartTour }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const isMod = currentUser && (currentUser.role === 'moderator' || currentUser.role === 'admin');
-  const isSuperAdmin = currentUser && currentUser.email === 'utdata@utoledo.edu';
+  const isSuperAdmin = currentUser && currentUser.role === 'admin';
 
   const navItems = [
     { id: 'home',       label: 'Home' },

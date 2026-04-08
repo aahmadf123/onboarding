@@ -40,6 +40,14 @@ export default {
 
     for (const user of users) {
       try {
+        // Sanitize the display name to prevent XSS in the email body
+        const displayName = user.email
+          .split('@')[0]
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;');
+
         // Send email via MailChannels (free on Cloudflare Workers)
         await fetch('https://api.mailchannels.net/tx/v1/send', {
           method: 'POST',
@@ -65,7 +73,7 @@ export default {
                   '<h1 style="margin:0;font-size:20px;">Toledo Athletics Onboarding</h1>',
                   '</div>',
                   '<div style="padding:24px;background:white;border:1px solid #e5e7eb;border-radius:0 0 8px 8px;">',
-                  '<p>Hi ' + user.email.split('@')[0] + ',</p>',
+                  '<p>Hi ' + displayName + ',</p>',
                   '<p>This is a friendly reminder to complete your <strong>required</strong> onboarding steps in the Toledo Athletics Onboarding Portal.</p>',
                   '<p>Required tasks include:</p>',
                   '<ul>',
@@ -87,8 +95,12 @@ export default {
             ],
           }),
         });
-      } catch {
-        // Silently continue if email fails for one user
+      } catch (err) {
+        // Log email delivery failure for diagnostics
+        console.error(
+          `Failed to send reminder to ${user.email}:`,
+          err instanceof Error ? err.message : err
+        );
       }
     }
   },

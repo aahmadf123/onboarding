@@ -1136,8 +1136,8 @@ function App() {
     _currentUserId = user.id;
     setCurrentUser(user);
     try { localStorage.setItem('toledo_auth_user', JSON.stringify(user)); } catch (e) {}
-    // Superadmin: redirect to admin dashboard
-    if (user.email === 'utdata@utoledo.edu') {
+    // Superadmin: redirect to admin dashboard (role set by server)
+    if (user.role === 'admin') {
       navigate('admin');
       return;
     }
