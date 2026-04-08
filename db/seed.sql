@@ -434,7 +434,7 @@ ParkUToledo news & updates: https://www.parkutoledo.com/parking-news/parking-upd
 QUICK REFERENCE — Parking near key athletics facilities:
 - Savage Arena (main admin offices): Use A permit spaces on the east side of campus
 - Larimer Athletic Complex (football/SASS): Dedicated athletics lots adjacent to the complex
-- Findlay Building (baseball/softball): Surface lots on the south end of campus
+- Findlay Athletic Complex (baseball/softball): Surface lots on the south end of campus
 
 When in doubt, arrive early on your first day and allow extra time to find parking.');
 
@@ -449,7 +449,7 @@ INSERT INTO Articles (category_id, title, current_content) VALUES
 
 KEY STAFF:
 - Jillian Lehman — Associate AD for Student-Athlete Experience
-- Duane Welch — Assistant Director of SASS
+- Duane Welch — Assistant Director of SASS / Director of Football Advising
 
 SERVICES PROVIDED:
 - Course scheduling guidance
