@@ -132,7 +132,7 @@ INSERT INTO KeyContacts (id, function_area, department, contact_name, title, ema
 (5, 'Athletics Communications', 'Communications', 'Paul Helgren', 'Associate Athletic Director of Communications', 'paul.helgren@utoledo.edu', '419-530-4918', NULL, 'Media, communications, and interview routing.', 1, 5),
 (6, 'University Marketing and Communications', 'Marketing', 'Jen Sorgenfrei', 'Executive Director of Marketing and Communications', 'utmarcom@utoledo.edu', '419-530-5546', NULL, 'University-level marketing and branding support.', 1, 6),
 (7, 'Payroll Services', 'Office of the Controller', NULL, NULL, 'payroll@utoledo.edu', '419-530-8780', NULL, 'Payroll operations and pay-related questions.', 1, 7),
-(8, 'Door Access and Security', 'Auxiliary Services', NULL, NULL, 'dooraccess@utoledo.edu', NULL, NULL, 'Badge and door access plan changes.', 1, 8),
+(8, 'Door Access and Security', 'Auxiliary Services', 'Rebecca Lugo', 'Executive Assistant to the Vice President and Director of Athletics', NULL, NULL, NULL, 'Badge and door access plan changes.', 1, 8),
 (9, 'Brand Licensing', 'Marketing and Licensing', 'Kevin Taylor', 'Brand and Licensing Manager', 'kevin.taylor3@utoledo.edu', NULL, NULL, 'Trademark and licensing approvals.', 1, 9),
 (10, 'HRIS Data Maintenance', 'Human Resources Information Systems', NULL, NULL, 'HRIS@utoledo.edu', NULL, NULL, 'Supervisor and reporting-line updates.', 1, 10);
 
