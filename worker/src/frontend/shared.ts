@@ -155,18 +155,98 @@ function Header({ currentUser, onNavigate, currentView, onSignOut, onStartTour }
 }
 
 // ── SearchBar ─────────────────────────────────────────────────────────────────
-function SearchBar({ onSearch }) {
+function SearchBar({ onSearch, onNavigate }) {
   const [q, setQ] = useState('');
-  return React.createElement('form', {
-    onSubmit: (e) => { e.preventDefault(); if (q.trim()) onSearch(q.trim()); },
-    className: 'relative',
-  },
-    React.createElement('div', { className: 'absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400' }, React.createElement(IconSearch)),
-    React.createElement('input', {
-      type: 'text', value: q, onChange: (e) => setQ(e.target.value),
-      placeholder: 'Search articles, policies, procedures...',
-      className: 'w-full pl-12 pr-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-toledo-blue shadow-sm text-sm',
-    })
+  const [suggestions, setSuggestions] = useState([]);
+  const [showDrop, setShowDrop] = useState(false);
+  const debounceRef = useRef(null);
+  const wrapRef = useRef(null);
+
+  useEffect(function () {
+    function handleOutsideClick(e) {
+      if (wrapRef.current && !wrapRef.current.contains(e.target)) setShowDrop(false);
+    }
+    document.addEventListener('mousedown', handleOutsideClick);
+    return function () { document.removeEventListener('mousedown', handleOutsideClick); };
+  }, []);
+
+  function handleChange(e) {
+    const val = e.target.value;
+    setQ(val);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (!val.trim()) { setSuggestions([]); setShowDrop(false); return; }
+    debounceRef.current = setTimeout(function () {
+      fetch('/api/search?q=' + encodeURIComponent(val.trim()))
+        .then(function (r) { return r.json(); })
+        .then(function (r) {
+          if (r.success && r.data.length > 0) { setSuggestions(r.data.slice(0, 5)); setShowDrop(true); }
+          else { setSuggestions([]); setShowDrop(false); }
+        })
+        .catch(function () {});
+    }, 300);
+  }
+
+  function handleSubmit(e) {
+    e.preventDefault();
+    setShowDrop(false);
+    if (q.trim()) onSearch(q.trim());
+  }
+
+  function handleSuggestionClick(item) {
+    setShowDrop(false);
+    setQ('');
+    setSuggestions([]);
+    const type = item.result_type || 'article';
+    if (onNavigate) {
+      if (type === 'article') onNavigate('article', item.id);
+      else if (type === 'contact') onNavigate('contacts');
+      else if (type === 'system') onNavigate('resources');
+      else if (type === 'policy') onNavigate('policies');
+      else onSearch(q.trim());
+    } else {
+      onSearch(item.title || q.trim());
+    }
+  }
+
+  const typeIcon = { article: '\uD83D\uDCC4', contact: '\uD83D\uDC64', system: '\uD83D\uDCBB', policy: '\uD83D\uDCCB' };
+  const typeColor = { article: 'bg-blue-50 text-blue-600', contact: 'bg-purple-50 text-purple-600', system: 'bg-green-50 text-green-600', policy: 'bg-orange-50 text-orange-600' };
+
+  return React.createElement('div', { className: 'relative', ref: wrapRef },
+    React.createElement('form', { onSubmit: handleSubmit, className: 'relative' },
+      React.createElement('div', { className: 'absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400' }, React.createElement(IconSearch)),
+      React.createElement('input', {
+        type: 'text', value: q, onChange: handleChange,
+        onFocus: function () { if (suggestions.length > 0) setShowDrop(true); },
+        placeholder: 'Search articles, policies, contacts...',
+        className: 'w-full pl-12 pr-4 py-3 bg-white border border-gray-200 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-toledo-blue shadow-sm text-sm ' +
+          (showDrop && suggestions.length > 0 ? 'rounded-t-xl rounded-b-none' : 'rounded-xl'),
+      })
+    ),
+    showDrop && suggestions.length > 0 && React.createElement('div', {
+      className: 'absolute left-0 right-0 bg-white border border-gray-200 border-t-0 rounded-b-xl shadow-xl z-50 overflow-hidden',
+    },
+      suggestions.map(function (item, i) {
+        const type = item.result_type || 'article';
+        const title = item.title || '';
+        const snippet = (item.current_content || item.description || item.summary || item.notes || '').substring(0, 70);
+        return React.createElement('button', {
+          key: i,
+          onClick: function () { handleSuggestionClick(item); },
+          className: 'w-full px-4 py-3 text-left hover:bg-gray-50 flex items-start gap-3 border-t border-gray-100 transition-colors',
+        },
+          React.createElement('span', { className: 'flex-shrink-0 text-base mt-0.5' }, typeIcon[type] || '\uD83D\uDCC4'),
+          React.createElement('div', { className: 'flex-1 min-w-0' },
+            React.createElement('p', { className: 'text-sm font-medium text-gray-900 truncate' }, title),
+            snippet && React.createElement('p', { className: 'text-xs text-gray-400 truncate mt-0.5' }, snippet)
+          ),
+          React.createElement('span', { className: 'flex-shrink-0 text-xs px-1.5 py-0.5 rounded font-medium ' + (typeColor[type] || 'bg-gray-100 text-gray-600') }, type)
+        );
+      }),
+      React.createElement('button', {
+        onClick: function () { setShowDrop(false); if (q.trim()) onSearch(q.trim()); },
+        className: 'w-full px-4 py-2.5 text-sm text-toledo-blue font-medium border-t border-gray-100 hover:bg-toledo-blue/5 transition-colors text-center',
+      }, 'See all results for "' + q + '" \u2192')
+    )
   );
 }
 

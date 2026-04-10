@@ -24,7 +24,7 @@ function HomePage({ categories, stats, onNavigate, onSearch, currentUser }) {
         React.createElement('img', { src: '/branding/Primary_Logo_for_Dark_Background.png', alt: 'Toledo Athletics', className: 'h-20 w-auto mx-auto mb-6' }),
         React.createElement('h1', { className: 'text-4xl md:text-5xl font-extrabold mb-4 tracking-tight' }, 'Welcome to Toledo Athletics'),
         React.createElement('p', { className: 'text-xl text-blue-200 mb-8 max-w-2xl mx-auto' }, 'Your complete onboarding guide — everything you need to succeed from day one.'),
-        React.createElement('div', { className: 'max-w-xl mx-auto' }, React.createElement(SearchBar, { onSearch }))
+        React.createElement('div', { className: 'max-w-xl mx-auto' }, React.createElement(SearchBar, { onSearch, onNavigate }))
       )
     ),
 
@@ -171,30 +171,115 @@ function ArticleView({ articleId, onNavigate }) {
 function SearchResults({ query, onNavigate }) {
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [activeType, setActiveType] = useState('all');
+
   useEffect(() => {
     setLoading(true);
-    api('/search?q=' + encodeURIComponent(query)).then(r => { if (r.success) setResults(r.data); setLoading(false); });
+    setActiveType('all');
+    api('/search?q=' + encodeURIComponent(query)).then(r => {
+      if (r.success) setResults(r.data || []);
+      setLoading(false);
+    });
   }, [query]);
+
+  function escapeHtml(text) {
+    return String(text || '')
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  function escapeRegex(str) {
+    return str.replace(/[.*+?^{}()|[\]\\$]/g, '\\$&');
+  }
+
+  function highlightText(text, q) {
+    if (!text || !q) return escapeHtml(text);
+    let escaped = escapeHtml(text);
+    const terms = q.split(/\s+/).filter(function (t) { return t.length > 1; });
+    terms.forEach(function (term) {
+      const re = new RegExp('(' + escapeRegex(term) + ')', 'gi');
+      escaped = escaped.replace(re, '<mark>$1</mark>');
+    });
+    return escaped;
+  }
+
+  function getSnippet(item, q) {
+    const raw = item.current_content || item.description || item.summary || item.notes || '';
+    if (!raw) return '';
+    const firstTerm = (q || '').split(/\s+/)[0] || '';
+    const idx = firstTerm ? raw.toLowerCase().indexOf(firstTerm.toLowerCase()) : -1;
+    const start = idx > 60 ? idx - 60 : 0;
+    const end = Math.min(raw.length, start + 220);
+    let snippet = raw.substring(start, end).replace(/[#*_~>|!\\[\]]/g, '').replace(/\s+/g, ' ').trim();
+    if (start > 0) snippet = '\u2026' + snippet;
+    if (end < raw.length) snippet = snippet + '\u2026';
+    return snippet;
+  }
+
+  function handleItemClick(item) {
+    const type = item.result_type || 'article';
+    if (type === 'article') onNavigate('article', item.id);
+    else if (type === 'contact') onNavigate('contacts');
+    else if (type === 'system') onNavigate('resources');
+    else if (type === 'policy') onNavigate('policies');
+  }
+
+  const typeLabels = { all: 'All', article: '\uD83D\uDCC4 Articles', contact: '\uD83D\uDC64 Contacts', system: '\uD83D\uDCBB Systems', policy: '\uD83D\uDCCB Policies' };
+  const typeBadgeColor = { article: 'bg-blue-50 text-blue-600', contact: 'bg-purple-50 text-purple-700', system: 'bg-green-50 text-green-700', policy: 'bg-orange-50 text-orange-700' };
+  const typeOrder = ['all', 'article', 'contact', 'system', 'policy'];
+
+  const typeCounts = results.reduce(function (acc, r) {
+    const t = r.result_type || 'article';
+    acc[t] = (acc[t] || 0) + 1;
+    return acc;
+  }, {});
+
+  const filtered = activeType === 'all' ? results : results.filter(function (r) { return (r.result_type || 'article') === activeType; });
+
   return React.createElement('div', { className: 'max-w-4xl mx-auto px-4 py-8 fade-in' },
     React.createElement('button', { onClick: () => onNavigate('home'), className: 'flex items-center gap-2 text-toledo-blue hover:text-toledo-dark mb-6 text-sm font-medium' },
       React.createElement(IconArrowLeft), 'Back to Home'),
-    React.createElement('h1', { className: 'text-2xl font-bold text-gray-900 mb-2' }, 'Search Results'),
-    React.createElement('p', { className: 'text-gray-500 mb-6' }, 'Showing results for "' + query + '"'),
+    React.createElement('h1', { className: 'text-2xl font-bold text-gray-900 mb-1' }, 'Search Results'),
+    React.createElement('p', { className: 'text-gray-500 mb-5' }, 'Results for "' + query + '"'),
+
+    // Type filter chips
+    !loading && results.length > 0 && React.createElement('div', { className: 'flex flex-wrap gap-2 mb-6' },
+      typeOrder.filter(function (t) { return t === 'all' || typeCounts[t]; }).map(function (type) {
+        const count = type === 'all' ? results.length : (typeCounts[type] || 0);
+        const active = activeType === type;
+        return React.createElement('button', {
+          key: type,
+          onClick: function () { setActiveType(type); },
+          className: 'px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ' +
+            (active ? 'bg-toledo-blue text-white border-toledo-blue' : 'bg-white text-gray-600 border-gray-200 hover:border-toledo-blue/40 hover:text-toledo-blue'),
+        }, typeLabels[type] + ' (' + count + ')');
+      })
+    ),
+
     loading
       ? React.createElement('p', { className: 'text-center text-gray-500 py-8' }, 'Searching...')
-      : results.length === 0
+      : filtered.length === 0
         ? React.createElement('p', { className: 'text-center text-gray-500 py-8' }, 'No results found. Try a different search term.')
         : React.createElement('div', { className: 'space-y-3' },
-            results.map((article) => React.createElement('button', {
-              key: article.id, onClick: () => onNavigate('article', article.id),
-              className: 'w-full bg-white rounded-xl border border-gray-200 p-5 text-left hover:shadow-md hover:border-toledo-blue/30 transition-all'
-            },
-              article.category_name && React.createElement('span', { className: 'px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full mb-1 inline-block' }, article.category_name),
-              React.createElement('h3', { className: 'font-semibold text-gray-900' }, article.title),
-              React.createElement('p', { className: 'text-sm text-gray-500 mt-1 line-clamp-2' },
-                article.current_content ? article.current_content.substring(0, 200) + '...' : ''
-              )
-            ))
+            filtered.map(function (item, idx) {
+              const type = item.result_type || 'article';
+              const title = item.title || '';
+              const snippet = getSnippet(item, query);
+              return React.createElement('button', {
+                key: idx, onClick: function () { handleItemClick(item); },
+                className: 'w-full bg-white rounded-xl border border-gray-200 p-5 text-left hover:shadow-md hover:border-toledo-blue/30 transition-all',
+              },
+                React.createElement('div', { className: 'flex items-center gap-2 mb-1' },
+                  React.createElement('span', { className: 'text-xs px-2 py-0.5 rounded-full font-medium ' + (typeBadgeColor[type] || 'bg-gray-100 text-gray-600') }, typeLabels[type] || type),
+                  type === 'article' && item.category_name && React.createElement('span', { className: 'text-xs text-gray-400' }, item.category_name)
+                ),
+                React.createElement('h3', { className: 'font-semibold text-gray-900 mb-1', dangerouslySetInnerHTML: { __html: highlightText(title, query) } }),
+                snippet && React.createElement('p', { className: 'text-sm text-gray-500 line-clamp-2', dangerouslySetInnerHTML: { __html: highlightText(snippet, query) } }),
+                type === 'contact' && React.createElement('div', { className: 'mt-2 flex flex-wrap gap-3 text-xs text-gray-400' },
+                  item.email && React.createElement('span', null, '\u2709\uFE0F ' + item.email),
+                  item.phone && React.createElement('span', null, '\uD83D\uDCDE ' + item.phone)
+                )
+              );
+            })
           )
   );
 }

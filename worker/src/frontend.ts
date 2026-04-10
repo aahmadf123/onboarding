@@ -40,6 +40,14 @@ function getIndexHtml(): string {
     .prose ol { list-style-type: decimal; padding-left: 1.5rem; margin-bottom: 1rem; }
     .prose li { margin-bottom: 0.25rem; }
     .prose strong { font-weight: 600; }
+    .chat-md p { margin-bottom: 0.5rem; line-height: 1.6; }
+    .chat-md p:last-child { margin-bottom: 0; }
+    .chat-md ul { list-style-type: disc; padding-left: 1.25rem; margin-bottom: 0.5rem; }
+    .chat-md ol { list-style-type: decimal; padding-left: 1.25rem; margin-bottom: 0.5rem; }
+    .chat-md li { margin-bottom: 0.15rem; }
+    .chat-md strong { font-weight: 600; }
+    .chat-md a { color: #0B2240; text-decoration: underline; }
+    mark { background: #fef9c3; color: #713f12; border-radius: 2px; padding: 0 2px; }
     .fade-in { animation: fadeIn 0.3s ease-in; }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
   </style>
@@ -500,34 +508,83 @@ function AIChatWidget({ currentUser }) {
     }
   }, [messages]);
 
-  function handleSend() {
-    if (!input.trim() || sending) return;
-    var userMsg = { role: 'user', content: input.trim() };
-    var newMessages = messages.concat([userMsg]);
+  async function sendMessage(text) {
+    if (!text || !text.trim() || sending) return;
+    const userMsg = { role: 'user', content: text.trim() };
+    const newMessages = messages.concat([userMsg]);
     setMessages(newMessages);
     setInput('');
     setSending(true);
-    api('/ai/chat', {
-      method: 'POST',
-      body: JSON.stringify({ messages: newMessages.map(function (m) { return { role: m.role, content: m.content }; }) }),
-    }).then(function (r) {
-      setSending(false);
-      if (r.data && r.data.reply) {
-        setMessages(function (prev) {
-          return prev.concat([{ role: 'assistant', content: r.data.reply, sources: r.data.sources }]);
-        });
-      } else {
-        setMessages(function (prev) {
-          return prev.concat([{ role: 'assistant', content: r.error || 'Sorry, I could not process your request. Please try again.' }]);
-        });
-      }
-    }).catch(function () {
-      setSending(false);
-      setMessages(function (prev) {
-        return prev.concat([{ role: 'assistant', content: 'An error occurred. Please try again.' }]);
+
+    // Append empty streaming placeholder
+    setMessages(prev => prev.concat([{ role: 'assistant', content: '', sources: [], streaming: true }]));
+
+    try {
+      const res = await fetch('/api/ai/chat/stream', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: newMessages.map(m => ({ role: m.role, content: m.content })) }),
       });
-    });
+
+      if (!res.ok || !res.body) throw new Error('Stream unavailable');
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          const data = line.slice(6).trim();
+          if (data === '[DONE]') break;
+          try {
+            const parsed = JSON.parse(data);
+            if (parsed.type === 'sources') {
+              const srcs = parsed.sources;
+              setMessages(prev => {
+                const updated = prev.slice();
+                const last = updated[updated.length - 1];
+                if (last && last.streaming) updated[updated.length - 1] = Object.assign({}, last, { sources: srcs });
+                return updated;
+              });
+            } else if (parsed.type === 'token') {
+              const tok = parsed.text;
+              setMessages(prev => {
+                const updated = prev.slice();
+                const last = updated[updated.length - 1];
+                if (last && last.streaming) updated[updated.length - 1] = Object.assign({}, last, { content: last.content + tok });
+                return updated;
+              });
+            }
+          } catch (e) {}
+        }
+      }
+
+      // Mark streaming complete
+      setMessages(prev => {
+        const updated = prev.slice();
+        const last = updated[updated.length - 1];
+        if (last && last.streaming) updated[updated.length - 1] = Object.assign({}, last, { streaming: false });
+        return updated;
+      });
+    } catch (e) {
+      setMessages(prev => {
+        const updated = prev.slice();
+        const last = updated[updated.length - 1];
+        if (last && last.streaming) updated[updated.length - 1] = { role: 'assistant', content: 'An error occurred. Please try again.', sources: [] };
+        return updated;
+      });
+    }
+
+    setSending(false);
   }
+
+  function handleSend() { sendMessage(input); }
 
   if (!open) {
     return React.createElement('button', {
@@ -538,8 +595,27 @@ function AIChatWidget({ currentUser }) {
     }, React.createElement(IconMessageCircle));
   }
 
-  return React.createElement('div', { className: 'fixed bottom-6 right-6 w-80 sm:w-96 bg-white rounded-xl shadow-2xl border border-gray-200 flex flex-col z-50', style: { maxHeight: '500px' } },
-    React.createElement('div', { className: 'flex items-center justify-between px-4 py-3 bg-toledo-blue text-white rounded-t-xl' },
+  function renderAssistantContent(msg) {
+    if (msg.streaming && !msg.content) {
+      return React.createElement('span', { className: 'inline-flex gap-1 items-center py-1' },
+        React.createElement('span', { className: 'w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce', style: { animationDelay: '0ms' } }),
+        React.createElement('span', { className: 'w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce', style: { animationDelay: '150ms' } }),
+        React.createElement('span', { className: 'w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce', style: { animationDelay: '300ms' } })
+      );
+    }
+    const html = typeof marked !== 'undefined' ? marked.parse(msg.content || '') : (msg.content || '');
+    return React.createElement('div', { className: 'prose prose-sm max-w-none chat-md', dangerouslySetInnerHTML: { __html: html } });
+  }
+
+  const starterQuestions = [
+    'What should I do on my first day?',
+    'Who do I contact for IT issues?',
+    'How does door access work?',
+    'What is the NIL policy?',
+  ];
+
+  return React.createElement('div', { className: 'fixed bottom-6 right-6 w-80 sm:w-96 bg-white rounded-xl shadow-2xl border border-gray-200 flex flex-col z-50 max-w-[calc(100vw-3rem)]', style: { maxHeight: '540px' } },
+    React.createElement('div', { className: 'flex items-center justify-between px-4 py-3 bg-toledo-blue text-white rounded-t-xl flex-shrink-0' },
       React.createElement('div', { className: 'flex items-center gap-2' },
         React.createElement(IconSparkles),
         React.createElement('span', { className: 'font-semibold text-sm' }, 'AI Assistant')
@@ -554,36 +630,47 @@ function AIChatWidget({ currentUser }) {
           React.createElement(IconX))
       )
     ),
-    React.createElement('div', { className: 'p-3 bg-yellow-50 border-b text-xs text-yellow-700' },
-      'This AI assistant is scoped to Toledo Athletics onboarding topics. Responses are AI-generated and may not be fully accurate.'),
-    React.createElement('div', { className: 'flex-1 overflow-y-auto p-4 space-y-3', style: { minHeight: '200px', maxHeight: '320px' } },
-      messages.length === 0 && React.createElement('p', { className: 'text-center text-gray-400 text-sm py-8' }, 'Ask me anything about onboarding!'),
+    React.createElement('div', { className: 'px-3 py-2 bg-yellow-50 border-b text-xs text-yellow-700 flex-shrink-0' },
+      'Scoped to Toledo Athletics onboarding topics. Responses are AI-generated — verify with your department.'),
+    React.createElement('div', { className: 'flex-1 overflow-y-auto p-4 space-y-3', style: { minHeight: '200px', maxHeight: '340px' } },
+      messages.length === 0 && React.createElement('div', { className: 'py-2' },
+        React.createElement('p', { className: 'text-center text-xs text-gray-400 mb-3' }, 'Try asking:'),
+        React.createElement('div', { className: 'space-y-2' },
+          starterQuestions.map(function (q, i) {
+            return React.createElement('button', {
+              key: i,
+              onClick: function () { sendMessage(q); },
+              className: 'w-full text-left px-3 py-2 rounded-lg border border-gray-200 text-xs text-gray-600 hover:bg-toledo-blue/5 hover:border-toledo-blue/30 transition-colors',
+            }, '\uD83D\uDCAC ' + q);
+          })
+        )
+      ),
       messages.map(function (msg, i) {
         var isUser = msg.role === 'user';
         return React.createElement('div', { key: i, className: 'flex ' + (isUser ? 'justify-end' : 'justify-start') },
-          React.createElement('div', { className: 'max-w-[80%] px-3 py-2 rounded-lg text-sm ' + (isUser ? 'bg-toledo-blue text-white' : 'bg-gray-100 text-gray-800') },
-            React.createElement('p', { className: 'whitespace-pre-wrap' }, msg.content),
-            msg.sources && msg.sources.length > 0 && React.createElement('div', { className: 'mt-2 pt-2 border-t ' + (isUser ? 'border-blue-400' : 'border-gray-200') },
-              React.createElement('p', { className: 'text-xs font-medium mb-1 ' + (isUser ? 'text-blue-200' : 'text-gray-500') }, 'Sources:'),
+          React.createElement('div', { className: 'max-w-[85%] px-3 py-2 rounded-lg text-sm ' + (isUser ? 'bg-toledo-blue text-white' : 'bg-gray-100 text-gray-800') },
+            isUser
+              ? React.createElement('p', { className: 'whitespace-pre-wrap' }, msg.content)
+              : renderAssistantContent(msg),
+            msg.sources && msg.sources.length > 0 && !msg.streaming && React.createElement('div', { className: 'mt-2 pt-2 border-t border-gray-200' },
+              React.createElement('p', { className: 'text-xs font-medium mb-1 text-gray-500' }, 'Sources:'),
               msg.sources.map(function (src, j) {
-                return React.createElement('p', { key: j, className: 'text-xs ' + (isUser ? 'text-blue-200' : 'text-gray-500') }, '• ' + src);
+                return React.createElement('p', { key: j, className: 'text-xs text-gray-400' }, '\u2022 ' + src);
               })
             )
           )
         );
       }),
-      sending && React.createElement('div', { className: 'flex justify-start' },
-        React.createElement('div', { className: 'bg-gray-100 text-gray-500 px-3 py-2 rounded-lg text-sm' }, 'Thinking...')
-      ),
       React.createElement('div', { ref: messagesEndRef })
     ),
-    React.createElement('div', { className: 'p-3 border-t flex gap-2' },
+    React.createElement('div', { className: 'p-3 border-t flex gap-2 flex-shrink-0' },
       React.createElement('input', {
         type: 'text', value: input,
         onChange: function (e) { setInput(e.target.value); },
-        onKeyDown: function (e) { if (e.key === 'Enter') handleSend(); },
-        placeholder: 'Type a message...',
-        className: 'flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-toledo-blue',
+        onKeyDown: function (e) { if (e.key === 'Enter' && !e.shiftKey) handleSend(); },
+        placeholder: 'Ask anything about onboarding...',
+        disabled: sending,
+        className: 'flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-toledo-blue disabled:opacity-50',
       }),
       React.createElement('button', {
         onClick: handleSend, disabled: sending || !input.trim(),

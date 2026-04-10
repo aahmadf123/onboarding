@@ -19,18 +19,19 @@ IMPORTANT RULES:
 4. Be helpful, professional, and concise.
 5. Do not reveal confidential information like SSNs, salaries, medical data, or passwords.`;
 
-async function chat(ai: Ai, messages: ChatMessage[], context: string): Promise<string> {
-  const systemMessage = context
+/** Build the context query from the last 3 user messages for richer multi-turn retrieval. */
+function buildContextQuery(messages: ChatMessage[]): string {
+  return messages
+    .filter((m) => m.role === 'user')
+    .slice(-3)
+    .map((m) => m.content)
+    .join(' ');
+}
+
+function buildSystemMessage(context: string): string {
+  return context
     ? `${SYSTEM_PROMPT}\n\nRelevant onboarding context:\n${context}`
     : SYSTEM_PROMPT;
-
-  const aiMessages = [
-    { role: 'system' as const, content: systemMessage },
-    ...messages,
-  ];
-
-  const response = await ai.run(AI_MODEL, { messages: aiMessages }) as { response?: string };
-  return response?.response ?? 'I was unable to generate a response. Please try again.';
 }
 
 const aiChat = new Hono<{ Bindings: Bindings }>();
@@ -51,16 +52,11 @@ aiChat.post('/', async (c) => {
       return c.json({ success: false, error: 'messages array is required' }, 400);
     }
 
-    // Use the last user message as the search query for context retrieval
-    const lastUserMsg = [...body.messages]
-      .reverse()
-      .find((m) => m.role === 'user');
-
-    const { context, sources } = lastUserMsg
-      ? await getRelevantContextWithSources(c.env.DB, lastUserMsg.content)
+    const contextQuery = buildContextQuery(body.messages);
+    const { context, sources } = contextQuery
+      ? await getRelevantContextWithSources(c.env.DB, contextQuery)
       : { context: '', sources: [] };
 
-    // If AI binding is not available, return context-based response
     if (!c.env.AI) {
       const fallbackReply = context
         ? `Based on onboarding materials:\n\n${context.substring(0, 500)}...\n\nFor more details, please contact the relevant department.`
@@ -68,7 +64,12 @@ aiChat.post('/', async (c) => {
       return c.json({ success: true, data: { reply: fallbackReply, sources } });
     }
 
-    const reply = await chat(c.env.AI, body.messages, context);
+    const aiMessages = [
+      { role: 'system' as const, content: buildSystemMessage(context) },
+      ...body.messages,
+    ];
+    const response = await c.env.AI.run(AI_MODEL, { messages: aiMessages }) as { response?: string };
+    const reply = response?.response ?? 'I was unable to generate a response. Please try again.';
 
     return c.json({ success: true, data: { reply, sources } });
   } catch (err) {
@@ -81,6 +82,107 @@ aiChat.post('/', async (c) => {
         sources: [],
       },
     });
+  }
+});
+
+/**
+ * POST /api/ai/chat/stream
+ * Body: { messages: ChatMessage[] }
+ * Returns: text/event-stream with:
+ *   data: { type: 'sources', sources: string[] }
+ *   data: { type: 'token', text: string }  (repeated)
+ *   data: [DONE]
+ */
+aiChat.post('/stream', async (c) => {
+  try {
+    const body = await c.req.json<{ messages: ChatMessage[] }>();
+
+    if (!body.messages || body.messages.length === 0) {
+      return c.json({ success: false, error: 'messages array is required' }, 400);
+    }
+
+    const contextQuery = buildContextQuery(body.messages);
+    const { context, sources } = contextQuery
+      ? await getRelevantContextWithSources(c.env.DB, contextQuery)
+      : { context: '', sources: [] };
+
+    const encoder = new TextEncoder();
+
+    // Fallback when AI binding is unavailable
+    if (!c.env.AI) {
+      const fallback = context
+        ? `Based on onboarding materials:\n\n${context.substring(0, 500)}...\n\nFor more details, please contact the relevant department.`
+        : 'The AI assistant is currently unavailable. Please try again later or contact your department directly.';
+      const stream = new ReadableStream({
+        start(controller) {
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'sources', sources })}\n\n`));
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'token', text: fallback })}\n\n`));
+          controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+          controller.close();
+        },
+      });
+      return new Response(stream, {
+        headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache' },
+      });
+    }
+
+    const aiMessages = [
+      { role: 'system' as const, content: buildSystemMessage(context) },
+      ...body.messages,
+    ];
+
+    const aiStream = await c.env.AI.run(AI_MODEL, { messages: aiMessages, stream: true }) as ReadableStream;
+
+    const readable = new ReadableStream({
+      async start(controller) {
+        // Emit sources metadata first so the UI can display citations immediately
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'sources', sources })}\n\n`));
+
+        const reader = aiStream.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n');
+            buffer = lines.pop() ?? '';
+            for (const line of lines) {
+              if (!line.startsWith('data: ')) continue;
+              const data = line.slice(6).trim();
+              if (data === '[DONE]') {
+                controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+                return;
+              }
+              try {
+                const parsed = JSON.parse(data) as { response?: string };
+                if (parsed.response) {
+                  controller.enqueue(
+                    encoder.encode(`data: ${JSON.stringify({ type: 'token', text: parsed.response })}\n\n`)
+                  );
+                }
+              } catch { /* ignore malformed SSE chunks */ }
+            }
+          }
+          controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+        } finally {
+          reader.releaseLock();
+          controller.close();
+        }
+      },
+    });
+
+    return new Response(readable, {
+      headers: {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+      },
+    });
+  } catch (err) {
+    console.error('AI Chat stream error:', err);
+    return c.json({ success: false, error: 'AI service temporarily unavailable' }, 500);
   }
 });
 
