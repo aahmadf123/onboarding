@@ -3,6 +3,48 @@ import { SiteContentIndexRow } from '../types';
 type Chunk = { source_title: string; section_path: string | null; content_text: string };
 
 /**
+ * Refreshes the AI-chat index entry for a single article. Must be called
+ * after every CMS write to Articles, or the chat keeps answering from stale
+ * seeded text. Soft-deleted articles are removed from the index.
+ */
+export async function reindexArticle(db: D1Database, articleId: number): Promise<void> {
+  await db
+    .prepare("DELETE FROM SiteContentIndex WHERE source_type = 'article' AND source_id = ?")
+    .bind(articleId)
+    .run();
+
+  const article = await db
+    .prepare(
+      `SELECT Articles.id, Articles.title, Articles.current_content, Articles.is_active,
+              Categories.name AS category_name
+       FROM Articles LEFT JOIN Categories ON Categories.id = Articles.category_id
+       WHERE Articles.id = ?`
+    )
+    .bind(articleId)
+    .first<{
+      id: number;
+      title: string;
+      current_content: string | null;
+      is_active: number;
+      category_name: string | null;
+    }>();
+  if (!article || !article.is_active) return;
+
+  await db
+    .prepare(
+      `INSERT INTO SiteContentIndex (source_type, source_id, source_title, content_text, section_path)
+       VALUES ('article', ?, ?, ?, ?)`
+    )
+    .bind(
+      article.id,
+      article.title,
+      `${article.title}\n${(article.current_content ?? '').slice(0, 8000)}`,
+      article.category_name ? `${article.category_name} > ${article.title}` : article.title
+    )
+    .run();
+}
+
+/**
  * Retrieves relevant context chunks for AI chat.
  * Returns just the context string (backwards-compatible convenience wrapper).
  */
