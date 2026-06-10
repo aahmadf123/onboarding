@@ -3,6 +3,7 @@
 
 import { getSharedCode } from './frontend/shared';
 import { getContentCode } from './frontend/content';
+import { getAdminCode } from './frontend/admin';
 
 function getIndexHtml(): string {
   return `<!DOCTYPE html>
@@ -57,6 +58,7 @@ function getIndexHtml(): string {
   <script type="text/babel" data-type="module">
 ${getSharedCode()}
 ${getContentCode()}
+${getAdminCode()}
 ${getFeatureCode()}
   </script>
 </body>
@@ -287,100 +289,51 @@ function renderTourCard(current, step, isLast, advance, goAndDone, onDone, setSt
   );
 }
 
-// ── OnboardingGuidePage (unified guide + checklist) ───────────────────────────
+// ── OnboardingGuidePage (DB-backed checklist with approvals) ──────────────────
+var PHASE_META = {
+  'first-day':     { label: 'First Day',     icon: '☀️', order: 1 },
+  'first-week':    { label: 'First Week',    icon: '📅', order: 2 },
+  'first-month':   { label: 'First Month',   icon: '📋', order: 3 },
+  'first-90-days': { label: 'First 90 Days', icon: '🎯', order: 4 },
+};
+
+function taskIsChecked(status) {
+  return status === 'done' || status === 'approved' || status === 'pending_approval';
+}
+
 function OnboardingGuidePage({ currentUser, onNavigate }) {
-  var storageKey = 'checklist_' + (currentUser ? currentUser.email : 'guest');
-  var [checked, setChecked] = useState(function () {
-    try {
-      var saved = localStorage.getItem(storageKey);
-      return saved ? JSON.parse(saved) : {};
-    } catch (e) { return {}; }
-  });
-  var [expandedItem, setExpandedItem] = useState(null);
+  var _tasksState = useState(null);
+  var tasks = _tasksState[0];
+  var setTasks = _tasksState[1];
+  var _expandedState = useState(null);
+  var expandedItem = _expandedState[0];
+  var setExpandedItem = _expandedState[1];
+  var _busyState = useState(null);
+  var busy = _busyState[0];
+  var setBusy = _busyState[1];
 
-  function toggle(id) {
-    var next = Object.assign({}, checked, { [id]: !checked[id] });
-    setChecked(next);
-    try { localStorage.setItem(storageKey, JSON.stringify(next)); } catch (e) {}
+  useEffect(function () {
+    api('/tasks').then(function (r) { if (r.success) setTasks(r.data || []); });
+  }, []);
+
+  function toggle(task) {
+    if (task.my_status === 'approved' || busy) return;
+    var done = !taskIsChecked(task.my_status);
+    setBusy(task.id);
+    api('/tasks/' + task.id + '/status', { method: 'PUT', body: JSON.stringify({ done: done }) })
+      .then(function (r) {
+        setBusy(null);
+        if (r.success) {
+          setTasks(function (prev) {
+            return (prev || []).map(function (t) {
+              if (t.id !== task.id) return t;
+              return Object.assign({}, t, { my_status: r.data.status, review_notes: done ? t.review_notes : null });
+            });
+          });
+        }
+      })
+      .catch(function () { setBusy(null); });
   }
-
-  function reset() {
-    setChecked({});
-    try { localStorage.setItem(storageKey, JSON.stringify({})); } catch (e) {}
-  }
-
-  var phases = [
-    {
-      id: 'first-day',
-      label: 'First Day',
-      icon: '☀️',
-      color: 'border-l-green-500',
-      tasks: [
-        { id: 'rocket-id', title: 'Get Your Rocket ID & UTAD Account', priority: 'required', description: 'Visit the Rocket Card Office to obtain your campus ID. Your UTAD account is also activated here — you need it for email, Wi-Fi, and all digital resources. Follow the activation link sent to your personal email.' },
-        { id: 'mfa', title: 'Set Up Multi-Factor Authentication (MFA)', priority: 'required', description: 'Install Microsoft Authenticator on your phone and register it with your UTAD account. This is required for secure login to university systems.' },
-        { id: 'myut', title: 'Activate MyUT Portal Access', priority: 'required', description: 'Log into myut.utoledo.edu to verify your account works. This is your primary gateway to employee self-service — payroll, benefits, and HR tools all live here.' },
-        { id: 'meet-team', title: 'Meet Your Team & Supervisor', priority: 'recommended', description: 'Your supervisor will introduce you to your immediate team and provide an overview of daily operations and your first-week schedule.' },
-      ]
-    },
-    {
-      id: 'first-week',
-      label: 'First Week',
-      icon: '📅',
-      color: 'border-l-blue-500',
-      tasks: [
-        { id: 'parking', title: 'Set Up Parking via vPermit', priority: 'required', description: 'Apply for your parking permit through ParkUToledo. Lots near Savage Arena fill fast before 9am. Consider a daily C permit until your A permit arrives. A Permit: $329/year, C Permit: $6.20/day.' },
-        { id: 'direct-deposit', title: 'Set Up Direct Deposit & Taxes', priority: 'required', description: 'In MyUT, go to Employee Self-Service to configure direct deposit into your bank account and verify your tax withholding (W-4).' },
-        { id: 'facilities-tour', title: 'Tour Athletic Facilities', priority: 'recommended', description: 'Get oriented with all athletic facilities including Savage Arena, Glass Bowl, the Crissey Athletic Complex, and Scott Park. Knowing your way around is essential.' },
-        { id: 'systems-training', title: 'Complete Systems Setup', priority: 'required', description: 'Set up Microsoft 365 (Outlook, Teams, OneDrive) via Office.com with your UTAD credentials. If applicable to your role, get access to Teamworks — the athletics department operating platform.' },
-      ]
-    },
-    {
-      id: 'first-month',
-      label: 'First Month',
-      icon: '📋',
-      color: 'border-l-purple-500',
-      tasks: [
-        { id: 'benefits', title: 'Complete Benefits Enrollment', priority: 'required', description: 'You have 30 days from your start date to elect or waive benefits in MyUT. Silence is NOT a waiver — you must actively make selections for health, dental, vision, and life insurance.' },
-        { id: 'compliance-training', title: 'Finish All Required Training', priority: 'required', description: 'Complete all mandatory training modules assigned through Blackboard or HR, including NCAA compliance-specific courses. These have hard deadlines.' },
-        { id: 'dept-workflows', title: 'Learn Department Workflows', priority: 'recommended', description: 'Understand the standard processes for your role: communication channels, approval workflows, reporting structures, and how Athletics interfaces with the broader university.' },
-        { id: 'key-contacts', title: 'Connect with Key Contacts', priority: 'recommended', description: "Build relationships with people you'll work with regularly. Use the Key Contacts page for reference. Introduce yourself, especially to compliance, facilities, and communications staff." },
-      ]
-    },
-    {
-      id: 'first-90-days',
-      label: 'First 90 Days',
-      icon: '🎯',
-      color: 'border-l-toledo-gold',
-      tasks: [
-        { id: 'compliance-policies', title: 'Review All Compliance Policies', priority: 'required', description: 'Read through Standards of Conduct (3364-25-01), FERPA, Information Security policies, and NCAA compliance rules specific to your role. When in doubt, always contact Compliance first.' },
-        { id: 'learning-plan', title: 'Build Your Personal Learning Plan', priority: 'recommended', description: 'Use the Video Learning resources to find relevant training and create a personal development plan aligned with your goals and role.' },
-        { id: 'supervisor-checkin', title: 'Formal Supervisor Check-In', priority: 'recommended', description: "Schedule a check-in with your supervisor to review your onboarding experience, ask open questions, set 90-day goals, and confirm you're on track." },
-        { id: 'toledo-explore', title: 'Explore Toledo Neighborhoods & Resources', priority: 'optional', description: 'Get comfortable with the city. Staff commonly live in areas like Ottawa Hills, Sylvania Township, Perrysburg, and Maumee. Toledo has affordable housing and a growing food/arts scene.' },
-      ]
-    },
-  ];
-
-  var taskLinks = {
-    'rocket-id':          { view: 'category', param: 6 },
-    'mfa':                { view: 'category', param: 6 },
-    'myut':               { view: 'category', param: 6 },
-    'systems-training':   { view: 'category', param: 6 },
-    'parking':            { view: 'category', param: 7 },
-    'direct-deposit':     { view: 'category', param: 5 },
-    'benefits':           { view: 'category', param: 5 },
-    'meet-team':          { view: 'category', param: 1 },
-    'facilities-tour':    { view: 'category', param: 1 },
-    'dept-workflows':     { view: 'category', param: 1 },
-    'compliance-training':{ view: 'category', param: 2 },
-    'compliance-policies':{ view: 'category', param: 2 },
-    'key-contacts':       { view: 'contacts',  param: null },
-    'toledo-explore':     { view: 'category', param: 9 },
-  };
-
-  var allTasks = phases.flatMap(function(p) { return p.tasks; });
-  var total = allTasks.length;
-  var done = allTasks.filter(function(t) { return checked[t.id]; }).length;
-  var pct = Math.round((done / total) * 100);
 
   var priorityStyles = {
     required: 'border-l-red-400',
@@ -393,18 +346,88 @@ function OnboardingGuidePage({ currentUser, onNavigate }) {
     optional: 'bg-gray-100 text-gray-600',
   };
   var priorityLabels = { required: 'Required', recommended: 'Recommended', optional: 'Optional' };
+  var statusBadges = {
+    pending_approval: { label: '⏳ Awaiting review', cls: 'bg-amber-100 text-amber-700' },
+    approved: { label: '✓ Approved', cls: 'bg-green-100 text-green-700' },
+    rejected: { label: '↩ Sent back', cls: 'bg-red-100 text-red-700' },
+  };
+
+  if (tasks === null) {
+    return React.createElement('div', { className: 'max-w-3xl mx-auto px-4 py-12 text-center text-gray-500' }, 'Loading...');
+  }
+
+  var standardTasks = tasks.filter(function (t) { return t.audience !== 'assigned'; });
+  var assignedTasks = tasks.filter(function (t) { return t.audience === 'assigned'; });
+  var total = tasks.length;
+  var done = tasks.filter(function (t) { return taskIsChecked(t.my_status); }).length;
+  var pct = total > 0 ? Math.round((done / total) * 100) : 0;
+
+  function renderTask(task, showPhaseChip) {
+    var isChecked = taskIsChecked(task.my_status);
+    var isExpanded = expandedItem === task.id;
+    var badge = statusBadges[task.my_status];
+    return React.createElement('div', {
+      key: task.id,
+      className: 'bg-white rounded-xl border border-gray-200 border-l-4 ' + (priorityStyles[task.priority] || '') +
+        (task.my_status === 'approved' ? ' opacity-60' : isChecked ? ' opacity-75' : ''),
+    },
+      // Task header row
+      React.createElement('div', { className: 'flex items-center gap-3 p-4' },
+        React.createElement('input', {
+          type: 'checkbox',
+          checked: isChecked,
+          disabled: task.my_status === 'approved' || busy === task.id,
+          onChange: function () { toggle(task); },
+          className: 'w-4 h-4 rounded border-gray-300 text-toledo-blue focus:ring-toledo-blue cursor-pointer flex-shrink-0 disabled:cursor-not-allowed',
+        }),
+        React.createElement('button', {
+          onClick: function () { setExpandedItem(isExpanded ? null : task.id); },
+          className: 'flex-1 flex items-center justify-between text-left min-w-0 group',
+        },
+          React.createElement('span', {
+            className: 'text-sm font-medium ' + (task.my_status === 'approved' ? 'line-through text-gray-400' : isChecked ? 'text-gray-500' : 'text-gray-900 group-hover:text-toledo-blue'),
+          }, task.title),
+          React.createElement('div', { className: 'flex items-center gap-2 flex-shrink-0 ml-3' },
+            badge && React.createElement('span', { className: 'text-xs px-2 py-0.5 rounded-full font-medium ' + badge.cls }, badge.label),
+            showPhaseChip && PHASE_META[task.phase] && React.createElement('span', { className: 'text-xs px-2 py-0.5 rounded-full font-medium bg-gray-100 text-gray-500 hidden sm:inline-block' }, PHASE_META[task.phase].label),
+            React.createElement('span', { className: 'text-xs px-2 py-0.5 rounded-full font-medium hidden sm:inline-block ' + (priorityColors[task.priority] || '') },
+              priorityLabels[task.priority] || ''
+            ),
+            React.createElement('span', { className: 'text-gray-400 text-sm transition-transform ' + (isExpanded ? 'rotate-180 inline-block' : 'inline-block') }, '▾')
+          )
+        )
+      ),
+      // Expanded details
+      isExpanded && React.createElement('div', { className: 'px-4 pb-4 pt-0 border-t border-gray-100' },
+        React.createElement('p', { className: 'text-sm text-gray-600 pt-3 leading-relaxed' }, task.description),
+        task.my_status === 'rejected' && task.review_notes && React.createElement('div', { className: 'mt-3 bg-red-50 rounded-lg p-3 text-sm text-red-700' },
+          React.createElement('strong', null, 'Reviewer note: '), task.review_notes,
+          React.createElement('p', { className: 'text-xs text-red-500 mt-1' }, 'Address the note, then check the task off again to resubmit.')
+        ),
+        !!task.requires_approval && task.my_status !== 'approved' && task.my_status !== 'pending_approval' && React.createElement('p', { className: 'mt-2 text-xs text-amber-600' },
+          '🔏 An administrator reviews this task after you check it off.'
+        ),
+        task.my_status === 'pending_approval' && React.createElement('p', { className: 'mt-2 text-xs text-amber-600' },
+          '⏳ Checked off — waiting for an administrator to confirm.'
+        ),
+        task.assigned_by_email && React.createElement('p', { className: 'mt-2 text-xs text-gray-400' },
+          '📌 Assigned to you by ' + task.assigned_by_email
+        ),
+        task.link_view && React.createElement('button', {
+          onClick: function () { onNavigate(task.link_view, task.link_param); },
+          className: 'mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-toledo-blue hover:text-toledo-dark border border-toledo-blue/30 hover:border-toledo-blue hover:bg-toledo-blue/5 px-3 py-1.5 rounded-lg transition-colors',
+        }, '📂 Explore full details →')
+      )
+    );
+  }
+
+  var phaseIds = Object.keys(PHASE_META).sort(function (a, b) { return PHASE_META[a].order - PHASE_META[b].order; });
 
   return React.createElement('div', { className: 'max-w-3xl mx-auto px-4 py-8 fade-in' },
-    React.createElement('div', { className: 'flex items-center justify-between mb-2' },
-      React.createElement('button', { onClick: function () { onNavigate('home'); }, className: 'flex items-center gap-2 text-toledo-blue hover:text-toledo-dark text-sm font-medium' },
-        React.createElement(IconArrowLeft), 'Back to Home'),
-      React.createElement('button', {
-        onClick: reset,
-        className: 'text-xs text-gray-400 hover:text-red-500 border border-gray-200 px-3 py-1.5 rounded-lg transition-colors',
-      }, 'Reset Progress')
-    ),
+    React.createElement('button', { onClick: function () { onNavigate('home'); }, className: 'flex items-center gap-2 text-toledo-blue hover:text-toledo-dark text-sm font-medium mb-2' },
+      React.createElement(IconArrowLeft), 'Back to Home'),
     React.createElement('h1', { className: 'text-2xl font-bold text-gray-900 mt-4 mb-1' }, '🗺️ My Onboarding'),
-    React.createElement('p', { className: 'text-gray-500 text-sm mb-6' }, 'Work through each phase at your own pace. Expand any task to learn how to complete it, then check it off.'),
+    React.createElement('p', { className: 'text-gray-500 text-sm mb-6' }, 'Work through each phase at your own pace. Expand any task to learn how to complete it, then check it off. Your progress is saved to your account.'),
 
     // Progress bar
     React.createElement('div', { className: 'bg-white rounded-xl border border-gray-200 p-5 mb-8' },
@@ -418,66 +441,40 @@ function OnboardingGuidePage({ currentUser, onNavigate }) {
           style: { width: pct + '%' },
         })
       ),
-      done === total && React.createElement('p', { className: 'text-center text-green-600 font-semibold mt-3 text-sm' }, "🎉 You've completed all onboarding tasks!")
+      total > 0 && done === total && React.createElement('p', { className: 'text-center text-green-600 font-semibold mt-3 text-sm' }, '🎉 You have completed all onboarding tasks!')
+    ),
+
+    // Assigned-to-you tasks
+    assignedTasks.length > 0 && React.createElement('div', { className: 'mb-6' },
+      React.createElement('div', { className: 'flex items-center gap-2 mb-3' },
+        React.createElement('span', { className: 'text-xl' }, '📌'),
+        React.createElement('h2', { className: 'text-lg font-bold text-gray-900 flex-1' }, 'Assigned to You'),
+        React.createElement('span', { className: 'text-xs font-medium px-2 py-0.5 rounded-full bg-toledo-gold/20 text-toledo-blue' },
+          assignedTasks.filter(function (t) { return taskIsChecked(t.my_status); }).length + '/' + assignedTasks.length
+        )
+      ),
+      React.createElement('div', { className: 'space-y-2' },
+        assignedTasks.map(function (task) { return renderTask(task, true); })
+      )
     ),
 
     // Phases
-    phases.map(function (phase) {
-      var phaseDone = phase.tasks.filter(function(t) { return checked[t.id]; }).length;
-      var phaseComplete = phaseDone === phase.tasks.length;
-      return React.createElement('div', { key: phase.id, className: 'mb-6' },
+    phaseIds.map(function (phaseId) {
+      var meta = PHASE_META[phaseId];
+      var phaseTasks = standardTasks.filter(function (t) { return t.phase === phaseId; });
+      if (phaseTasks.length === 0) return null;
+      var phaseDone = phaseTasks.filter(function (t) { return taskIsChecked(t.my_status); }).length;
+      var phaseComplete = phaseDone === phaseTasks.length;
+      return React.createElement('div', { key: phaseId, className: 'mb-6' },
         React.createElement('div', { className: 'flex items-center gap-2 mb-3' },
-          React.createElement('span', { className: 'text-xl' }, phase.icon),
-          React.createElement('h2', { className: 'text-lg font-bold text-gray-900 flex-1' }, phase.label),
+          React.createElement('span', { className: 'text-xl' }, meta.icon),
+          React.createElement('h2', { className: 'text-lg font-bold text-gray-900 flex-1' }, meta.label),
           React.createElement('span', { className: 'text-xs font-medium px-2 py-0.5 rounded-full ' + (phaseComplete ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500') },
-            phaseDone + '/' + phase.tasks.length
+            phaseDone + '/' + phaseTasks.length
           )
         ),
         React.createElement('div', { className: 'space-y-2' },
-          phase.tasks.map(function (task) {
-            var isChecked = !!checked[task.id];
-            var isExpanded = expandedItem === task.id;
-            return React.createElement('div', {
-              key: task.id,
-              className: 'bg-white rounded-xl border border-gray-200 border-l-4 ' + (priorityStyles[task.priority] || '') +
-                (isChecked ? ' opacity-60' : ''),
-            },
-              // Task header row
-              React.createElement('div', { className: 'flex items-center gap-3 p-4' },
-                React.createElement('input', {
-                  type: 'checkbox',
-                  checked: isChecked,
-                  onChange: function () { toggle(task.id); },
-                  className: 'w-4 h-4 rounded border-gray-300 text-toledo-blue focus:ring-toledo-blue cursor-pointer flex-shrink-0',
-                }),
-                React.createElement('button', {
-                  onClick: function () { setExpandedItem(isExpanded ? null : task.id); },
-                  className: 'flex-1 flex items-center justify-between text-left min-w-0 group',
-                },
-                  React.createElement('span', {
-                    className: 'text-sm font-medium ' + (isChecked ? 'line-through text-gray-400' : 'text-gray-900 group-hover:text-toledo-blue'),
-                  }, task.title),
-                  React.createElement('div', { className: 'flex items-center gap-2 flex-shrink-0 ml-3' },
-                    React.createElement('span', { className: 'text-xs px-2 py-0.5 rounded-full font-medium hidden sm:inline-block ' + (priorityColors[task.priority] || '') },
-                      priorityLabels[task.priority] || ''
-                    ),
-                    React.createElement('span', { className: 'text-gray-400 text-sm transition-transform ' + (isExpanded ? 'rotate-180 inline-block' : 'inline-block') }, '▾')
-                  )
-                )
-              ),
-              // Expanded details
-              isExpanded && React.createElement('div', { className: 'px-4 pb-4 pt-0 border-t border-gray-100' },
-                React.createElement('p', { className: 'text-sm text-gray-600 pt-3 leading-relaxed' }, task.description),
-                taskLinks[task.id] && React.createElement('button', {
-                  onClick: function () {
-                    var link = taskLinks[task.id];
-                    onNavigate(link.view, link.param);
-                  },
-                  className: 'mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-toledo-blue hover:text-toledo-dark border border-toledo-blue/30 hover:border-toledo-blue hover:bg-toledo-blue/5 px-3 py-1.5 rounded-lg transition-colors',
-                }, '📂 Explore full details →')
-              )
-            );
-          })
+          phaseTasks.map(function (task) { return renderTask(task, false); })
         )
       );
     })
@@ -872,172 +869,7 @@ function PoliciesPage({ onNavigate }) {
 
 // (Systems moved into ResourcesPage)
 
-// ── SuperAdminDashboard ───────────────────────────────────────────────────────
-function SuperAdminDashboard({ currentUser, onNavigate }) {
-  var _useState = useState([]);
-  var submissions = _useState[0];
-  var setSubmissions = _useState[1];
-  var _useState2 = useState([]);
-  var users = _useState2[0];
-  var setUsers = _useState2[1];
-  var _useState3 = useState('submissions');
-  var tab = _useState3[0];
-  var setTab = _useState3[1];
-  var _useState4 = useState('pending');
-  var filter = _useState4[0];
-  var setFilter = _useState4[1];
-  var _useState5 = useState(null);
-  var processing = _useState5[0];
-  var setProcessing = _useState5[1];
-  var _useState6 = useState('');
-  var reviewNotes = _useState6[0];
-  var setReviewNotes = _useState6[1];
-
-  function loadSubmissions() {
-    api('/submissions?status=' + filter).then(function (r) { if (r.success) setSubmissions(r.data || []); });
-  }
-  function loadUsers() {
-    api('/users').then(function (r) { if (r.success) setUsers(r.data || []); });
-  }
-
-  useEffect(function () {
-    loadSubmissions();
-    loadUsers();
-  }, [filter]);
-
-  function handleAction(id, action) {
-    setProcessing(id);
-    api('/submissions/' + id + '/' + action, {
-      method: 'PUT',
-      body: JSON.stringify({ reviewed_by: currentUser.id, review_notes: reviewNotes }),
-    }).then(function () {
-      setReviewNotes('');
-      setProcessing(null);
-      loadSubmissions();
-    });
-  }
-
-  return React.createElement('div', { className: 'max-w-5xl mx-auto px-4 py-8 fade-in' },
-    React.createElement('button', { onClick: function () { onNavigate('home'); }, className: 'flex items-center gap-2 text-toledo-blue hover:text-toledo-dark mb-6 text-sm font-medium' },
-      React.createElement(IconArrowLeft), 'Back to Home'),
-    React.createElement('div', { className: 'flex items-center gap-3 mb-1' },
-      React.createElement('span', { className: 'text-2xl' }, '\uD83D\uDD12'),
-      React.createElement('h1', { className: 'text-2xl font-bold text-gray-900' }, 'Super Admin Dashboard')
-    ),
-    React.createElement('p', { className: 'text-gray-500 text-sm mb-6' }, 'Manage submissions, tips, and users across the platform.'),
-
-    // Tabs
-    React.createElement('div', { className: 'flex gap-1 mb-6 bg-gray-100 p-1 rounded-lg w-fit' },
-      [
-        { id: 'submissions', label: '\uD83D\uDCDD Submissions' },
-        { id: 'users', label: '\uD83D\uDC65 Users' },
-      ].map(function (t) {
-        return React.createElement('button', {
-          key: t.id,
-          onClick: function () { setTab(t.id); },
-          className: 'px-4 py-1.5 rounded-md text-sm font-medium transition-colors ' + (tab === t.id ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'),
-        }, t.label);
-      })
-    ),
-
-    // Submissions Tab
-    tab === 'submissions' && React.createElement('div', null,
-      React.createElement('div', { className: 'flex gap-2 mb-4' },
-        ['pending', 'approved', 'rejected'].map(function (s) {
-          return React.createElement('button', {
-            key: s, onClick: function () { setFilter(s); },
-            className: 'px-4 py-2 rounded-lg text-sm font-medium transition-colors ' +
-              (filter === s
-                ? (s === 'pending' ? 'bg-orange-100 text-orange-700' : s === 'approved' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700')
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'),
-          }, s.charAt(0).toUpperCase() + s.slice(1));
-        })
-      ),
-      submissions.length === 0
-        ? React.createElement('p', { className: 'text-center text-gray-400 py-8' }, 'No ' + filter + ' submissions.')
-        : React.createElement('div', { className: 'space-y-4' },
-            submissions.map(function (item) {
-              return React.createElement('div', { key: item.id, className: 'bg-white rounded-xl border border-gray-200 p-5' },
-                React.createElement('div', { className: 'flex items-start justify-between mb-3' },
-                  React.createElement('div', { className: 'flex-1 min-w-0' },
-                    React.createElement('h3', { className: 'font-semibold text-gray-900' },
-                      item.proposed_title || (item.article_title ? 'Edit: ' + item.article_title : 'Submission #' + item.id)
-                    ),
-                    React.createElement('div', { className: 'flex flex-wrap gap-3 mt-1 text-xs text-gray-500' },
-                      React.createElement('span', null, 'By: ' + (item.author_email || 'Unknown')),
-                      React.createElement('span', null, new Date(item.submitted_at).toLocaleString())
-                    )
-                  ),
-                  React.createElement('span', {
-                    className: 'ml-3 flex-shrink-0 px-2 py-0.5 rounded-full text-xs font-medium ' +
-                      (item.status === 'pending' ? 'bg-orange-100 text-orange-700' : item.status === 'approved' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'),
-                  }, item.status)
-                ),
-                React.createElement('div', { className: 'bg-gray-50 rounded-lg p-4 text-sm text-gray-700 whitespace-pre-wrap max-h-48 overflow-y-auto mb-3' },
-                  item.proposed_content || item.content
-                ),
-                item.review_notes && React.createElement('div', { className: 'bg-blue-50 rounded-lg p-3 text-sm text-blue-700 mb-3' },
-                  React.createElement('strong', null, 'Review notes: '), item.review_notes
-                ),
-                filter === 'pending' && React.createElement('div', { className: 'space-y-3' },
-                  React.createElement('textarea', {
-                    value: processing === item.id ? reviewNotes : '',
-                    onChange: function (e) { setProcessing(item.id); setReviewNotes(e.target.value); },
-                    placeholder: 'Optional review notes...',
-                    rows: 2,
-                    className: 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-toledo-blue',
-                  }),
-                  React.createElement('div', { className: 'flex gap-2' },
-                    React.createElement('button', {
-                      onClick: function () { handleAction(item.id, 'approve'); },
-                      disabled: !!processing,
-                      className: 'flex items-center gap-1 px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-50',
-                    }, React.createElement(IconCheck), 'Approve & Publish'),
-                    React.createElement('button', {
-                      onClick: function () { handleAction(item.id, 'reject'); },
-                      disabled: !!processing,
-                      className: 'flex items-center gap-1 px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 disabled:opacity-50',
-                    }, React.createElement(IconX), 'Reject')
-                  )
-                )
-              );
-            })
-          )
-    ),
-
-    // Users Tab
-    tab === 'users' && React.createElement('div', null,
-      React.createElement('p', { className: 'text-sm text-gray-500 mb-4' }, 'Total users: ' + users.length),
-      users.length === 0
-        ? React.createElement('p', { className: 'text-center text-gray-400 py-8' }, 'No users registered.')
-        : React.createElement('div', { className: 'bg-white rounded-xl border border-gray-200 overflow-hidden' },
-            React.createElement('table', { className: 'w-full' },
-              React.createElement('thead', null,
-                React.createElement('tr', { className: 'bg-gray-50 border-b border-gray-200' },
-                  React.createElement('th', { className: 'px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase' }, 'Email'),
-                  React.createElement('th', { className: 'px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase' }, 'Role'),
-                  React.createElement('th', { className: 'px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase' }, 'Joined')
-                )
-              ),
-              React.createElement('tbody', null,
-                users.map(function (u) {
-                  return React.createElement('tr', { key: u.id, className: 'border-b border-gray-100 last:border-0' },
-                    React.createElement('td', { className: 'px-4 py-3 text-sm text-gray-900' }, u.email),
-                    React.createElement('td', { className: 'px-4 py-3' },
-                      React.createElement('span', {
-                        className: 'px-2 py-0.5 rounded-full text-xs font-medium ' +
-                          (u.role === 'admin' ? 'bg-purple-100 text-purple-700' : u.role === 'moderator' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'),
-                      }, u.role)
-                    ),
-                    React.createElement('td', { className: 'px-4 py-3 text-sm text-gray-500' }, new Date(u.created_at).toLocaleDateString())
-                  );
-                })
-              )
-            )
-          )
-    )
-  );
-}
+// (SuperAdminDashboard replaced by AdminDashboard in frontend/admin.ts)
 
 // ── FeedbackButton ────────────────────────────────────────────────────────────
 function FeedbackButton({ currentUser }) {
@@ -1144,16 +976,24 @@ function Footer({ onNavigate }) {
 }
 
 // ── App (Router) ──────────────────────────────────────────────────────────────
+function LoadingSplash() {
+  return React.createElement('div', { className: 'min-h-screen bg-gray-50 flex items-center justify-center' },
+    React.createElement('p', { className: 'text-gray-400 text-sm' }, 'Loading…')
+  );
+}
+
 function App() {
-  var _useState = useState(function () {
-    try {
-      var saved = localStorage.getItem('toledo_auth_user');
-      if (saved) { var u = JSON.parse(saved); _currentUserId = u.id; return u; }
-    } catch (e) {}
-    return null;
-  });
-  var currentUser = _useState[0];
-  var setCurrentUser = _useState[1];
+  // Pre-auth landing for password-reset links: /reset-password?token=…
+  var resetToken = null;
+  try {
+    if (window.location.pathname === '/reset-password') {
+      resetToken = new URLSearchParams(window.location.search).get('token');
+    }
+  } catch (e) {}
+
+  var _authState = useState({ loading: true, user: null, mustReset: false });
+  var authState = _authState[0];
+  var setAuthState = _authState[1];
   var _useState2 = useState('home');
   var view = _useState2[0];
   var setView = _useState2[1];
@@ -1167,16 +1007,68 @@ function App() {
   var stats = _useState5[0];
   var setStats = _useState5[1];
   var tourKey = 'toledo_tour_done_v1';
-  var _useState6 = useState(function () {
-    try { return !localStorage.getItem(tourKey); } catch (e) { return false; }
-  });
+  var _useState6 = useState(false);
   var showTour = _useState6[0];
   var setShowTour = _useState6[1];
 
+  var currentUser = authState.user;
+
+  // Validate the cached session on boot instead of trusting localStorage.
   useEffect(function () {
+    if (resetToken) { setAuthState({ loading: false, user: null, mustReset: false }); return; }
+    var token = getSessionToken();
+    if (!token) { setAuthState({ loading: false, user: null, mustReset: false }); return; }
+    api('/auth/me').then(function (r) {
+      if (r.success) {
+        finishLogin({ user: r.data.user, must_reset: r.data.must_reset, localstorage_migrated: r.data.localstorage_migrated }, false);
+      } else {
+        setSessionToken(null);
+        setAuthState({ loading: false, user: null, mustReset: false });
+      }
+    }).catch(function () {
+      setAuthState({ loading: false, user: null, mustReset: false });
+    });
+  }, []);
+
+  useEffect(function () {
+    if (!authState.user || authState.mustReset) return;
     api('/categories').then(function (r) { if (r.success) setCategories(r.data); });
     api('/stats').then(function (r) { if (r.success) setStats(r.data); });
-  }, []);
+  }, [authState.user, authState.mustReset]);
+
+  // One-time import of the legacy localStorage checklist into the database.
+  function migrateLocalChecklist(user) {
+    var slugs = [];
+    try {
+      var saved = localStorage.getItem('checklist_' + user.email);
+      if (saved) {
+        var obj = JSON.parse(saved);
+        slugs = Object.keys(obj).filter(function (k) { return obj[k]; });
+      }
+    } catch (e) {}
+    api('/tasks/migrate-local', { method: 'POST', body: JSON.stringify({ slugs: slugs }) }).catch(function () {});
+  }
+
+  function afterAuthed(data, fromLoginForm) {
+    if (!data.localstorage_migrated) migrateLocalChecklist(data.user);
+    if (fromLoginForm) {
+      if (data.user.role === 'admin') { navigate('admin'); return; }
+      try { if (!localStorage.getItem(tourKey)) setShowTour(true); } catch (e) {}
+    }
+  }
+
+  function finishLogin(data, fromLoginForm) {
+    if (data.token) setSessionToken(data.token);
+    try { localStorage.setItem('toledo_auth_user', JSON.stringify(data.user)); } catch (e) {}
+    setAuthState({ loading: false, user: data.user, mustReset: !!data.must_reset });
+    if (!data.must_reset) afterAuthed(data, fromLoginForm);
+  }
+
+  function handleResetComplete(data) {
+    try { localStorage.setItem('toledo_auth_user', JSON.stringify(data.user)); } catch (e) {}
+    setAuthState({ loading: false, user: data.user, mustReset: false });
+    afterAuthed(data, true);
+  }
 
   function navigate(newView, param, pushState) {
     if (pushState !== false) {
@@ -1194,7 +1086,7 @@ function App() {
       'search': 'Search — Toledo Athletics',
       'submit': 'Contribute — Toledo Athletics',
       'moderate': 'Moderation — Toledo Athletics',
-      'admin': 'Super Admin — Toledo Athletics',
+      'admin': 'Admin — Toledo Athletics',
     };
     document.title = titles[newView] || 'Toledo Athletics Onboarding';
     setView(newView);
@@ -1219,32 +1111,29 @@ function App() {
     navigate('search', query);
   }
 
-  function handleLogin(user) {
-    _currentUserId = user.id;
-    setCurrentUser(user);
-    try { localStorage.setItem('toledo_auth_user', JSON.stringify(user)); } catch (e) {}
-    // Superadmin: redirect to admin dashboard (role set by server)
-    if (user.role === 'admin') {
-      navigate('admin');
-      return;
-    }
-    // Show tour only for brand-new users (no tour flag set yet)
-    try { if (!localStorage.getItem(tourKey)) setShowTour(true); } catch (e) {}
-  }
-
   function dismissTour() {
     setShowTour(false);
     try { localStorage.setItem(tourKey, '1'); } catch (e) {}
   }
 
   function handleSignOut() {
-    _currentUserId = null;
-    setCurrentUser(null);
+    api('/auth/logout', { method: 'POST' }).catch(function () {});
+    setSessionToken(null);
     try { localStorage.removeItem('toledo_auth_user'); } catch (e) {}
+    setAuthState({ loading: false, user: null, mustReset: false });
   }
 
+  if (resetToken) {
+    return React.createElement(ResetWithTokenScreen, { token: resetToken });
+  }
+  if (authState.loading) {
+    return React.createElement(LoadingSplash);
+  }
   if (!currentUser) {
-    return React.createElement(LoginScreen, { onLogin: handleLogin });
+    return React.createElement(LoginScreen, { onLogin: function (data) { finishLogin(data, true); } });
+  }
+  if (authState.mustReset) {
+    return React.createElement(ForceResetScreen, { currentUser: currentUser, onComplete: handleResetComplete, onSignOut: handleSignOut });
   }
 
   var content;
@@ -1293,7 +1182,9 @@ function App() {
       content = React.createElement(ModerationDashboard, { currentUser: currentUser, onNavigate: navigate });
       break;
     case 'admin':
-      content = React.createElement(SuperAdminDashboard, { currentUser: currentUser, onNavigate: navigate });
+      content = currentUser.role === 'admin'
+        ? React.createElement(AdminDashboard, { currentUser: currentUser, onNavigate: navigate })
+        : React.createElement('div', { className: 'max-w-3xl mx-auto px-4 py-12 text-center text-gray-500' }, 'You need administrator access for this page.');
       break;
     case 'checklist':
       content = React.createElement(OnboardingGuidePage, { currentUser: currentUser, onNavigate: navigate });
@@ -1308,7 +1199,7 @@ function App() {
       content = React.createElement(PoliciesPage, { onNavigate: navigate });
       break;
     default:
-      content = React.createElement(HomePage, { categories: categories, stats: stats, onNavigate: navigate, onSearch: handleSearch });
+      content = React.createElement(HomePage, { categories: categories, stats: stats, onNavigate: navigate, onSearch: handleSearch, currentUser: currentUser });
   }
 
   return React.createElement('div', { className: 'min-h-screen bg-gray-50 flex flex-col' },
