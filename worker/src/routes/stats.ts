@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
-import { Bindings } from '../types';
+import { AppEnv } from '../types';
 
-const stats = new Hono<{ Bindings: Bindings }>();
+const stats = new Hono<AppEnv>();
 
 stats.get('/', async (c) => {
   const [articles, categories, pendingSubmissions, totalUsers] =

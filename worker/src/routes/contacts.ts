@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
-import { Bindings } from '../types';
+import { AppEnv } from '../types';
 
-const contacts = new Hono<{ Bindings: Bindings }>();
+const contacts = new Hono<AppEnv>();
 
 contacts.get('/', async (c) => {
   const { results } = await c.env.DB.prepare(

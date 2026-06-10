@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { Bindings } from '../types';
+import { AppEnv } from '../types';
 import { rateLimit } from '../middleware/rate-limit';
 import { getRelevantContextWithSources } from '../services/content-index';
 
@@ -34,7 +34,7 @@ function buildSystemMessage(context: string): string {
     : SYSTEM_PROMPT;
 }
 
-const aiChat = new Hono<{ Bindings: Bindings }>();
+const aiChat = new Hono<AppEnv>();
 
 // Rate limit: 20 AI chat requests per minute per IP
 aiChat.use('*', rateLimit(20));
