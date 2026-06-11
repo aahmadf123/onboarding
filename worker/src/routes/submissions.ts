@@ -105,18 +105,30 @@ submissions.put('/:id/approve', requireRole('moderator', 'admin'), async (c) => 
   }
 
   const now = new Date().toISOString();
-  let articleId: number;
 
+  // Claim the submission first — the SELECT above is not a lock, so without
+  // the pending guard a concurrent reviewer could clobber a prior decision
+  // and double-publish content.
+  const claim = await c.env.DB.prepare(
+    'UPDATE Submissions SET status = ?, reviewed_by = ?, review_notes = ? WHERE id = ? AND status = ?'
+  )
+    .bind('approved', reviewer.id, body.review_notes ?? null, submissionId, 'pending')
+    .run();
+  if (claim.meta.changes === 0) {
+    return c.json(
+      { success: false, error: 'Submission not found or already reviewed' },
+      404
+    );
+  }
+
+  let articleId: number;
   if (submission.article_id) {
     articleId = submission.article_id;
-    await c.env.DB.batch([
-      c.env.DB.prepare(
-        'UPDATE Articles SET current_content = ?, last_updated = ? WHERE id = ?'
-      ).bind(submission.proposed_content, now, articleId),
-      c.env.DB.prepare(
-        'UPDATE Submissions SET status = ?, reviewed_by = ?, review_notes = ? WHERE id = ?'
-      ).bind('approved', reviewer.id, body.review_notes ?? null, submissionId),
-    ]);
+    await c.env.DB.prepare(
+      'UPDATE Articles SET current_content = ?, last_updated = ? WHERE id = ?'
+    )
+      .bind(submission.proposed_content, now, articleId)
+      .run();
   } else {
     const categoryId = body.category_id ?? 1;
     const info = await c.env.DB.prepare(
@@ -130,11 +142,6 @@ submissions.put('/:id/approve', requireRole('moderator', 'admin'), async (c) => 
       )
       .run();
     articleId = info.meta.last_row_id as number;
-    await c.env.DB.prepare(
-      'UPDATE Submissions SET status = ?, reviewed_by = ?, review_notes = ? WHERE id = ?'
-    )
-      .bind('approved', reviewer.id, body.review_notes ?? null, submissionId)
-      .run();
   }
 
   // Keep the AI chat index in sync with the newly published content.

@@ -517,12 +517,18 @@ function AIChatWidget({ currentUser }) {
     setMessages(prev => prev.concat([{ role: 'assistant', content: '', sources: [], streaming: true }]));
 
     try {
+      // Raw fetch (not the api() helper) because we need the streaming body;
+      // the global auth gate still requires the bearer token here.
+      const streamHeaders = { 'Content-Type': 'application/json' };
+      const sessionToken = getSessionToken();
+      if (sessionToken) streamHeaders['Authorization'] = 'Bearer ' + sessionToken;
       const res = await fetch('/api/ai/chat/stream', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: streamHeaders,
         body: JSON.stringify({ messages: newMessages.map(m => ({ role: m.role, content: m.content })) }),
       });
 
+      if (res.status === 401 && sessionToken) { clearAuthAndReload(); return; }
       if (!res.ok || !res.body) throw new Error('Stream unavailable');
 
       const reader = res.body.getReader();

@@ -138,6 +138,33 @@ describe('task assignment', () => {
       .first<{ n: number }>();
     expect(log?.n).toBe(1);
   });
+
+  it('sanitizes admin-entered task titles in email subjects', async () => {
+    const admin = await createUserAndLogin({ role: 'admin' });
+    const target = await createUserAndLogin();
+    const messyTitle = 'Line one\r\nLine two ' + 'x'.repeat(200);
+
+    const create = await apiCall('/api/admin/tasks', {
+      method: 'POST',
+      token: admin.token,
+      body: JSON.stringify({ title: messyTitle, phase: 'first-week', audience: 'assigned' }),
+    });
+    expect(create.status).toBe(201);
+    await apiCall(`/api/admin/tasks/${create.json.data.id}/assign`, {
+      method: 'POST',
+      token: admin.token,
+      body: JSON.stringify({ user_ids: [target.id] }),
+    });
+
+    const log = await env.DB.prepare(
+      "SELECT subject FROM EmailLog WHERE email_type = 'task_assigned' AND user_id = ?"
+    )
+      .bind(target.id)
+      .first<{ subject: string }>();
+    expect(log?.subject).toBeTruthy();
+    expect(log!.subject).not.toMatch(/[\r\n]/);
+    expect(log!.subject.length).toBeLessThanOrEqual(120);
+  });
 });
 
 describe('content CMS', () => {
@@ -312,5 +339,25 @@ describe('moderation endpoints are no longer forgeable', () => {
       .bind(post.json.id)
       .first<{ reviewed_by: number }>();
     expect(reviewed?.reviewed_by).toBe(mod.id);
+
+    // Race guard: a second decision must not clobber the first.
+    const mod2 = await createUserAndLogin({ role: 'moderator' });
+    const reApprove = await apiCall(`/api/submissions/${post.json.id}/approve`, {
+      method: 'PUT',
+      token: mod2.token,
+      body: JSON.stringify({ category_id: 1 }),
+    });
+    expect(reApprove.status).toBe(404);
+    const reReject = await apiCall(`/api/submissions/${post.json.id}/reject`, {
+      method: 'PUT',
+      token: mod2.token,
+      body: JSON.stringify({}),
+    });
+    expect(reReject.status).toBe(404);
+    const still = await env.DB.prepare('SELECT status, reviewed_by FROM Submissions WHERE id = ?')
+      .bind(post.json.id)
+      .first<{ status: string; reviewed_by: number }>();
+    expect(still?.status).toBe('approved');
+    expect(still?.reviewed_by).toBe(mod.id);
   });
 });

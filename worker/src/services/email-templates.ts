@@ -5,6 +5,18 @@ export interface EmailContent {
   html: string;
 }
 
+const MAX_SUBJECT_LENGTH = 120;
+
+// Subjects can embed admin-entered text (e.g. task titles) — keep them
+// single-line and bounded so providers don't reject malformed headers.
+function subjectSafe(value: string): string {
+  const flat = String(value ?? '')
+    .replace(/[\r\n]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return flat.length > MAX_SUBJECT_LENGTH ? `${flat.slice(0, MAX_SUBJECT_LENGTH - 1)}…` : flat;
+}
+
 export function escapeHtml(value: string): string {
   return String(value ?? '')
     .replace(/&/g, '&amp;')
@@ -85,7 +97,7 @@ export function taskAssignedEmail(opts: {
   baseUrl: string;
 }): EmailContent {
   return {
-    subject: `New onboarding task assigned: ${opts.taskTitle}`,
+    subject: subjectSafe(`New onboarding task assigned: ${opts.taskTitle}`),
     html: layout(
       greeting(opts.name, opts.email) +
         `<p>${escapeHtml(opts.assignedByEmail)} assigned you a new onboarding task:</p>` +
@@ -131,9 +143,11 @@ export function approvalDecisionEmail(opts: {
   baseUrl: string;
 }): EmailContent {
   return {
-    subject: opts.approved
-      ? `Task approved: ${opts.taskTitle}`
-      : `Task needs another look: ${opts.taskTitle}`,
+    subject: subjectSafe(
+      opts.approved
+        ? `Task approved: ${opts.taskTitle}`
+        : `Task needs another look: ${opts.taskTitle}`
+    ),
     html: layout(
       greeting(opts.name, opts.email) +
         (opts.approved

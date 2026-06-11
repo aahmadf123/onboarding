@@ -93,6 +93,8 @@ describe('Toledo Athletics Onboarding Worker', () => {
     expect(text).toContain('AdminDashboard');
     expect(text).toContain('AdminContent');
     expect(text).toContain('renderMapDirectives');
+    // AI chat streaming fetch must carry the bearer token (gated endpoint)
+    expect(text).toContain('streamHeaders');
     // Removed surfaces
     expect(text).not.toContain('SuperAdminDashboard');
     expect(text).not.toContain('OrgChartPage');
