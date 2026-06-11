@@ -1,11 +1,14 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
-import { Bindings } from './types';
+import { AppEnv } from './types';
 import { getIndexHtml } from './frontend';
+import { authGate } from './middleware/auth';
 
+import auth from './routes/auth';
+import tasks from './routes/tasks';
+import admin from './routes/admin';
 import categories from './routes/categories';
 import articles from './routes/articles';
-import users from './routes/users';
 import submissions from './routes/submissions';
 import search from './routes/search';
 import stats from './routes/stats';
@@ -16,15 +19,21 @@ import contacts from './routes/contacts';
 import systems from './routes/systems';
 import policies from './routes/policies';
 
-const app = new Hono<{ Bindings: Bindings }>();
+const app = new Hono<AppEnv>();
 
 // Enable CORS for all API routes
 app.use('/api/*', cors());
 
+// Global auth gate: the portal is invite-only, so every API route except
+// /api/auth/* requires a valid session (authGate skips auth paths itself).
+app.use('/api/*', authGate);
+
 // ── API routes ────────────────────────────────────────────────
+app.route('/api/auth', auth);
+app.route('/api/tasks', tasks);
+app.route('/api/admin', admin);
 app.route('/api/categories', categories);
 app.route('/api/articles', articles);
-app.route('/api/users', users);
 app.route('/api/submissions', submissions);
 app.route('/api/search', search);
 app.route('/api/stats', stats);
@@ -44,7 +53,8 @@ app.get('/branding/*', async (c) => {
 });
 
 // ── SPA fallback ──────────────────────────────────────────────
-// For any non-API route, serve the React SPA shell
+// For any non-API route, serve the React SPA shell (this also covers
+// /reset-password, which the SPA handles client-side).
 app.get('*', (c) => c.html(getIndexHtml()));
 
 export default app;

@@ -5,17 +5,21 @@ export function getContentCode(): string {
 // ── HomePage ──────────────────────────────────────────────────────────────────
 function HomePage({ categories, stats, onNavigate, onSearch, currentUser }) {
 
-  // Read checklist progress from localStorage
-  var storageKey = 'checklist_' + (currentUser ? currentUser.email : 'guest');
-  var checklistProgress = (function() {
-    try {
-      var saved = localStorage.getItem(storageKey);
-      var checked = saved ? JSON.parse(saved) : {};
-      var total = 16;
-      var done = Object.values(checked).filter(Boolean).length;
-      return { done: done, total: total, pct: Math.round((done / total) * 100) };
-    } catch (e) { return { done: 0, total: 16, pct: 0 }; }
-  })();
+  // Checklist progress now lives in the database (synced across devices)
+  var _progressState = useState({ done: 0, total: 0, pct: 0 });
+  var checklistProgress = _progressState[0];
+  var setChecklistProgress = _progressState[1];
+  useEffect(function () {
+    api('/tasks').then(function (r) {
+      if (!r.success) return;
+      var list = r.data || [];
+      var done = list.filter(function (t) {
+        return t.my_status === 'done' || t.my_status === 'approved' || t.my_status === 'pending_approval';
+      }).length;
+      var total = list.length;
+      setChecklistProgress({ done: done, total: total, pct: total > 0 ? Math.round((done / total) * 100) : 0 });
+    });
+  }, []);
 
   return React.createElement('div', { className: 'fade-in' },
     // Hero banner
@@ -67,7 +71,7 @@ function HomePage({ categories, stats, onNavigate, onSearch, currentUser }) {
             style: { width: checklistProgress.pct + '%' },
           })
         ),
-        checklistProgress.done === checklistProgress.total
+        checklistProgress.total > 0 && checklistProgress.done === checklistProgress.total
           ? React.createElement('p', { className: 'text-green-600 font-semibold text-sm mb-3' }, "🎉 You've completed all onboarding tasks!")
           : React.createElement('p', { className: 'text-sm text-gray-400 mb-3' },
               checklistProgress.done === 0 ? "Start by clicking 'My Onboarding' above." : "Keep going — you're making great progress!"
@@ -139,6 +143,34 @@ function CategoryView({ categoryId, onNavigate }) {
 }
 
 // ── ArticleView ───────────────────────────────────────────────────────────────
+// Lines of the form "::map <google-maps-embed-url>" become responsive map
+// iframes. Only https://www.google.com/maps* (and maps.google.com) URLs are
+// allowed; anything else is dropped.
+function renderMapDirectives(text) {
+  if (!text) return '';
+  var lines = String(text).split('\\n');
+  var out = [];
+  for (var i = 0; i < lines.length; i++) {
+    var trimmed = lines[i].trim();
+    if (trimmed.indexOf('::map ') === 0) {
+      var url = trimmed.slice(6).trim();
+      var ok = false;
+      try {
+        var parsed = new URL(url);
+        ok = parsed.protocol === 'https:' &&
+          (parsed.hostname === 'www.google.com' || parsed.hostname === 'maps.google.com') &&
+          parsed.pathname.indexOf('/maps') === 0;
+      } catch (e) { ok = false; }
+      if (ok) {
+        out.push('<div style="position:relative;width:100%;padding-bottom:56%;border-radius:12px;overflow:hidden;margin:12px 0;border:1px solid #e5e7eb;"><iframe src="' + url.replace(/"/g, '&quot;') + '" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;border:0;" allowfullscreen referrerpolicy="no-referrer-when-downgrade"></iframe></div>');
+      }
+    } else {
+      out.push(lines[i]);
+    }
+  }
+  return out.join('\\n');
+}
+
 function ArticleView({ articleId, onNavigate }) {
   const [article, setArticle] = useState(null);
   useEffect(() => {
@@ -147,8 +179,9 @@ function ArticleView({ articleId, onNavigate }) {
   if (!article) return React.createElement('div', { className: 'max-w-4xl mx-auto px-4 py-12 text-center text-gray-500' }, 'Loading...');
   function renderMarkdown(text) {
     if (!text) return '';
+    var withMaps = renderMapDirectives(text);
     if (typeof marked !== 'undefined') {
-      try { return marked.parse(text); } catch (e) {}
+      try { return marked.parse(withMaps); } catch (e) {}
     }
     // Fallback: preserve line breaks
     return text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\\n/g,'<br>');
@@ -299,7 +332,6 @@ function SubmitForm({ currentUser, categories, onNavigate }) {
     if (!currentUser) return;
     setSubmitting(true);
     const payload = {
-      author_id: currentUser.id,
       proposed_content: content,
       proposed_title: isNew ? title : undefined,
       article_id: !isNew && articleId ? parseInt(articleId) : undefined,
@@ -378,7 +410,7 @@ function ModerationDashboard({ currentUser, onNavigate }) {
     const base = activeTab === 'submissions' ? '/submissions/' : '/tips/';
     await api(base + id + '/' + action, {
       method: 'PUT',
-      body: JSON.stringify({ reviewed_by: currentUser.id, review_notes: reviewNotes }),
+      body: JSON.stringify({ review_notes: reviewNotes }),
     });
     setReviewNotes('');
     setProcessing(null);

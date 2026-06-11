@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
-import { Bindings } from '../types';
+import { AppEnv } from '../types';
 
-const search = new Hono<{ Bindings: Bindings }>();
+const search = new Hono<AppEnv>();
 
 search.get('/', async (c) => {
   const q = c.req.query('q');
@@ -16,7 +16,7 @@ search.get('/', async (c) => {
              Articles.last_updated, Categories.name as category_name, 'article' as result_type
       FROM Articles
       LEFT JOIN Categories ON Articles.category_id = Categories.id
-      WHERE Articles.title LIKE ? OR Articles.current_content LIKE ?
+      WHERE Articles.is_active = 1 AND (Articles.title LIKE ? OR Articles.current_content LIKE ?)
       ORDER BY
         CASE WHEN Articles.title LIKE ? THEN 0 ELSE 1 END,
         Articles.category_id, Articles.id

@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
-import { Bindings } from '../types';
+import { AppEnv } from '../types';
 
-const categories = new Hono<{ Bindings: Bindings }>();
+const categories = new Hono<AppEnv>();
 
 // GET all categories
 categories.get('/', async (c) => {
@@ -25,7 +25,7 @@ categories.get('/:id', async (c) => {
 categories.get('/:id/articles', async (c) => {
   const id = c.req.param('id');
   const { results } = await c.env.DB.prepare(
-    'SELECT * FROM Articles WHERE category_id = ? ORDER BY id'
+    'SELECT * FROM Articles WHERE category_id = ? AND is_active = 1 ORDER BY id'
   )
     .bind(id)
     .all();
