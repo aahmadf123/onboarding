@@ -869,7 +869,7 @@ function PoliciesPage({ onNavigate }) {
 
 // (Systems moved into ResourcesPage)
 
-// (SuperAdminDashboard replaced by AdminDashboard in frontend/admin.ts)
+// (legacy super-admin view replaced by AdminDashboard in frontend/admin.ts)
 
 // ── FeedbackButton ────────────────────────────────────────────────────────────
 function FeedbackButton({ currentUser }) {
