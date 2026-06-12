@@ -1,4 +1,4 @@
-import { env, SELF, fetchMock } from 'cloudflare:test';
+import { env, SELF } from 'cloudflare:test';
 import { hashPassword } from '../src/services/passwords';
 
 // Bootstrap the in-memory D1 database with the post-migration-0003 schema.
@@ -217,13 +217,8 @@ export async function applySchema(): Promise<void> {
 
 /** Intercepts Resend so no test ever sends a real email. */
 export function mockResend(): void {
-  fetchMock.activate();
-  fetchMock.disableNetConnect();
-  fetchMock
-    .get('https://api.resend.com')
-    .intercept({ path: '/emails', method: 'POST' })
-    .reply(200, { id: 'email_mock' })
-    .persist();
+  // Intentionally empty: sendEmail short-circuits when RESEND_API_KEY is the
+  // test sentinel key, so tests avoid outbound network calls.
 }
 
 // Hash computation is expensive (100k PBKDF2 iterations) — reuse per password.

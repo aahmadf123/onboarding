@@ -53,13 +53,14 @@ describe('weekly reminder cron', () => {
   });
 
   it('sends nothing when the weekly reminder is disabled', async () => {
+    const before = (await reminderRows()).length;
     await createUser({ email: 'behind2@utoledo.edu' });
     await env.DB.prepare(
       "INSERT INTO AppConfig (key, value) VALUES ('weekly_reminder_enabled', '0') ON CONFLICT(key) DO UPDATE SET value = '0'"
     ).run();
 
     await runScheduled();
-    expect((await reminderRows()).length).toBe(0);
+    expect((await reminderRows()).length).toBe(before);
   });
 
   it('purges expired sessions and reset tokens', async () => {
