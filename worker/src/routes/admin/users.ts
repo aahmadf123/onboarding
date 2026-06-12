@@ -10,6 +10,7 @@ const users = new Hono<AppEnv>();
 
 const VALID_ROLES: Role[] = ['staff', 'moderator', 'admin'];
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const PRIMARY_SUPERADMIN_EMAIL = 'utdata@utoledo.edu';
 
 const LIST_FIELDS = `id, email, name, role, status, must_reset, created_at,
   invited_at, last_login_at, passcode_expires_at`;
@@ -170,6 +171,53 @@ users.put('/:id', async (c) => {
     .bind(id)
     .first();
   return c.json({ success: true, data: updated });
+});
+
+// DELETE /api/admin/users/:id — permanently remove a user and related data.
+users.delete('/:id', async (c) => {
+  const id = Number(c.req.param('id'));
+  const me = c.get('currentUser');
+
+  if (!Number.isFinite(id) || id <= 0) {
+    return c.json({ success: false, error: 'Valid user id is required' }, 400);
+  }
+  if (id === me.id) {
+    return c.json({ success: false, error: 'You cannot delete your own account.' }, 400);
+  }
+
+  const user = await c.env.DB.prepare('SELECT id, email FROM Users WHERE id = ?')
+    .bind(id)
+    .first<{ id: number; email: string }>();
+  if (!user) {
+    return c.json({ success: false, error: 'User not found' }, 404);
+  }
+  if (user.email.toLowerCase() === PRIMARY_SUPERADMIN_EMAIL) {
+    return c.json({ success: false, error: 'Primary super admin cannot be deleted.' }, 400);
+  }
+
+  // Preserve historical rows where this user acted as reviewer/assigner by
+  // nulling those references, but remove content they authored/reported.
+  await c.env.DB.batch([
+    c.env.DB.prepare('DELETE FROM Sessions WHERE user_id = ?').bind(id),
+    c.env.DB.prepare('DELETE FROM PasswordResets WHERE user_id = ?').bind(id),
+    c.env.DB.prepare('DELETE FROM EmailLog WHERE user_id = ?').bind(id),
+
+    c.env.DB.prepare('UPDATE UserTasks SET assigned_by = NULL WHERE assigned_by = ?').bind(id),
+    c.env.DB.prepare('UPDATE UserTasks SET reviewed_by = NULL WHERE reviewed_by = ?').bind(id),
+    c.env.DB.prepare('DELETE FROM UserTasks WHERE user_id = ?').bind(id),
+
+    c.env.DB.prepare('UPDATE Submissions SET reviewed_by = NULL WHERE reviewed_by = ?').bind(id),
+    c.env.DB.prepare('DELETE FROM Submissions WHERE author_id = ?').bind(id),
+
+    c.env.DB.prepare('UPDATE Tips SET reviewed_by = NULL WHERE reviewed_by = ?').bind(id),
+    c.env.DB.prepare('DELETE FROM TipFeedback WHERE reporter_id = ?').bind(id),
+    c.env.DB.prepare('DELETE FROM TipFeedback WHERE tip_id IN (SELECT id FROM Tips WHERE author_id = ?)').bind(id),
+    c.env.DB.prepare('DELETE FROM Tips WHERE author_id = ?').bind(id),
+
+    c.env.DB.prepare('DELETE FROM Users WHERE id = ?').bind(id),
+  ]);
+
+  return c.json({ success: true, message: 'User deleted successfully.' });
 });
 
 export default users;

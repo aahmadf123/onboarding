@@ -98,6 +98,159 @@ describe('user provisioning', () => {
     expect(disable.status).toBe(200);
     expect((await apiCall('/api/auth/me', { token: victim.token })).status).toBe(401);
   });
+
+  it('enforces delete safeguards: cannot self-delete or delete primary super admin', async () => {
+    const admin = await createUserAndLogin({ role: 'admin' });
+    const primary = await createUserAndLogin({ role: 'admin', email: 'utdata@utoledo.edu' });
+
+    const selfDelete = await apiCall(`/api/admin/users/${admin.id}`, {
+      method: 'DELETE',
+      token: admin.token,
+    });
+    expect(selfDelete.status).toBe(400);
+
+    const primaryDelete = await apiCall(`/api/admin/users/${primary.id}`, {
+      method: 'DELETE',
+      token: admin.token,
+    });
+    expect(primaryDelete.status).toBe(400);
+  });
+
+  it('deletes a user with cascading cleanup and reference nulling', async () => {
+    const admin = await createUserAndLogin({ role: 'admin' });
+    const victim = await createUserAndLogin({ role: 'staff', email: 'delete.me@utoledo.edu' });
+    const other = await createUserAndLogin({ role: 'moderator' });
+
+    const article = await env.DB.prepare(
+      "INSERT INTO Articles (category_id, title, current_content, is_active) VALUES (1, 'Delete Cascade Article', 'Body', 1)"
+    ).run();
+    const articleId = article.meta.last_row_id as number;
+
+    const tipByVictim = await env.DB.prepare(
+      "INSERT INTO Tips (author_id, category_id, title, content, status, reviewed_by) VALUES (?, 1, 'Victim tip', 'Tip body', 'pending', ?)"
+    )
+      .bind(victim.id, victim.id)
+      .run();
+    const tipByVictimId = tipByVictim.meta.last_row_id as number;
+
+    const tipByOther = await env.DB.prepare(
+      "INSERT INTO Tips (author_id, category_id, title, content, status, reviewed_by) VALUES (?, 1, 'Other tip', 'Other body', 'pending', ?)"
+    )
+      .bind(other.id, victim.id)
+      .run();
+    const tipByOtherId = tipByOther.meta.last_row_id as number;
+
+    await env.DB.prepare(
+      "INSERT INTO TipFeedback (tip_id, reporter_id, reason, details, status) VALUES (?, ?, 'issue', 'details', 'open')"
+    )
+      .bind(tipByVictimId, other.id)
+      .run();
+    await env.DB.prepare(
+      "INSERT INTO TipFeedback (tip_id, reporter_id, reason, details, status) VALUES (?, ?, 'issue', 'details', 'open')"
+    )
+      .bind(tipByOtherId, victim.id)
+      .run();
+
+    await env.DB.prepare(
+      `INSERT INTO Submissions (article_id, author_id, proposed_title, proposed_content, request_type, priority, topic_area, status, reviewed_by)
+       VALUES (?, ?, 'Victim submission', 'Submission body', 'content_update', 'normal', 'IT', 'pending', ?)`
+    )
+      .bind(articleId, victim.id, victim.id)
+      .run();
+
+    await env.DB.prepare(
+      `INSERT INTO UserTasks (user_id, task_id, status, assigned_by, reviewed_by)
+       VALUES (?, 1, 'open', ?, ?)`
+    )
+      .bind(victim.id, victim.id, victim.id)
+      .run();
+    await env.DB.prepare(
+      `INSERT INTO UserTasks (user_id, task_id, status, assigned_by, reviewed_by)
+       VALUES (?, 1, 'open', ?, ?)`
+    )
+      .bind(other.id, victim.id, victim.id)
+      .run();
+
+    await env.DB.prepare(
+      "INSERT INTO PasswordResets (user_id, token_hash, expires_at) VALUES (?, 'to-delete-token', ?)"
+    )
+      .bind(victim.id, new Date(Date.now() + 60_000).toISOString())
+      .run();
+    await env.DB.prepare(
+      "INSERT INTO EmailLog (user_id, to_email, email_type, subject, status) VALUES (?, ?, 'test', 'subject', 'sent')"
+    )
+      .bind(victim.id, victim.email)
+      .run();
+
+    const del = await apiCall(`/api/admin/users/${victim.id}`, {
+      method: 'DELETE',
+      token: admin.token,
+    });
+    expect(del.status).toBe(200);
+
+    const userRow = await env.DB.prepare('SELECT * FROM Users WHERE id = ?').bind(victim.id).first();
+    expect(userRow).toBeNull();
+
+    const authoredSubmissions = await env.DB.prepare('SELECT COUNT(*) AS n FROM Submissions WHERE author_id = ?')
+      .bind(victim.id)
+      .first<{ n: number }>();
+    expect(authoredSubmissions?.n).toBe(0);
+
+    const reviewedSubmissions = await env.DB.prepare('SELECT COUNT(*) AS n FROM Submissions WHERE reviewed_by = ?')
+      .bind(victim.id)
+      .first<{ n: number }>();
+    expect(reviewedSubmissions?.n).toBe(0);
+
+    const authoredTips = await env.DB.prepare('SELECT COUNT(*) AS n FROM Tips WHERE author_id = ?')
+      .bind(victim.id)
+      .first<{ n: number }>();
+    expect(authoredTips?.n).toBe(0);
+
+    const reviewedTips = await env.DB.prepare('SELECT COUNT(*) AS n FROM Tips WHERE reviewed_by = ?')
+      .bind(victim.id)
+      .first<{ n: number }>();
+    expect(reviewedTips?.n).toBe(0);
+
+    const reporterFeedback = await env.DB.prepare('SELECT COUNT(*) AS n FROM TipFeedback WHERE reporter_id = ?')
+      .bind(victim.id)
+      .first<{ n: number }>();
+    expect(reporterFeedback?.n).toBe(0);
+
+    const deletedTipFeedback = await env.DB.prepare('SELECT COUNT(*) AS n FROM TipFeedback WHERE tip_id = ?')
+      .bind(tipByVictimId)
+      .first<{ n: number }>();
+    expect(deletedTipFeedback?.n).toBe(0);
+
+    const victimTasks = await env.DB.prepare('SELECT COUNT(*) AS n FROM UserTasks WHERE user_id = ?')
+      .bind(victim.id)
+      .first<{ n: number }>();
+    expect(victimTasks?.n).toBe(0);
+
+    const assignedByRefs = await env.DB.prepare('SELECT COUNT(*) AS n FROM UserTasks WHERE assigned_by = ?')
+      .bind(victim.id)
+      .first<{ n: number }>();
+    expect(assignedByRefs?.n).toBe(0);
+
+    const reviewedByRefs = await env.DB.prepare('SELECT COUNT(*) AS n FROM UserTasks WHERE reviewed_by = ?')
+      .bind(victim.id)
+      .first<{ n: number }>();
+    expect(reviewedByRefs?.n).toBe(0);
+
+    const sessions = await env.DB.prepare('SELECT COUNT(*) AS n FROM Sessions WHERE user_id = ?')
+      .bind(victim.id)
+      .first<{ n: number }>();
+    expect(sessions?.n).toBe(0);
+
+    const resets = await env.DB.prepare('SELECT COUNT(*) AS n FROM PasswordResets WHERE user_id = ?')
+      .bind(victim.id)
+      .first<{ n: number }>();
+    expect(resets?.n).toBe(0);
+
+    const logs = await env.DB.prepare('SELECT COUNT(*) AS n FROM EmailLog WHERE user_id = ?')
+      .bind(victim.id)
+      .first<{ n: number }>();
+    expect(logs?.n).toBe(0);
+  });
 });
 
 describe('task assignment', () => {
@@ -359,5 +512,49 @@ describe('moderation endpoints are no longer forgeable', () => {
       .first<{ status: string; reviewed_by: number }>();
     expect(still?.status).toBe('approved');
     expect(still?.reviewed_by).toBe(mod.id);
+  });
+
+  it('supports end-to-end manual reassignment to a contact from site data', async () => {
+    const staff = await createUserAndLogin();
+    const mod = await createUserAndLogin({ role: 'moderator' });
+
+    const contactInsert = await env.DB.prepare(
+      `INSERT INTO KeyContacts (function_area, department, contact_name, title, email, is_active, display_order)
+       VALUES ('IT Help Desk', 'UT Information Technology', 'Casey Support', 'Support Analyst', 'casey.support@utoledo.edu', 1, 1)`
+    ).run();
+    const contactId = contactInsert.meta.last_row_id as number;
+
+    const post = await apiCall('/api/submissions', {
+      method: 'POST',
+      token: staff.token,
+      body: JSON.stringify({
+        proposed_title: 'Need MyUT access help',
+        proposed_content: 'The onboarding site needs a clearer MyUT access escalation path.',
+        request_type: 'access_request',
+        topic_area: 'IT & Campus Access',
+      }),
+    });
+    expect(post.status).toBe(201);
+
+    const denied = await apiCall(`/api/submissions/${post.json.id}/assignment`, {
+      method: 'PUT',
+      token: staff.token,
+      body: JSON.stringify({ contact_id: contactId }),
+    });
+    expect(denied.status).toBe(403);
+
+    const reassigned = await apiCall(`/api/submissions/${post.json.id}/assignment`, {
+      method: 'PUT',
+      token: mod.token,
+      body: JSON.stringify({
+        contact_id: contactId,
+        assignment_reason: 'Manual IT routing from moderation.',
+      }),
+    });
+    expect(reassigned.status).toBe(200);
+    expect(reassigned.json.data.assigned_team).toBe('IT Help Desk');
+    expect(reassigned.json.data.assigned_to_name).toBe('Casey Support');
+    expect(reassigned.json.data.assigned_to_email).toBe('casey.support@utoledo.edu');
+    expect(reassigned.json.data.assignment_reason).toContain('Manual IT routing');
   });
 });

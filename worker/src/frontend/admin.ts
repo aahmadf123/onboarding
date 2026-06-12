@@ -90,6 +90,7 @@ function AdminUsers({ currentUser }) {
   var _error = useState('');
   var error = _error[0];
   var setError = _error[1];
+  var primaryAdminEmail = 'utdata@utoledo.edu';
 
   function load() {
     api('/admin/users').then(function (r) { if (r.success) setUsers(r.data || []); });
@@ -112,6 +113,16 @@ function AdminUsers({ currentUser }) {
       setBusy(null);
       if (r.success) { setReveal({ email: user.email, passcode: r.data.passcode }); load(); }
       else setError(r.error || 'Re-invite failed');
+    });
+  }
+
+  function deleteUser(user) {
+    if (!window.confirm('Delete ' + user.email + '? This permanently removes their account, authored submissions/tips, and related records.')) return;
+    setBusy(user.id);
+    api('/admin/users/' + user.id, { method: 'DELETE' }).then(function (r) {
+      setBusy(null);
+      if (r.success) load();
+      else setError(r.error || 'Delete failed');
     });
   }
 
@@ -168,6 +179,12 @@ function AdminUsers({ currentUser }) {
                     disabled: busy === u.id,
                     className: 'text-xs ' + (u.status === 'disabled' ? 'text-green-600' : 'text-red-500') + ' hover:underline disabled:opacity-50',
                   }, u.status === 'disabled' ? 'Enable' : 'Disable')
+                  ,
+                  !isSelf && u.email !== primaryAdminEmail && React.createElement('button', {
+                    onClick: function () { deleteUser(u); },
+                    disabled: busy === u.id,
+                    className: 'text-xs text-red-700 hover:underline disabled:opacity-50',
+                  }, 'Delete')
                 )
               )
             );
