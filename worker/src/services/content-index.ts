@@ -1,6 +1,64 @@
 import { SiteContentIndexRow } from '../types';
+import { escapeSqlLiteral, expandSearchTerms } from './query-utils';
 
-type Chunk = { source_title: string; section_path: string | null; content_text: string };
+type Chunk = {
+  source_title: string;
+  section_path: string | null;
+  content_text: string;
+  match_score?: number;
+};
+
+function buildWeightedScore(
+  fields: Array<{ name: string; weight: number }>,
+  terms: string[],
+  phrase: string,
+  exactTitleField?: string
+): string {
+  const pieces: string[] = [];
+
+  if (phrase) {
+    const escapedPhrase = escapeSqlLiteral(phrase);
+    if (exactTitleField) {
+      pieces.push(
+        `CASE WHEN lower(${exactTitleField}) = '${escapedPhrase}' THEN 120 ELSE 0 END`,
+        `CASE WHEN lower(${exactTitleField}) LIKE '${escapedPhrase}%' THEN 60 ELSE 0 END`
+      );
+    }
+
+    for (const field of fields) {
+      pieces.push(
+        `CASE WHEN lower(${field.name}) LIKE '%${escapedPhrase}%' THEN ${field.weight * 3} ELSE 0 END`
+      );
+    }
+  }
+
+  for (const term of terms) {
+    const escapedTerm = escapeSqlLiteral(term);
+    for (const field of fields) {
+      pieces.push(
+        `CASE WHEN lower(${field.name}) LIKE '%${escapedTerm}%' THEN ${field.weight} ELSE 0 END`
+      );
+    }
+  }
+
+  return pieces.length > 0 ? pieces.join(' + ') : '0';
+}
+
+function buildWhereClause(fields: string[], terms: string[], phrase: string): string {
+  const checks: string[] = [];
+
+  if (phrase) {
+    const escapedPhrase = escapeSqlLiteral(phrase);
+    checks.push(...fields.map((field) => `lower(${field}) LIKE '%${escapedPhrase}%'`));
+  }
+
+  for (const term of terms) {
+    const escapedTerm = escapeSqlLiteral(term);
+    checks.push(...fields.map((field) => `lower(${field}) LIKE '%${escapedTerm}%'`));
+  }
+
+  return checks.length > 0 ? checks.join(' OR ') : '1 = 0';
+}
 
 /**
  * Retrieves relevant context chunks for AI chat.
@@ -31,112 +89,140 @@ export async function getRelevantContextWithSources(
   query: string,
   maxChunks = 10
 ): Promise<{ context: string; sources: string[] }> {
-  const terms = query
-    .toLowerCase()
-    .split(/\s+/)
-    .filter((t) => t.length > 2)
-    .slice(0, 10)
-    .map((t) => t.replace(/'/g, "''"));
+  const { phrase, terms } = expandSearchTerms(query, 16);
 
-  if (terms.length === 0) return { context: '', sources: [] };
+  if (!phrase && terms.length === 0) return { context: '', sources: [] };
 
   // ── SiteContentIndex ──────────────────────────────────────────────────────
   const siteChunks = await fetchRankedChunks<Chunk>(
     db,
-    terms,
     `SELECT source_title, section_path, content_text,
-            {SCORE} AS match_score
+            ${buildWeightedScore([
+              { name: 'source_title', weight: 12 },
+              { name: 'section_path', weight: 7 },
+              { name: 'content_text', weight: 4 },
+            ], terms, phrase, 'source_title')} AS match_score
      FROM SiteContentIndex
-     WHERE {WHERE}
+     WHERE ${buildWhereClause(['source_title', 'section_path', 'content_text'], terms, phrase)}
      ORDER BY match_score DESC
      LIMIT ?`,
-    (term) => `(content_text LIKE '%${term}%' OR source_title LIKE '%${term}%')`,
     maxChunks
+  );
+
+  // ── Live Articles ─────────────────────────────────────────────────────────
+  const articleChunks = await fetchRankedChunks<Chunk>(
+    db,
+    `SELECT Articles.title AS source_title,
+            Categories.name AS section_path,
+            COALESCE(Articles.current_content, '') AS content_text,
+            ${buildWeightedScore([
+              { name: 'Articles.title', weight: 14 },
+              { name: 'Categories.name', weight: 8 },
+              { name: 'Articles.current_content', weight: 4 },
+            ], terms, phrase, 'Articles.title')} AS match_score
+     FROM Articles
+     LEFT JOIN Categories ON Categories.id = Articles.category_id
+     WHERE ${buildWhereClause(['Articles.title', 'Categories.name', 'Articles.current_content'], terms, phrase)}
+     ORDER BY match_score DESC, Articles.last_updated DESC
+     LIMIT ?`,
+    4
   );
 
   // ── KeyContacts ───────────────────────────────────────────────────────────
   const contactChunks = await fetchRankedChunks<Chunk>(
     db,
-    terms,
     `SELECT contact_name AS source_title,
             'Contacts > ' || COALESCE(function_area, department) AS section_path,
             COALESCE(contact_name, '') || ' — ' || COALESCE(title, '') ||
               CASE WHEN email IS NOT NULL THEN ' | Email: ' || email ELSE '' END ||
               CASE WHEN phone IS NOT NULL THEN ' | Phone: ' || phone ELSE '' END ||
               CASE WHEN notes IS NOT NULL THEN ' | ' || notes ELSE '' END AS content_text,
-            {SCORE} AS match_score
+            ${buildWeightedScore([
+              { name: 'contact_name', weight: 12 },
+              { name: 'title', weight: 9 },
+              { name: 'function_area', weight: 8 },
+              { name: 'department', weight: 6 },
+              { name: 'notes', weight: 4 },
+            ], terms, phrase, 'contact_name')} AS match_score
      FROM KeyContacts
-     WHERE is_active = 1 AND ({WHERE})
+     WHERE is_active = 1 AND (${buildWhereClause(['contact_name', 'title', 'function_area', 'department', 'notes'], terms, phrase)})
      ORDER BY match_score DESC
      LIMIT ?`,
-    (term) =>
-      `(contact_name LIKE '%${term}%' OR title LIKE '%${term}%' OR function_area LIKE '%${term}%' OR department LIKE '%${term}%' OR notes LIKE '%${term}%')`,
     3
   );
 
   // ── SystemsDirectory ─────────────────────────────────────────────────────
   const systemChunks = await fetchRankedChunks<Chunk>(
     db,
-    terms,
     `SELECT system_name AS source_title,
             'Systems > ' || COALESCE(category, 'General') AS section_path,
             system_name || ': ' || COALESCE(description, '') ||
               CASE WHEN login_notes IS NOT NULL THEN ' | Login: ' || login_notes ELSE '' END ||
               CASE WHEN access_url IS NOT NULL THEN ' | URL: ' || access_url ELSE '' END AS content_text,
-            {SCORE} AS match_score
+            ${buildWeightedScore([
+              { name: 'system_name', weight: 12 },
+              { name: 'category', weight: 7 },
+              { name: 'description', weight: 5 },
+              { name: 'login_notes', weight: 5 },
+            ], terms, phrase, 'system_name')} AS match_score
      FROM SystemsDirectory
-     WHERE is_active = 1 AND ({WHERE})
+     WHERE is_active = 1 AND (${buildWhereClause(['system_name', 'category', 'description', 'login_notes'], terms, phrase)})
      ORDER BY match_score DESC
      LIMIT ?`,
-    (term) =>
-      `(system_name LIKE '%${term}%' OR description LIKE '%${term}%' OR login_notes LIKE '%${term}%' OR category LIKE '%${term}%')`,
     3
   );
 
   // ── PolicyResources ───────────────────────────────────────────────────────
   const policyChunks = await fetchRankedChunks<Chunk>(
     db,
-    terms,
     `SELECT title AS source_title,
             'Policies > ' || COALESCE(category, 'General') AS section_path,
             COALESCE(policy_code || ' — ', '') || title || ': ' || COALESCE(summary, '') AS content_text,
-            {SCORE} AS match_score
+            ${buildWeightedScore([
+              { name: 'title', weight: 12 },
+              { name: 'policy_code', weight: 10 },
+              { name: 'category', weight: 7 },
+              { name: 'applies_to', weight: 5 },
+              { name: 'summary', weight: 4 },
+            ], terms, phrase, 'title')} AS match_score
      FROM PolicyResources
-     WHERE is_active = 1 AND ({WHERE})
+     WHERE is_active = 1 AND (${buildWhereClause(['title', 'policy_code', 'category', 'applies_to', 'summary'], terms, phrase)})
      ORDER BY match_score DESC
      LIMIT ?`,
-    (term) =>
-      `(title LIKE '%${term}%' OR summary LIKE '%${term}%' OR category LIKE '%${term}%' OR applies_to LIKE '%${term}%')`,
     3
   );
 
   // ── OrgChart ──────────────────────────────────────────────────────────────
   const orgChunks = await fetchRankedChunks<Chunk>(
     db,
-    terms,
     `SELECT name AS source_title,
             'Org Chart > ' || COALESCE(department, 'General') AS section_path,
             name || ' — ' || title ||
               CASE WHEN department IS NOT NULL THEN ' (' || department || ')' ELSE '' END ||
               CASE WHEN email IS NOT NULL THEN ' | Email: ' || email ELSE '' END ||
               CASE WHEN phone IS NOT NULL THEN ' | Phone: ' || phone ELSE '' END AS content_text,
-            {SCORE} AS match_score
+            ${buildWeightedScore([
+              { name: 'name', weight: 11 },
+              { name: 'title', weight: 8 },
+              { name: 'department', weight: 6 },
+            ], terms, phrase, 'name')} AS match_score
      FROM OrgChart
-     WHERE is_active = 1 AND ({WHERE})
+     WHERE is_active = 1 AND (${buildWhereClause(['name', 'title', 'department'], terms, phrase)})
      ORDER BY match_score DESC
      LIMIT ?`,
-    (term) =>
-      `(name LIKE '%${term}%' OR title LIKE '%${term}%' OR department LIKE '%${term}%')`,
     3
   );
 
   const allChunks = [
     ...siteChunks,
+    ...articleChunks,
     ...contactChunks,
     ...systemChunks,
     ...policyChunks,
     ...orgChunks,
-  ].slice(0, maxChunks);
+  ]
+    .sort((a, b) => (b.match_score ?? 0) - (a.match_score ?? 0))
+    .slice(0, maxChunks);
 
   if (allChunks.length === 0) return { context: '', sources: [] };
 
@@ -165,25 +251,9 @@ export async function getRelevantContextWithSources(
  */
 async function fetchRankedChunks<T extends { content_text: string; source_title: string; section_path: string | null }>(
   db: D1Database,
-  terms: string[],
   queryTemplate: string,
-  clauseBuilder: (term: string) => string,
   limit: number
 ): Promise<T[]> {
-  if (terms.length === 0) return [];
-
-  const whereClauses = terms.map(clauseBuilder).join(' OR ');
-  const scoreExpr = terms
-    .map((t) => {
-      const clause = clauseBuilder(t);
-      return `CASE WHEN ${clause} THEN 1 ELSE 0 END`;
-    })
-    .join(' + ');
-
-  const sql = queryTemplate
-    .replace('{WHERE}', whereClauses)
-    .replace('{SCORE}', scoreExpr);
-
-  const { results } = await db.prepare(sql).bind(limit).all<T>();
+  const { results } = await db.prepare(queryTemplate).bind(limit).all<T>();
   return results;
 }

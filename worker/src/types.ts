@@ -40,6 +40,14 @@ export interface SubmissionRow {
   author_id: number;
   proposed_title: string | null;
   proposed_content: string;
+  request_type: 'new_article' | 'content_update' | 'access_request' | 'policy_question' | 'process_gap' | 'bug_report' | 'other';
+  priority: 'low' | 'normal' | 'high' | 'urgent';
+  topic_area: string | null;
+  source_context: string | null;
+  assigned_team: string | null;
+  assigned_to_name: string | null;
+  assigned_to_email: string | null;
+  assignment_reason: string | null;
   status: 'pending' | 'approved' | 'rejected';
   submitted_at: string;
   reviewed_by: number | null;

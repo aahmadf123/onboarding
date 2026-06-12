@@ -1,13 +1,12 @@
-import { defineWorkersConfig } from '@cloudflare/vitest-pool-workers/config';
+import { defineConfig } from 'vitest/config';
+import { cloudflareTest } from '@cloudflare/vitest-pool-workers';
 
-export default defineWorkersConfig({
-test: {
-poolOptions: {
-workers: {
-wrangler: { configPath: './wrangler.jsonc' },
-// Disable remote bindings so tests run fully local without Cloudflare auth
-remoteBindings: false,
-},
-},
-},
+export default defineConfig({
+	plugins: [
+		cloudflareTest({
+			wrangler: { configPath: './wrangler.jsonc' },
+			remoteBindings: false,
+		}),
+	],
+	test: {},
 });

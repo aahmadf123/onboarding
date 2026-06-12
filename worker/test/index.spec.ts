@@ -30,6 +30,14 @@ article_id INTEGER,
 author_id INTEGER NOT NULL,
 proposed_title TEXT,
 proposed_content TEXT NOT NULL,
+request_type TEXT DEFAULT 'content_update',
+priority TEXT DEFAULT 'normal',
+topic_area TEXT,
+source_context TEXT,
+assigned_team TEXT,
+assigned_to_name TEXT,
+assigned_to_email TEXT,
+assignment_reason TEXT,
 status TEXT DEFAULT 'pending',
 submitted_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 reviewed_by INTEGER,
@@ -266,5 +274,86 @@ expect(text).toContain('Footer');
 expect(text).toContain('SuperAdminDashboard');
 // OrgChartPage has been removed
 expect(text).not.toContain('OrgChartPage');
+});
+
+it('allows super admin to delete another user', async () => {
+const adminCreate = await SELF.fetch('https://example.com/api/users', {
+method: 'POST',
+headers: { 'Content-Type': 'application/json' },
+body: JSON.stringify({ email: 'utdata@utoledo.edu' }),
+});
+const adminJson = await adminCreate.json() as { success: boolean; data: { id: number } };
+expect(adminJson.success).toBe(true);
+
+const staffCreate = await SELF.fetch('https://example.com/api/users', {
+method: 'POST',
+headers: { 'Content-Type': 'application/json' },
+body: JSON.stringify({ email: 'delete.me@utoledo.edu' }),
+});
+const staffJson = await staffCreate.json() as { success: boolean; data: { id: number } };
+expect(staffJson.success).toBe(true);
+
+const deleteResponse = await SELF.fetch('https://example.com/api/users/' + staffJson.data.id, {
+method: 'DELETE',
+headers: { 'x-user-id': String(adminJson.data.id) },
+});
+expect(deleteResponse.status).toBe(200);
+const deleteJson = await deleteResponse.json() as { success: boolean };
+expect(deleteJson.success).toBe(true);
+
+const lookupResponse = await SELF.fetch('https://example.com/api/users/lookup?email=delete.me@utoledo.edu');
+expect(lookupResponse.status).toBe(404);
+});
+
+it('allows moderators to manually reassign a submission ticket', async () => {
+const moderatorInsert = await env.DB.prepare(
+	"INSERT INTO Users (email, role) VALUES (?, ?)"
+).bind('moderator@utoledo.edu', 'moderator').run();
+
+const authorInsert = await env.DB.prepare(
+	"INSERT INTO Users (email, role) VALUES (?, ?)"
+).bind('author@utoledo.edu', 'staff').run();
+
+await env.DB.prepare(
+	`INSERT INTO KeyContacts (function_area, department, contact_name, title, email, is_active, display_order)
+	 VALUES (?, ?, ?, ?, ?, 1, 1)`
+).bind('IT Help Desk', 'UT Information Technology', 'Casey Support', 'Support Analyst', 'casey.support@utoledo.edu').run();
+
+const submissionResponse = await SELF.fetch('https://example.com/api/submissions', {
+	method: 'POST',
+	headers: { 'Content-Type': 'application/json' },
+	body: JSON.stringify({
+		author_id: authorInsert.meta.last_row_id,
+		proposed_title: 'Need MyUT access help',
+		proposed_content: 'The onboarding site needs a clearer MyUT access escalation path.',
+		request_type: 'access_request',
+		topic_area: 'IT & Campus Access',
+	}),
+});
+const submissionJson = await submissionResponse.json() as { success: boolean; id: number };
+expect(submissionJson.success).toBe(true);
+
+const contactsResult = await env.DB.prepare('SELECT id FROM KeyContacts WHERE email = ?')
+	.bind('casey.support@utoledo.edu')
+	.first<{ id: number }>();
+expect(contactsResult?.id).toBeTruthy();
+
+const reassignResponse = await SELF.fetch('https://example.com/api/submissions/' + submissionJson.id + '/assignment', {
+	method: 'PUT',
+	headers: {
+		'Content-Type': 'application/json',
+		'x-user-id': String(moderatorInsert.meta.last_row_id),
+	},
+	body: JSON.stringify({
+		contact_id: contactsResult?.id,
+		assignment_reason: 'Manual IT routing from moderation.',
+	}),
+});
+expect(reassignResponse.status).toBe(200);
+const reassignJson = await reassignResponse.json() as { success: boolean; data: { assigned_team: string; assigned_to_email: string; assignment_reason: string } };
+expect(reassignJson.success).toBe(true);
+expect(reassignJson.data.assigned_team).toBe('IT Help Desk');
+expect(reassignJson.data.assigned_to_email).toBe('casey.support@utoledo.edu');
+expect(reassignJson.data.assignment_reason).toContain('Manual IT routing');
 });
 });

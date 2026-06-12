@@ -289,11 +289,42 @@ function SubmitForm({ currentUser, categories, onNavigate }) {
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [articleId, setArticleId] = useState('');
-  const [isNew, setIsNew] = useState(true);
+  const [requestType, setRequestType] = useState('content_update');
+  const [priority, setPriority] = useState('normal');
+  const [topicArea, setTopicArea] = useState('');
+  const [sourceContext, setSourceContext] = useState('');
   const [articles, setArticles] = useState([]);
   const [submitting, setSubmitting] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
+  const [submittedTicket, setSubmittedTicket] = useState(null);
+  const [assignmentPreview, setAssignmentPreview] = useState(null);
   useEffect(() => { api('/articles').then(r => r.success && setArticles(r.data)); }, []);
+
+  useEffect(() => {
+    if (!currentUser) return;
+    if (!title.trim() && !content.trim() && !articleId && !topicArea && !sourceContext.trim()) {
+      setAssignmentPreview(null);
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      api('/submissions/assignment-preview', {
+        method: 'POST',
+        body: JSON.stringify({
+          article_id: articleId ? parseInt(articleId, 10) : undefined,
+          proposed_title: title,
+          proposed_content: content,
+          request_type: requestType,
+          topic_area: topicArea || undefined,
+          source_context: sourceContext || undefined,
+        })
+      }).then(r => {
+        if (r.success) setAssignmentPreview(r.data);
+      });
+    }, 250);
+
+    return () => clearTimeout(timer);
+  }, [articleId, content, currentUser, requestType, sourceContext, title, topicArea]);
+
   async function handleSubmit(e) {
     e.preventDefault();
     if (!currentUser) return;
@@ -301,55 +332,152 @@ function SubmitForm({ currentUser, categories, onNavigate }) {
     const payload = {
       author_id: currentUser.id,
       proposed_content: content,
-      proposed_title: isNew ? title : undefined,
-      article_id: !isNew && articleId ? parseInt(articleId) : undefined,
+      proposed_title: requestType === 'content_update' ? undefined : title,
+      article_id: requestType === 'content_update' && articleId ? parseInt(articleId, 10) : undefined,
+      request_type: requestType,
+      priority,
+      topic_area: topicArea || undefined,
+      source_context: sourceContext || undefined,
     };
     const res = await api('/submissions', { method: 'POST', body: JSON.stringify(payload) });
     setSubmitting(false);
-    if (res.success) { setSubmitted(true); setTitle(''); setContent(''); setArticleId(''); }
+    if (res.success) {
+      setSubmittedTicket(res.data || { id: res.id, assignment: assignmentPreview });
+      setTitle('');
+      setContent('');
+      setArticleId('');
+      setSourceContext('');
+      setPriority('normal');
+      setTopicArea('');
+      setAssignmentPreview(null);
+    }
   }
+
+  const isEditFlow = requestType === 'content_update';
+  const requestTypes = [
+    { id: 'content_update', label: 'Edit existing content', desc: 'Route a correction or rewrite request' },
+    { id: 'new_article', label: 'New knowledge article', desc: 'Add missing onboarding information' },
+    { id: 'access_request', label: 'Access or setup issue', desc: 'Account, door, or system access gaps' },
+    { id: 'policy_question', label: 'Policy clarification', desc: 'Rules, compliance, or process interpretation' },
+    { id: 'process_gap', label: 'Workflow gap', desc: 'Something in onboarding is missing or confusing' },
+    { id: 'bug_report', label: 'Portal bug', desc: 'Broken page, wrong link, or bad data' },
+  ];
+
   if (!currentUser) return React.createElement('div', { className: 'max-w-2xl mx-auto px-4 py-12 text-center' },
     React.createElement('p', { className: 'text-gray-500' }, 'Please log in to contribute.')
   );
-  if (submitted) return React.createElement('div', { className: 'max-w-2xl mx-auto px-4 py-12 text-center fade-in' },
-    React.createElement('div', { className: 'w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4' }, React.createElement(IconCheck)),
-    React.createElement('h2', { className: 'text-2xl font-bold text-gray-900 mb-2' }, 'Submission Received!'),
-    React.createElement('p', { className: 'text-gray-500 mb-6' }, 'Your contribution has been queued for moderation. Thank you!'),
-    React.createElement('button', { onClick: () => setSubmitted(false), className: 'px-6 py-2 bg-toledo-blue text-white rounded-lg hover:bg-toledo-dark transition-colors text-sm font-medium' }, 'Submit Another')
+  if (submittedTicket) return React.createElement('div', { className: 'max-w-3xl mx-auto px-4 py-12 fade-in' },
+    React.createElement('div', { className: 'bg-white border border-gray-200 rounded-2xl p-8 text-center shadow-sm' },
+      React.createElement('div', { className: 'w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4' }, React.createElement(IconCheck)),
+      React.createElement('p', { className: 'text-xs uppercase tracking-[0.2em] text-green-600 font-semibold mb-2' }, 'Ticket queued'),
+      React.createElement('h2', { className: 'text-2xl font-bold text-gray-900 mb-2' }, 'Contribution Ticket #' + submittedTicket.id),
+      React.createElement('p', { className: 'text-gray-500 mb-6' }, 'Your request is now in the moderation queue with a suggested owner from the current portal knowledge.'),
+      submittedTicket.assignment && React.createElement('div', { className: 'bg-slate-50 border border-slate-200 rounded-xl p-4 text-left max-w-xl mx-auto mb-6' },
+        React.createElement('p', { className: 'text-xs uppercase tracking-wide text-slate-500 mb-2' }, 'Suggested routing'),
+        React.createElement('p', { className: 'text-sm font-semibold text-slate-900' }, submittedTicket.assignment.assigned_team || 'General Review Queue'),
+        submittedTicket.assignment.assigned_to_name && React.createElement('p', { className: 'text-sm text-slate-600 mt-1' }, submittedTicket.assignment.assigned_to_name + (submittedTicket.assignment.assigned_to_email ? ' • ' + submittedTicket.assignment.assigned_to_email : '')),
+        submittedTicket.assignment.assignment_reason && React.createElement('p', { className: 'text-xs text-slate-500 mt-2' }, submittedTicket.assignment.assignment_reason)
+      ),
+      React.createElement('div', { className: 'flex items-center justify-center gap-3' },
+        React.createElement('button', { onClick: () => setSubmittedTicket(null), className: 'px-6 py-2 bg-toledo-blue text-white rounded-lg hover:bg-toledo-dark transition-colors text-sm font-medium' }, 'Open Another Ticket'),
+        React.createElement('button', { onClick: () => onNavigate('home'), className: 'px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:border-toledo-blue hover:text-toledo-blue transition-colors text-sm font-medium' }, 'Back to Home')
+      )
+    )
   );
-  return React.createElement('div', { className: 'max-w-2xl mx-auto px-4 py-8 fade-in' },
+  return React.createElement('div', { className: 'max-w-6xl mx-auto px-4 py-8 fade-in' },
     React.createElement('button', { onClick: () => onNavigate('home'), className: 'flex items-center gap-2 text-toledo-blue hover:text-toledo-dark mb-6 text-sm font-medium' },
       React.createElement(IconArrowLeft), 'Back to Home'),
-    React.createElement('h1', { className: 'text-2xl font-bold text-gray-900 mb-2' }, 'Contribute Knowledge'),
-    React.createElement('p', { className: 'text-gray-500 mb-8' }, 'Share your insights to improve onboarding. Submissions are reviewed before publishing.'),
-    React.createElement('form', { onSubmit: handleSubmit, className: 'bg-white rounded-xl border border-gray-200 p-6 space-y-6' },
-      React.createElement('div', { className: 'flex gap-4' },
-        React.createElement('label', { className: 'flex items-center gap-2 cursor-pointer' },
-          React.createElement('input', { type: 'radio', checked: isNew, onChange: () => setIsNew(true), className: 'text-toledo-blue' }),
-          React.createElement('span', { className: 'text-sm font-medium text-gray-700' }, 'Propose new article')
-        ),
-        React.createElement('label', { className: 'flex items-center gap-2 cursor-pointer' },
-          React.createElement('input', { type: 'radio', checked: !isNew, onChange: () => setIsNew(false), className: 'text-toledo-blue' }),
-          React.createElement('span', { className: 'text-sm font-medium text-gray-700' }, 'Suggest edit to existing')
-        )
-      ),
-      isNew && React.createElement('div', null,
-        React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, 'Article Title'),
-        React.createElement('input', { type: 'text', value: title, onChange: (e) => setTitle(e.target.value), required: isNew, placeholder: 'Enter a descriptive title', className: 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-toledo-blue text-sm' })
-      ),
-      !isNew && React.createElement('div', null,
-        React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, 'Select Article to Edit'),
-        React.createElement('select', { value: articleId, onChange: (e) => setArticleId(e.target.value), required: !isNew, className: 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-toledo-blue text-sm' },
-          React.createElement('option', { value: '' }, '-- Select an article --'),
-          articles.map(a => React.createElement('option', { key: a.id, value: a.id }, a.title))
-        )
-      ),
+    React.createElement('div', { className: 'flex items-end justify-between gap-4 mb-8' },
       React.createElement('div', null,
-        React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, isNew ? 'Article Content' : 'Proposed Changes'),
-        React.createElement('textarea', { value: content, onChange: (e) => setContent(e.target.value), required: true, rows: 10, placeholder: isNew ? 'Write the article content here...' : 'Describe your proposed changes...', className: 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-toledo-blue text-sm resize-y' })
+        React.createElement('p', { className: 'text-xs uppercase tracking-[0.2em] text-toledo-blue font-semibold mb-2' }, 'Contribution Desk'),
+        React.createElement('h1', { className: 'text-3xl font-bold text-gray-900 mb-2' }, 'Create a ticket from what you found on the site'),
+        React.createElement('p', { className: 'text-gray-500 max-w-2xl' }, 'Turn corrections, missing content, access issues, and policy questions into structured tickets. The form suggests an owner using the existing portal knowledge base and contact directory.')
       ),
-      React.createElement('button', { type: 'submit', disabled: submitting, className: 'w-full py-3 bg-toledo-blue text-white rounded-lg hover:bg-toledo-dark transition-colors text-sm font-medium disabled:opacity-50' },
-        submitting ? 'Submitting...' : 'Submit for Review'
+      React.createElement('div', { className: 'hidden lg:block bg-toledo-dark text-white rounded-2xl px-5 py-4 min-w-[240px]' },
+        React.createElement('p', { className: 'text-xs uppercase tracking-wide text-blue-200 mb-1' }, 'Routing mode'),
+        React.createElement('p', { className: 'text-lg font-semibold' }, 'Portal-aware assignment'),
+        React.createElement('p', { className: 'text-xs text-blue-200 mt-1' }, 'Uses current articles, categories, and contacts to suggest the right queue.')
+      )
+    ),
+    React.createElement('form', { onSubmit: handleSubmit, className: 'grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_320px] gap-6' },
+      React.createElement('div', { className: 'bg-white rounded-2xl border border-gray-200 p-6 space-y-6 shadow-sm' },
+        React.createElement('div', null,
+          React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-3' }, 'Ticket type'),
+          React.createElement('div', { className: 'grid grid-cols-1 md:grid-cols-2 gap-3' },
+            requestTypes.map(function(type) {
+              const active = requestType === type.id;
+              return React.createElement('button', {
+                key: type.id,
+                type: 'button',
+                onClick: () => setRequestType(type.id),
+                className: 'text-left rounded-xl border p-4 transition-colors ' + (active ? 'border-toledo-blue bg-toledo-blue/5' : 'border-gray-200 hover:border-toledo-blue/40 hover:bg-gray-50')
+              },
+                React.createElement('p', { className: 'text-sm font-semibold text-gray-900' }, type.label),
+                React.createElement('p', { className: 'text-xs text-gray-500 mt-1' }, type.desc)
+              );
+            })
+          )
+        ),
+        React.createElement('div', { className: 'grid grid-cols-1 md:grid-cols-2 gap-4' },
+          React.createElement('div', null,
+            React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, 'Priority'),
+            React.createElement('select', { value: priority, onChange: (e) => setPriority(e.target.value), className: 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-toledo-blue text-sm bg-white' },
+              ['low', 'normal', 'high', 'urgent'].map(level => React.createElement('option', { key: level, value: level }, level.charAt(0).toUpperCase() + level.slice(1)))
+            )
+          ),
+          React.createElement('div', null,
+            React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, 'Topic area'),
+            React.createElement('select', { value: topicArea, onChange: (e) => setTopicArea(e.target.value), className: 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-toledo-blue text-sm bg-white' },
+              React.createElement('option', { value: '' }, 'Use the ticket details to infer this'),
+              categories.map(cat => React.createElement('option', { key: cat.id, value: cat.name }, cat.name))
+            )
+          )
+        ),
+        isEditFlow && React.createElement('div', null,
+          React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, 'Related article on the site'),
+          React.createElement('select', { value: articleId, onChange: (e) => setArticleId(e.target.value), required: isEditFlow, className: 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-toledo-blue text-sm bg-white' },
+            React.createElement('option', { value: '' }, '-- Select an article to update --'),
+            articles.map(a => React.createElement('option', { key: a.id, value: a.id }, a.title))
+          )
+        ),
+        !isEditFlow && React.createElement('div', null,
+          React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, 'Ticket summary'),
+          React.createElement('input', { type: 'text', value: title, onChange: (e) => setTitle(e.target.value), required: !isEditFlow, placeholder: 'Summarize what should be added or fixed', className: 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-toledo-blue text-sm' })
+        ),
+        React.createElement('div', null,
+          React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, 'What on the site pointed you here?'),
+          React.createElement('textarea', { value: sourceContext, onChange: (e) => setSourceContext(e.target.value), rows: 3, placeholder: 'Example: The parking article is missing visitor permit details, or the MyUT setup page links to the wrong step.', className: 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-toledo-blue text-sm resize-y' })
+        ),
+        React.createElement('div', null,
+          React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, isEditFlow ? 'Requested changes' : 'Ticket details'),
+          React.createElement('textarea', { value: content, onChange: (e) => setContent(e.target.value), required: true, rows: 12, placeholder: isEditFlow ? 'Describe the correction, missing step, or rewrite needed...' : 'Describe the missing knowledge, bug, access issue, or question in enough detail for review...', className: 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-toledo-blue text-sm resize-y' })
+        ),
+        React.createElement('div', { className: 'flex items-center justify-between gap-4 pt-2' },
+          React.createElement('p', { className: 'text-xs text-gray-500 max-w-md' }, 'Tickets stay in moderation until approved. New article and content update tickets can still be published directly from the moderation queue.'),
+          React.createElement('button', { type: 'submit', disabled: submitting, className: 'px-6 py-3 bg-toledo-blue text-white rounded-lg hover:bg-toledo-dark transition-colors text-sm font-medium disabled:opacity-50 whitespace-nowrap' },
+            submitting ? 'Routing ticket...' : 'Submit Ticket'
+          )
+        )
+      ),
+      React.createElement('div', { className: 'space-y-4' },
+        React.createElement('div', { className: 'bg-white rounded-2xl border border-gray-200 p-5 shadow-sm' },
+          React.createElement('p', { className: 'text-xs uppercase tracking-wide text-gray-500 mb-2' }, 'Suggested owner'),
+          assignmentPreview
+            ? React.createElement('div', null,
+                React.createElement('p', { className: 'text-lg font-semibold text-gray-900' }, assignmentPreview.assigned_team || 'General Review Queue'),
+                assignmentPreview.assigned_to_name && React.createElement('p', { className: 'text-sm text-gray-600 mt-1' }, assignmentPreview.assigned_to_name + (assignmentPreview.assigned_to_email ? ' • ' + assignmentPreview.assigned_to_email : '')),
+                React.createElement('p', { className: 'text-xs text-gray-500 mt-3 leading-relaxed' }, assignmentPreview.assignment_reason)
+              )
+            : React.createElement('p', { className: 'text-sm text-gray-500' }, 'Start filling in the ticket and the portal will suggest the best queue and contact.')
+        ),
+        React.createElement('div', { className: 'bg-toledo-dark text-white rounded-2xl p-5 shadow-sm' },
+          React.createElement('p', { className: 'text-xs uppercase tracking-wide text-blue-200 mb-2' }, 'How this works'),
+          React.createElement('ol', { className: 'space-y-3 text-sm text-blue-50 list-decimal pl-4' },
+            React.createElement('li', null, 'Pick the ticket type and describe the gap.'),
+            React.createElement('li', null, 'The system checks existing categories, articles, and contacts.'),
+            React.createElement('li', null, 'Moderators can approve, reject, or re-route from the queue.')
+          )
+        )
       )
     )
   );
@@ -362,6 +490,9 @@ function ModerationDashboard({ currentUser, onNavigate }) {
   const [filter, setFilter] = useState('pending');
   const [processing, setProcessing] = useState(null);
   const [reviewNotes, setReviewNotes] = useState('');
+  const [contacts, setContacts] = useState([]);
+  const [assignmentContactId, setAssignmentContactId] = useState({});
+  const [assignmentReason, setAssignmentReason] = useState({});
 
   const loadData = useCallback(() => {
     if (activeTab === 'submissions') {
@@ -372,6 +503,11 @@ function ModerationDashboard({ currentUser, onNavigate }) {
   }, [activeTab, filter]);
 
   useEffect(() => { loadData(); }, [loadData]);
+  useEffect(() => {
+    if (activeTab === 'submissions') {
+      api('/contacts').then(r => r.success && setContacts(r.data || []));
+    }
+  }, [activeTab]);
 
   async function handleAction(id, action) {
     setProcessing(id);
@@ -381,6 +517,21 @@ function ModerationDashboard({ currentUser, onNavigate }) {
       body: JSON.stringify({ reviewed_by: currentUser.id, review_notes: reviewNotes }),
     });
     setReviewNotes('');
+    setProcessing(null);
+    loadData();
+  }
+
+  async function handleReassign(itemId) {
+    const contactId = assignmentContactId[itemId];
+    if (!contactId) return;
+    setProcessing('assign-' + itemId);
+    await api('/submissions/' + itemId + '/assignment', {
+      method: 'PUT',
+      body: JSON.stringify({
+        contact_id: Number(contactId),
+        assignment_reason: assignmentReason[itemId] || undefined,
+      }),
+    });
     setProcessing(null);
     loadData();
   }
@@ -418,6 +569,46 @@ function ModerationDashboard({ currentUser, onNavigate }) {
                 React.createElement('div', { className: 'flex flex-wrap gap-3 mt-1 text-xs text-gray-500' },
                   React.createElement('span', null, 'By: ' + (item.author_email || 'Unknown')),
                   React.createElement('span', null, new Date(item.submitted_at).toLocaleString())
+                ),
+                React.createElement('div', { className: 'flex flex-wrap gap-2 mt-3' },
+                  item.request_type && React.createElement('span', { className: 'px-2 py-1 rounded-full bg-slate-100 text-slate-700 text-xs font-medium' }, item.request_type.replace(/_/g, ' ')),
+                  item.priority && React.createElement('span', { className: 'px-2 py-1 rounded-full bg-amber-50 text-amber-700 text-xs font-medium' }, item.priority),
+                  item.topic_area && React.createElement('span', { className: 'px-2 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-medium' }, item.topic_area)
+                ),
+                item.assigned_team && React.createElement('div', { className: 'mt-3 bg-slate-50 border border-slate-200 rounded-lg p-3 text-sm text-slate-700' },
+                  React.createElement('p', { className: 'font-medium text-slate-900' }, 'Assigned queue: ' + item.assigned_team),
+                  item.assigned_to_name && React.createElement('p', { className: 'text-xs text-slate-600 mt-1' }, item.assigned_to_name + (item.assigned_to_email ? ' • ' + item.assigned_to_email : '')),
+                  item.assignment_reason && React.createElement('p', { className: 'text-xs text-slate-500 mt-2' }, item.assignment_reason)
+                ),
+                filter === 'pending' && React.createElement('div', { className: 'mt-3 bg-white border border-gray-200 rounded-lg p-3' },
+                  React.createElement('p', { className: 'text-xs uppercase tracking-wide text-gray-500 mb-2' }, 'Manual reassignment'),
+                  React.createElement('div', { className: 'grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_auto] gap-2' },
+                    React.createElement('div', { className: 'space-y-2' },
+                      React.createElement('select', {
+                        value: assignmentContactId[item.id] || '',
+                        onChange: (e) => setAssignmentContactId(prev => Object.assign({}, prev, { [item.id]: e.target.value })),
+                        className: 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-toledo-blue bg-white'
+                      },
+                        React.createElement('option', { value: '' }, 'Choose a contact to assign'),
+                        contacts.map(contact => React.createElement('option', { key: contact.id, value: contact.id },
+                          (contact.function_area || contact.department || 'General') + ' — ' + (contact.contact_name || contact.email || 'Unassigned contact')
+                        ))
+                      ),
+                      React.createElement('input', {
+                        type: 'text',
+                        value: assignmentReason[item.id] || '',
+                        onChange: (e) => setAssignmentReason(prev => Object.assign({}, prev, { [item.id]: e.target.value })),
+                        placeholder: 'Optional note about why this ticket is being rerouted',
+                        className: 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-toledo-blue'
+                      })
+                    ),
+                    React.createElement('button', {
+                      type: 'button',
+                      onClick: () => handleReassign(item.id),
+                      disabled: processing === 'assign-' + item.id || !assignmentContactId[item.id],
+                      className: 'px-4 py-2 rounded-lg bg-slate-900 text-white text-sm font-medium hover:bg-slate-800 disabled:opacity-50'
+                    }, processing === 'assign-' + item.id ? 'Updating...' : 'Reassign')
+                  )
                 )
               ),
               React.createElement('span', {

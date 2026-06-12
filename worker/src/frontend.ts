@@ -612,6 +612,7 @@ function AIChatWidget({ currentUser }) {
     'Who do I contact for IT issues?',
     'How does door access work?',
     'What is the NIL policy?',
+    'What is the fastest order for setting up MyUT and payroll?',
   ];
 
   return React.createElement('div', { className: 'fixed bottom-6 right-6 w-80 sm:w-96 bg-white rounded-xl shadow-2xl border border-gray-200 flex flex-col z-50 max-w-[calc(100vw-3rem)]', style: { maxHeight: '540px' } },
@@ -631,7 +632,7 @@ function AIChatWidget({ currentUser }) {
       )
     ),
     React.createElement('div', { className: 'px-3 py-2 bg-yellow-50 border-b text-xs text-yellow-700 flex-shrink-0' },
-      'Scoped to Toledo Athletics onboarding topics. Responses are AI-generated — verify with your department.'),
+      'Scoped to Toledo Athletics onboarding topics. Answers use portal context first and list the source sections below each response.'),
     React.createElement('div', { className: 'flex-1 overflow-y-auto p-4 space-y-3', style: { minHeight: '200px', maxHeight: '340px' } },
       messages.length === 0 && React.createElement('div', { className: 'py-2' },
         React.createElement('p', { className: 'text-center text-xs text-gray-400 mb-3' }, 'Try asking:'),
@@ -892,6 +893,18 @@ function SuperAdminDashboard({ currentUser, onNavigate }) {
   var _useState6 = useState('');
   var reviewNotes = _useState6[0];
   var setReviewNotes = _useState6[1];
+  var _useState7 = useState(null);
+  var deletingUserId = _useState7[0];
+  var setDeletingUserId = _useState7[1];
+  var _useState8 = useState([]);
+  var contacts = _useState8[0];
+  var setContacts = _useState8[1];
+  var _useState9 = useState({});
+  var assignmentContactId = _useState9[0];
+  var setAssignmentContactId = _useState9[1];
+  var _useState10 = useState({});
+  var assignmentReason = _useState10[0];
+  var setAssignmentReason = _useState10[1];
 
   function loadSubmissions() {
     api('/submissions?status=' + filter).then(function (r) { if (r.success) setSubmissions(r.data || []); });
@@ -899,10 +912,14 @@ function SuperAdminDashboard({ currentUser, onNavigate }) {
   function loadUsers() {
     api('/users').then(function (r) { if (r.success) setUsers(r.data || []); });
   }
+  function loadContacts() {
+    api('/contacts').then(function (r) { if (r.success) setContacts(r.data || []); });
+  }
 
   useEffect(function () {
     loadSubmissions();
     loadUsers();
+    loadContacts();
   }, [filter]);
 
   function handleAction(id, action) {
@@ -912,6 +929,31 @@ function SuperAdminDashboard({ currentUser, onNavigate }) {
       body: JSON.stringify({ reviewed_by: currentUser.id, review_notes: reviewNotes }),
     }).then(function () {
       setReviewNotes('');
+      setProcessing(null);
+      loadSubmissions();
+    });
+  }
+
+  function deleteUser(user) {
+    if (!window.confirm('Delete ' + user.email + '? This also removes their authored submissions, tips, and feedback.')) return;
+    setDeletingUserId(user.id);
+    api('/users/' + user.id, { method: 'DELETE' }).then(function (r) {
+      setDeletingUserId(null);
+      if (r.success) loadUsers();
+    });
+  }
+
+  function handleReassign(itemId) {
+    var contactId = assignmentContactId[itemId];
+    if (!contactId) return;
+    setProcessing('assign-' + itemId);
+    api('/submissions/' + itemId + '/assignment', {
+      method: 'PUT',
+      body: JSON.stringify({
+        contact_id: Number(contactId),
+        assignment_reason: assignmentReason[itemId] || undefined,
+      }),
+    }).then(function () {
       setProcessing(null);
       loadSubmissions();
     });
@@ -966,6 +1008,46 @@ function SuperAdminDashboard({ currentUser, onNavigate }) {
                     React.createElement('div', { className: 'flex flex-wrap gap-3 mt-1 text-xs text-gray-500' },
                       React.createElement('span', null, 'By: ' + (item.author_email || 'Unknown')),
                       React.createElement('span', null, new Date(item.submitted_at).toLocaleString())
+                    ),
+                    React.createElement('div', { className: 'flex flex-wrap gap-2 mt-3' },
+                      item.request_type && React.createElement('span', { className: 'px-2 py-1 rounded-full bg-slate-100 text-slate-700 text-xs font-medium' }, item.request_type.replace(/_/g, ' ')),
+                      item.priority && React.createElement('span', { className: 'px-2 py-1 rounded-full bg-amber-50 text-amber-700 text-xs font-medium' }, item.priority),
+                      item.topic_area && React.createElement('span', { className: 'px-2 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-medium' }, item.topic_area)
+                    ),
+                    item.assigned_team && React.createElement('div', { className: 'mt-3 bg-slate-50 border border-slate-200 rounded-lg p-3 text-sm text-slate-700' },
+                      React.createElement('p', { className: 'font-medium text-slate-900' }, 'Assigned queue: ' + item.assigned_team),
+                      item.assigned_to_name && React.createElement('p', { className: 'text-xs text-slate-600 mt-1' }, item.assigned_to_name + (item.assigned_to_email ? ' • ' + item.assigned_to_email : '')),
+                      item.assignment_reason && React.createElement('p', { className: 'text-xs text-slate-500 mt-2' }, item.assignment_reason)
+                    ),
+                    filter === 'pending' && React.createElement('div', { className: 'mt-3 bg-white border border-gray-200 rounded-lg p-3' },
+                      React.createElement('p', { className: 'text-xs uppercase tracking-wide text-gray-500 mb-2' }, 'Manual reassignment'),
+                      React.createElement('div', { className: 'grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_auto] gap-2' },
+                        React.createElement('div', { className: 'space-y-2' },
+                          React.createElement('select', {
+                            value: assignmentContactId[item.id] || '',
+                            onChange: function (e) { setAssignmentContactId(Object.assign({}, assignmentContactId, { [item.id]: e.target.value })); },
+                            className: 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-toledo-blue bg-white'
+                          },
+                            React.createElement('option', { value: '' }, 'Choose a contact to assign'),
+                            contacts.map(function (contact) { return React.createElement('option', { key: contact.id, value: contact.id },
+                              (contact.function_area || contact.department || 'General') + ' — ' + (contact.contact_name || contact.email || 'Unassigned contact')
+                            ); })
+                          ),
+                          React.createElement('input', {
+                            type: 'text',
+                            value: assignmentReason[item.id] || '',
+                            onChange: function (e) { setAssignmentReason(Object.assign({}, assignmentReason, { [item.id]: e.target.value })); },
+                            placeholder: 'Optional note about why this ticket is being rerouted',
+                            className: 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-toledo-blue'
+                          })
+                        ),
+                        React.createElement('button', {
+                          type: 'button',
+                          onClick: function () { handleReassign(item.id); },
+                          disabled: processing === 'assign-' + item.id || !assignmentContactId[item.id],
+                          className: 'px-4 py-2 rounded-lg bg-slate-900 text-white text-sm font-medium hover:bg-slate-800 disabled:opacity-50'
+                        }, processing === 'assign-' + item.id ? 'Updating...' : 'Reassign')
+                      )
                     )
                   ),
                   React.createElement('span', {
@@ -1016,7 +1098,8 @@ function SuperAdminDashboard({ currentUser, onNavigate }) {
                 React.createElement('tr', { className: 'bg-gray-50 border-b border-gray-200' },
                   React.createElement('th', { className: 'px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase' }, 'Email'),
                   React.createElement('th', { className: 'px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase' }, 'Role'),
-                  React.createElement('th', { className: 'px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase' }, 'Joined')
+                  React.createElement('th', { className: 'px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase' }, 'Joined'),
+                  React.createElement('th', { className: 'px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase' }, 'Actions')
                 )
               ),
               React.createElement('tbody', null,
@@ -1029,7 +1112,17 @@ function SuperAdminDashboard({ currentUser, onNavigate }) {
                           (u.role === 'admin' ? 'bg-purple-100 text-purple-700' : u.role === 'moderator' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'),
                       }, u.role)
                     ),
-                    React.createElement('td', { className: 'px-4 py-3 text-sm text-gray-500' }, new Date(u.created_at).toLocaleDateString())
+                    React.createElement('td', { className: 'px-4 py-3 text-sm text-gray-500' }, new Date(u.created_at).toLocaleDateString()),
+                    React.createElement('td', { className: 'px-4 py-3 text-right' },
+                      React.createElement('button', {
+                        onClick: function () { deleteUser(u); },
+                        disabled: deletingUserId === u.id || u.id === currentUser.id || u.email === 'utdata@utoledo.edu',
+                        className: 'px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ' +
+                          (u.id === currentUser.id || u.email === 'utdata@utoledo.edu'
+                            ? 'border-gray-200 text-gray-300 cursor-not-allowed'
+                            : 'border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300'),
+                      }, deletingUserId === u.id ? 'Deleting...' : 'Delete')
+                    )
                   );
                 })
               )

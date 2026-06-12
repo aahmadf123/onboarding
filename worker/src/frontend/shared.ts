@@ -217,7 +217,7 @@ function SearchBar({ onSearch, onNavigate }) {
       React.createElement('input', {
         type: 'text', value: q, onChange: handleChange,
         onFocus: function () { if (suggestions.length > 0) setShowDrop(true); },
-        placeholder: 'Search articles, policies, contacts...',
+        placeholder: 'Search by topic, system, policy, or person...',
         className: 'w-full pl-12 pr-4 py-3 bg-white border border-gray-200 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-toledo-blue shadow-sm text-sm ' +
           (showDrop && suggestions.length > 0 ? 'rounded-t-xl rounded-b-none' : 'rounded-xl'),
       })
@@ -229,6 +229,7 @@ function SearchBar({ onSearch, onNavigate }) {
         const type = item.result_type || 'article';
         const title = item.title || '';
         const snippet = (item.current_content || item.description || item.summary || item.notes || '').substring(0, 70);
+        const meta = item.category_name || item.function_area || item.category || item.department || item.policy_code || item.applies_to || '';
         return React.createElement('button', {
           key: i,
           onClick: function () { handleSuggestionClick(item); },
@@ -237,6 +238,7 @@ function SearchBar({ onSearch, onNavigate }) {
           React.createElement('span', { className: 'flex-shrink-0 text-base mt-0.5' }, typeIcon[type] || '\uD83D\uDCC4'),
           React.createElement('div', { className: 'flex-1 min-w-0' },
             React.createElement('p', { className: 'text-sm font-medium text-gray-900 truncate' }, title),
+            meta && React.createElement('p', { className: 'text-[11px] uppercase tracking-wide text-gray-400 mt-0.5 truncate' }, meta),
             snippet && React.createElement('p', { className: 'text-xs text-gray-400 truncate mt-0.5' }, snippet)
           ),
           React.createElement('span', { className: 'flex-shrink-0 text-xs px-1.5 py-0.5 rounded font-medium ' + (typeColor[type] || 'bg-gray-100 text-gray-600') }, type)

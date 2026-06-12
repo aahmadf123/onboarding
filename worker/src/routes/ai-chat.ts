@@ -17,13 +17,19 @@ IMPORTANT RULES:
 2. If you don't have relevant information, say so and direct them to the appropriate department.
 3. Never make up information or guess at policies.
 4. Be helpful, professional, and concise.
-5. Do not reveal confidential information like SSNs, salaries, medical data, or passwords.`;
+5. Do not reveal confidential information like SSNs, salaries, medical data, or passwords.
 
-/** Build the context query from the last 3 user messages for richer multi-turn retrieval. */
+RESPONSE FORMAT:
+- Start with a direct answer in 1 short paragraph.
+- When useful, follow with 2-5 short bullets for steps, contacts, or caveats.
+- Use exact system, policy, and contact names from the context.
+- If the context is partial, say what is missing and give the safest next contact or queue.`;
+
+/** Build the context query from the last 4 user messages for richer multi-turn retrieval. */
 function buildContextQuery(messages: ChatMessage[]): string {
   return messages
     .filter((m) => m.role === 'user')
-    .slice(-3)
+    .slice(-4)
     .map((m) => m.content)
     .join(' ');
 }
@@ -54,7 +60,7 @@ aiChat.post('/', async (c) => {
 
     const contextQuery = buildContextQuery(body.messages);
     const { context, sources } = contextQuery
-      ? await getRelevantContextWithSources(c.env.DB, contextQuery)
+      ? await getRelevantContextWithSources(c.env.DB, contextQuery, 12)
       : { context: '', sources: [] };
 
     if (!c.env.AI) {
@@ -103,7 +109,7 @@ aiChat.post('/stream', async (c) => {
 
     const contextQuery = buildContextQuery(body.messages);
     const { context, sources } = contextQuery
-      ? await getRelevantContextWithSources(c.env.DB, contextQuery)
+      ? await getRelevantContextWithSources(c.env.DB, contextQuery, 12)
       : { context: '', sources: [] };
 
     const encoder = new TextEncoder();

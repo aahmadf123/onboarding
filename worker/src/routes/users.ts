@@ -1,10 +1,12 @@
 import { Hono } from 'hono';
 import { Bindings } from '../types';
+import { requireRole } from '../middleware/auth';
 
 const users = new Hono<{ Bindings: Bindings }>();
+const PRIMARY_SUPERADMIN_EMAIL = 'utdata@utoledo.edu';
 
 // GET all users (id, email, role, created_at only — no password-like fields)
-users.get('/', async (c) => {
+users.get('/', requireRole('admin'), async (c) => {
   const { results } = await c.env.DB.prepare(
     'SELECT id, email, role, created_at FROM Users'
   ).all();
@@ -62,6 +64,45 @@ users.post('/', async (c) => {
     .bind(info.meta.last_row_id)
     .first();
   return c.json({ success: true, data: user }, 201);
+});
+
+// DELETE user (super admin only)
+users.delete('/:id', requireRole('admin'), async (c) => {
+  const userId = Number(c.req.param('id'));
+
+  if (!Number.isFinite(userId) || userId <= 0) {
+    return c.json({ success: false, error: 'Valid user id is required' }, 400);
+  }
+
+  const actorId = Number(c.req.header('x-user-id'));
+  if (actorId === userId) {
+    return c.json({ success: false, error: 'You cannot delete your own account' }, 400);
+  }
+
+  const user = await c.env.DB.prepare(
+    'SELECT id, email, role FROM Users WHERE id = ?'
+  )
+    .bind(userId)
+    .first<{ id: number; email: string; role: string }>();
+
+  if (!user) {
+    return c.json({ success: false, error: 'User not found' }, 404);
+  }
+
+  if (user.email === PRIMARY_SUPERADMIN_EMAIL) {
+    return c.json({ success: false, error: 'Primary super admin cannot be deleted' }, 400);
+  }
+
+  await c.env.DB.batch([
+    c.env.DB.prepare('DELETE FROM TipFeedback WHERE reporter_id = ?').bind(userId),
+    c.env.DB.prepare('UPDATE Tips SET reviewed_by = NULL WHERE reviewed_by = ?').bind(userId),
+    c.env.DB.prepare('DELETE FROM Tips WHERE author_id = ?').bind(userId),
+    c.env.DB.prepare('UPDATE Submissions SET reviewed_by = NULL WHERE reviewed_by = ?').bind(userId),
+    c.env.DB.prepare('DELETE FROM Submissions WHERE author_id = ?').bind(userId),
+    c.env.DB.prepare('DELETE FROM Users WHERE id = ?').bind(userId),
+  ]);
+
+  return c.json({ success: true, message: 'User deleted successfully.' });
 });
 
 export default users;
