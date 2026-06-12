@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
-import { Bindings } from '../types';
+import { AppEnv } from '../types';
 
-const policies = new Hono<{ Bindings: Bindings }>();
+const policies = new Hono<AppEnv>();
 
 policies.get('/', async (c) => {
   const { results } = await c.env.DB.prepare(

@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
-import { Bindings } from '../types';
+import { AppEnv } from '../types';
 
-const quicklinks = new Hono<{ Bindings: Bindings }>();
+const quicklinks = new Hono<AppEnv>();
 
 quicklinks.get('/', async (c) => {
   const { results } = await c.env.DB.prepare(

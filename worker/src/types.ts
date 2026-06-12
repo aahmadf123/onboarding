@@ -6,17 +6,62 @@ export type Bindings = {
   DB: D1Database;
   AI: Ai;
   ASSETS: Fetcher;
+  // Secrets (wrangler secret put …) — never committed
+  RESEND_API_KEY: string;
+  BOOTSTRAP_TOKEN: string;
+};
+
+// Hono environment: bindings + per-request variables set by auth middleware
+export type AppEnv = {
+  Bindings: Bindings;
+  Variables: {
+    currentUser: UserRow;
+    sessionId: number;
+  };
 };
 
 // ============================================================
 // DB row interfaces — original schema
 // ============================================================
 
+export type Role = 'staff' | 'moderator' | 'admin';
+export type UserStatus = 'invited' | 'active' | 'disabled';
+
 export interface UserRow {
   id: number;
   email: string;
-  role: 'staff' | 'moderator' | 'admin';
+  role: Role;
   created_at: string;
+  name: string | null;
+  password_hash: string | null;
+  status: UserStatus;
+  must_reset: number;
+  passcode_expires_at: string | null;
+  invited_at: string | null;
+  password_set_at: string | null;
+  last_login_at: string | null;
+  localstorage_migrated_at: string | null;
+}
+
+/** The subset of UserRow that is safe to send to the client. */
+export interface PublicUser {
+  id: number;
+  email: string;
+  name: string | null;
+  role: Role;
+  status: UserStatus;
+  created_at: string;
+}
+
+export function toPublicUser(u: UserRow): PublicUser {
+  return {
+    id: u.id,
+    email: u.email,
+    name: u.name,
+    role: u.role,
+    status: u.status,
+    created_at: u.created_at,
+  };
 }
 
 export interface CategoryRow {
@@ -114,6 +159,86 @@ export interface AppConfigRow {
   key: string;
   value: string;
   updated_at: string;
+}
+
+// ============================================================
+// DB row interfaces — migration 0003 (auth, tasks, email)
+// ============================================================
+
+export interface SessionRow {
+  id: number;
+  user_id: number;
+  token_hash: string;
+  created_at: string;
+  expires_at: string;
+  last_used_at: string | null;
+  user_agent: string | null;
+  ip: string | null;
+}
+
+export interface PasswordResetRow {
+  id: number;
+  user_id: number;
+  token_hash: string;
+  created_at: string;
+  expires_at: string;
+  used_at: string | null;
+}
+
+export type TaskPhase = 'first-day' | 'first-week' | 'first-month' | 'first-90-days';
+export type TaskPriority = 'required' | 'recommended' | 'optional';
+export type TaskAudience = 'all' | 'assigned';
+export type UserTaskStatus = 'open' | 'done' | 'pending_approval' | 'approved' | 'rejected';
+
+export interface TaskRow {
+  id: number;
+  slug: string;
+  phase: TaskPhase;
+  title: string;
+  description: string | null;
+  priority: TaskPriority;
+  display_order: number;
+  requires_approval: number;
+  audience: TaskAudience;
+  link_view: string | null;
+  link_param: string | null;
+  is_active: number;
+  created_by: number | null;
+  created_at: string;
+}
+
+export interface UserTaskRow {
+  id: number;
+  user_id: number;
+  task_id: number;
+  status: UserTaskStatus;
+  completed_at: string | null;
+  assigned_by: number | null;
+  assigned_at: string | null;
+  reviewed_by: number | null;
+  review_notes: string | null;
+  reviewed_at: string | null;
+  updated_at: string | null;
+}
+
+export type EmailType =
+  | 'invite'
+  | 'password_reset'
+  | 'task_assigned'
+  | 'weekly_reminder'
+  | 'approval_decision'
+  | 'test';
+
+export interface EmailLogRow {
+  id: number;
+  user_id: number | null;
+  to_email: string;
+  email_type: EmailType;
+  subject: string | null;
+  status: 'sent' | 'error';
+  provider_id: string | null;
+  error_text: string | null;
+  created_at: string;
 }
 
 // ============================================================

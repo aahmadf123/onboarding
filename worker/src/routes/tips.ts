@@ -1,8 +1,8 @@
 import { Hono } from 'hono';
-import { Bindings } from '../types';
+import { AppEnv } from '../types';
 import { requireRole } from '../middleware/auth';
 
-const tips = new Hono<{ Bindings: Bindings }>();
+const tips = new Hono<AppEnv>();
 
 // GET moderation queue (moderator/admin only) — must be before /:id
 tips.get('/queue', requireRole('moderator', 'admin'), async (c) => {
@@ -66,19 +66,19 @@ tips.get('/:id', async (c) => {
   return c.json({ success: true, data: result });
 });
 
-// POST submit a new tip (any authenticated user)
+// POST submit a new tip (author = the signed-in user)
 tips.post('/', async (c) => {
+  const author = c.get('currentUser');
   const body = await c.req.json<{
-    author_id: number;
     category_id?: number;
     title: string;
     content: string;
     tags?: string;
   }>();
 
-  if (!body.author_id || !body.title || !body.content) {
+  if (!body.title || !body.content) {
     return c.json(
-      { success: false, error: 'author_id, title and content are required' },
+      { success: false, error: 'title and content are required' },
       400
     );
   }
@@ -87,7 +87,7 @@ tips.post('/', async (c) => {
     'INSERT INTO Tips (author_id, category_id, title, content, tags) VALUES (?,?,?,?,?)'
   )
     .bind(
-      body.author_id,
+      author.id,
       body.category_id ?? null,
       body.title,
       body.content,
@@ -101,14 +101,13 @@ tips.post('/', async (c) => {
   );
 });
 
-// PUT approve a tip (moderator / admin)
-tips.put('/:id/approve', async (c) => {
+// PUT approve a tip (reviewer = the signed-in moderator/admin)
+tips.put('/:id/approve', requireRole('moderator', 'admin'), async (c) => {
+  const reviewer = c.get('currentUser');
   const id = c.req.param('id');
-  const body = await c.req.json<{ reviewed_by: number; review_notes?: string }>();
-
-  if (!body.reviewed_by) {
-    return c.json({ success: false, error: 'reviewed_by is required' }, 400);
-  }
+  const body = await c.req
+    .json<{ review_notes?: string }>()
+    .catch(() => ({}) as { review_notes?: string });
 
   const now = new Date().toISOString();
   const result = await c.env.DB.prepare(
@@ -116,7 +115,7 @@ tips.put('/:id/approve', async (c) => {
      SET status = 'approved', reviewed_by = ?, review_notes = ?, approved_at = ?, last_updated = ?
      WHERE id = ? AND status = 'pending'`
   )
-    .bind(body.reviewed_by, body.review_notes ?? null, now, now, id)
+    .bind(reviewer.id, body.review_notes ?? null, now, now, id)
     .run();
 
   if (result.meta.changes === 0) {
@@ -129,14 +128,13 @@ tips.put('/:id/approve', async (c) => {
   return c.json({ success: true, message: 'Tip approved and published.' });
 });
 
-// PUT reject a tip (moderator / admin)
-tips.put('/:id/reject', async (c) => {
+// PUT reject a tip (reviewer = the signed-in moderator/admin)
+tips.put('/:id/reject', requireRole('moderator', 'admin'), async (c) => {
+  const reviewer = c.get('currentUser');
   const id = c.req.param('id');
-  const body = await c.req.json<{ reviewed_by: number; review_notes?: string }>();
-
-  if (!body.reviewed_by) {
-    return c.json({ success: false, error: 'reviewed_by is required' }, 400);
-  }
+  const body = await c.req
+    .json<{ review_notes?: string }>()
+    .catch(() => ({}) as { review_notes?: string });
 
   const now = new Date().toISOString();
   const result = await c.env.DB.prepare(
@@ -144,7 +142,7 @@ tips.put('/:id/reject', async (c) => {
      SET status = 'rejected', reviewed_by = ?, review_notes = ?, last_updated = ?
      WHERE id = ? AND status = 'pending'`
   )
-    .bind(body.reviewed_by, body.review_notes ?? null, now, id)
+    .bind(reviewer.id, body.review_notes ?? null, now, id)
     .run();
 
   if (result.meta.changes === 0) {
@@ -157,26 +155,27 @@ tips.put('/:id/reject', async (c) => {
   return c.json({ success: true, message: 'Tip rejected.' });
 });
 
-// POST report / flag a tip (TipFeedback)
+// POST report / flag a tip (reporter = the signed-in user)
 tips.post('/:id/feedback', async (c) => {
+  const reporter = c.get('currentUser');
   const tipId = c.req.param('id');
   const body = await c.req.json<{
-    reporter_id: number;
-    reason: string;
+    reason?: string;
     details?: string;
+    feedback?: string;
   }>();
 
-  if (!body.reporter_id || !body.reason) {
-    return c.json(
-      { success: false, error: 'reporter_id and reason are required' },
-      400
-    );
+  // The site-wide FeedbackButton posts { feedback } against tip id 0.
+  const reason = body.reason ?? (body.feedback ? 'page_issue' : '');
+  const details = body.details ?? body.feedback ?? null;
+  if (!reason) {
+    return c.json({ success: false, error: 'reason is required' }, 400);
   }
 
   const info = await c.env.DB.prepare(
     'INSERT INTO TipFeedback (tip_id, reporter_id, reason, details) VALUES (?,?,?,?)'
   )
-    .bind(tipId, body.reporter_id, body.reason, body.details ?? null)
+    .bind(tipId, reporter.id, reason, details)
     .run();
 
   return c.json(

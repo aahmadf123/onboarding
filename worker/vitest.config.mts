@@ -6,6 +6,12 @@ export default defineConfig({
 		cloudflareTest({
 			wrangler: { configPath: './wrangler.jsonc' },
 			remoteBindings: false,
+			miniflare: {
+				bindings: {
+					RESEND_API_KEY: 'test-resend-key',
+					BOOTSTRAP_TOKEN: 'test-bootstrap-token',
+				},
+			},
 		}),
 	],
 	test: {},

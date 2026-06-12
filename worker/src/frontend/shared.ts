@@ -1,4 +1,4 @@
-// Shared frontend code: hooks setup, api helper, icons, constants, Header, SearchBar, LoginScreen
+// Shared frontend code: hooks setup, api helper, icons, constants, Header, SearchBar, auth screens
 
 export function getSharedCode(): string {
   return `
@@ -6,12 +6,34 @@ const { useState, useEffect, useCallback, useRef } = React;
 
 // ── API Helper ────────────────────────────────────────────────────────────────
 const API_BASE = '/api';
-let _currentUserId = null;
+
+function getSessionToken() {
+  try { return localStorage.getItem('toledo_session_token'); } catch (e) { return null; }
+}
+
+function setSessionToken(token) {
+  try {
+    if (token) localStorage.setItem('toledo_session_token', token);
+    else localStorage.removeItem('toledo_session_token');
+  } catch (e) {}
+}
+
+function clearAuthAndReload() {
+  setSessionToken(null);
+  try { localStorage.removeItem('toledo_auth_user'); } catch (e) {}
+  window.location.href = '/';
+}
 
 async function api(path, options = {}) {
   const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
-  if (_currentUserId) headers['x-user-id'] = String(_currentUserId);
+  const token = getSessionToken();
+  if (token) headers['Authorization'] = 'Bearer ' + token;
   const res = await fetch(API_BASE + path, { ...options, headers });
+  // A 401 outside the auth endpoints means the session is gone — start over.
+  if (res.status === 401 && path.indexOf('/auth/') !== 0 && token) {
+    clearAuthAndReload();
+    return { success: false, error: 'Session expired' };
+  }
   return res.json();
 }
 
@@ -81,7 +103,7 @@ function Header({ currentUser, onNavigate, currentView, onSignOut, onStartTour }
     { id: 'policies',   label: 'Policies' },
     { id: 'submit',     label: 'Contribute' },
     ...(isMod ? [{ id: 'moderate', label: 'Moderate' }] : []),
-    ...(isSuperAdmin ? [{ id: 'admin', label: '\uD83D\uDD12 Admin' }] : []),
+    ...(isSuperAdmin ? [{ id: 'admin', label: '🔒 Admin' }] : []),
   ];
 
   const navBtn = (item) => React.createElement('button', {
@@ -113,7 +135,7 @@ function Header({ currentUser, onNavigate, currentView, onSignOut, onStartTour }
             React.createElement('div', { className: 'w-7 h-7 bg-toledo-gold text-toledo-blue rounded-full flex items-center justify-center text-xs font-bold' },
               currentUser.email[0].toUpperCase()
             ),
-            React.createElement('span', { className: 'text-xs text-blue-200 hidden md:block max-w-[130px] truncate' }, currentUser.email)
+            React.createElement('span', { className: 'text-xs text-blue-200 hidden md:block max-w-[130px] truncate' }, currentUser.name || currentUser.email)
           ),
           currentUser && onSignOut && React.createElement('button', {
             onClick: onSignOut,
@@ -176,8 +198,7 @@ function SearchBar({ onSearch, onNavigate }) {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     if (!val.trim()) { setSuggestions([]); setShowDrop(false); return; }
     debounceRef.current = setTimeout(function () {
-      fetch('/api/search?q=' + encodeURIComponent(val.trim()))
-        .then(function (r) { return r.json(); })
+      api('/search?q=' + encodeURIComponent(val.trim()))
         .then(function (r) {
           if (r.success && r.data.length > 0) { setSuggestions(r.data.slice(0, 5)); setShowDrop(true); }
           else { setSuggestions([]); setShowDrop(false); }
@@ -208,7 +229,7 @@ function SearchBar({ onSearch, onNavigate }) {
     }
   }
 
-  const typeIcon = { article: '\uD83D\uDCC4', contact: '\uD83D\uDC64', system: '\uD83D\uDCBB', policy: '\uD83D\uDCCB' };
+  const typeIcon = { article: '📄', contact: '👤', system: '💻', policy: '📋' };
   const typeColor = { article: 'bg-blue-50 text-blue-600', contact: 'bg-purple-50 text-purple-600', system: 'bg-green-50 text-green-600', policy: 'bg-orange-50 text-orange-600' };
 
   return React.createElement('div', { className: 'relative', ref: wrapRef },
@@ -235,7 +256,7 @@ function SearchBar({ onSearch, onNavigate }) {
           onClick: function () { handleSuggestionClick(item); },
           className: 'w-full px-4 py-3 text-left hover:bg-gray-50 flex items-start gap-3 border-t border-gray-100 transition-colors',
         },
-          React.createElement('span', { className: 'flex-shrink-0 text-base mt-0.5' }, typeIcon[type] || '\uD83D\uDCC4'),
+          React.createElement('span', { className: 'flex-shrink-0 text-base mt-0.5' }, typeIcon[type] || '📄'),
           React.createElement('div', { className: 'flex-1 min-w-0' },
             React.createElement('p', { className: 'text-sm font-medium text-gray-900 truncate' }, title),
             meta && React.createElement('p', { className: 'text-[11px] uppercase tracking-wide text-gray-400 mt-0.5 truncate' }, meta),
@@ -247,50 +268,203 @@ function SearchBar({ onSearch, onNavigate }) {
       React.createElement('button', {
         onClick: function () { setShowDrop(false); if (q.trim()) onSearch(q.trim()); },
         className: 'w-full px-4 py-2.5 text-sm text-toledo-blue font-medium border-t border-gray-100 hover:bg-toledo-blue/5 transition-colors text-center',
-      }, 'See all results for "' + q + '" \u2192')
+      }, 'See all results for "' + q + '" →')
     )
   );
 }
 
-// ── LoginScreen ───────────────────────────────────────────────────────────────
-function LoginScreen({ onLogin }) {
-  const [email, setEmail] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-
-  async function handleSubmit(e) {
-    e.preventDefault();
-    setLoading(true); setError('');
-    const res = await api('/users', { method: 'POST', body: JSON.stringify({ email }) });
-    setLoading(false);
-    if (res.success) onLogin(res.data);
-    else setError(res.error || 'Login failed');
-  }
-
+// ── Auth screens ──────────────────────────────────────────────────────────────
+function AuthShell({ children, subtitle }) {
   return React.createElement('div', { className: 'min-h-screen bg-gradient-to-br from-toledo-blue via-toledo-dark to-toledo-blue flex items-center justify-center px-4' },
     React.createElement('div', { className: 'bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md fade-in' },
       React.createElement('div', { className: 'text-center mb-8' },
         React.createElement('img', { src: '/branding/Primary_Logo_for_Light_Background.png', alt: 'Toledo Athletics', className: 'h-16 w-auto mx-auto mb-4' }),
         React.createElement('h1', { className: 'text-2xl font-bold text-gray-900' }, 'Toledo Athletics'),
-        React.createElement('p', { className: 'text-gray-500 mt-1' }, 'Onboarding Portal')
+        React.createElement('p', { className: 'text-gray-500 mt-1' }, subtitle || 'Onboarding Portal')
       ),
-      React.createElement('form', { onSubmit: handleSubmit, className: 'space-y-4' },
-        React.createElement('div', null,
-          React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, 'University Email'),
-          React.createElement('input', {
-            type: 'email', value: email, onChange: (e) => setEmail(e.target.value), required: true,
-            placeholder: 'your.name@utoledo.edu',
-            className: 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-toledo-blue',
-          })
-        ),
-        error && React.createElement('p', { className: 'text-red-500 text-sm' }, error),
-        React.createElement('button', {
-          type: 'submit', disabled: loading,
-          className: 'w-full py-3 bg-toledo-blue text-white rounded-lg hover:bg-toledo-dark transition-colors font-medium disabled:opacity-50',
-        }, loading ? 'Signing in...' : 'Sign In'),
-        React.createElement('p', { className: 'text-xs text-gray-400 text-center' }, 'Enter your university email to access the portal.')
+      children
+    )
+  );
+}
+
+function AuthInput(props) {
+  return React.createElement('div', null,
+    React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, props.label),
+    React.createElement('input', {
+      type: props.type, value: props.value, onChange: props.onChange, required: true,
+      placeholder: props.placeholder || '',
+      autoComplete: props.autoComplete,
+      className: 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-toledo-blue',
+    }),
+    props.hint && React.createElement('p', { className: 'text-xs text-gray-400 mt-1' }, props.hint)
+  );
+}
+
+// LoginScreen: invite-only email + password (or one-time invite passcode).
+function LoginScreen({ onLogin }) {
+  const [view, setView] = useState('login'); // 'login' | 'forgot' | 'sent'
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  async function handleLogin(e) {
+    e.preventDefault();
+    setLoading(true); setError('');
+    const res = await api('/auth/login', { method: 'POST', body: JSON.stringify({ email: email, password: password }) });
+    setLoading(false);
+    if (res.success) onLogin(res.data);
+    else setError(res.error || 'Sign in failed');
+  }
+
+  async function handleForgot(e) {
+    e.preventDefault();
+    setLoading(true); setError('');
+    await api('/auth/forgot', { method: 'POST', body: JSON.stringify({ email: email }) });
+    setLoading(false);
+    setView('sent');
+  }
+
+  if (view === 'forgot' || view === 'sent') {
+    return React.createElement(AuthShell, { subtitle: 'Reset your password' },
+      view === 'sent'
+        ? React.createElement('div', { className: 'text-center space-y-4' },
+            React.createElement('p', { className: 'text-sm text-gray-600' }, 'If an account exists for ' + email + ', a reset link is on its way. The link is valid for 60 minutes.'),
+            React.createElement('p', { className: 'text-xs text-gray-400' }, 'Nothing arriving? Ask an administrator to re-invite you instead.'),
+            React.createElement('button', {
+              onClick: function () { setView('login'); setError(''); },
+              className: 'w-full py-3 bg-toledo-blue text-white rounded-lg hover:bg-toledo-dark transition-colors font-medium',
+            }, 'Back to Sign In')
+          )
+        : React.createElement('form', { onSubmit: handleForgot, className: 'space-y-4' },
+            React.createElement(AuthInput, { label: 'University Email', type: 'email', value: email, onChange: function (e) { setEmail(e.target.value); }, placeholder: 'your.name@utoledo.edu', autoComplete: 'email' }),
+            error && React.createElement('p', { className: 'text-red-500 text-sm' }, error),
+            React.createElement('button', {
+              type: 'submit', disabled: loading,
+              className: 'w-full py-3 bg-toledo-blue text-white rounded-lg hover:bg-toledo-dark transition-colors font-medium disabled:opacity-50',
+            }, loading ? 'Sending...' : 'Email Me a Reset Link'),
+            React.createElement('button', {
+              type: 'button',
+              onClick: function () { setView('login'); setError(''); },
+              className: 'w-full text-xs text-gray-400 hover:text-gray-600 text-center',
+            }, '← Back to sign in')
+          )
+    );
+  }
+
+  return React.createElement(AuthShell, null,
+    React.createElement('form', { onSubmit: handleLogin, className: 'space-y-4' },
+      React.createElement(AuthInput, { label: 'University Email', type: 'email', value: email, onChange: function (e) { setEmail(e.target.value); }, placeholder: 'your.name@utoledo.edu', autoComplete: 'email' }),
+      React.createElement(AuthInput, { label: 'Password', type: 'password', value: password, onChange: function (e) { setPassword(e.target.value); }, placeholder: '••••••••••', autoComplete: 'current-password' }),
+      error && React.createElement('p', { className: 'text-red-500 text-sm' }, error),
+      React.createElement('button', {
+        type: 'submit', disabled: loading,
+        className: 'w-full py-3 bg-toledo-blue text-white rounded-lg hover:bg-toledo-dark transition-colors font-medium disabled:opacity-50',
+      }, loading ? 'Signing in...' : 'Sign In'),
+      React.createElement('button', {
+        type: 'button',
+        onClick: function () { setView('forgot'); setError(''); },
+        className: 'w-full text-xs text-toledo-blue hover:text-toledo-dark text-center font-medium',
+      }, 'Forgot password?'),
+      React.createElement('div', { className: 'bg-blue-50 rounded-lg p-3' },
+        React.createElement('p', { className: 'text-xs text-blue-700' },
+          'First time here? Sign in with the one-time passcode from your invite email as your password. Access is by invitation — contact your administrator if you need an account.'
+        )
       )
     )
+  );
+}
+
+// ForceResetScreen: shown after first login (or an admin-forced reset) until
+// the user chooses their own password.
+function ForceResetScreen({ currentUser, onComplete, onSignOut }) {
+  const [current, setCurrent] = useState('');
+  const [next, setNext] = useState('');
+  const [confirm, setConfirm] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    setError('');
+    if (next.length < 10) { setError('New password must be at least 10 characters.'); return; }
+    if (next !== confirm) { setError('New passwords do not match.'); return; }
+    setLoading(true);
+    const res = await api('/auth/change-password', {
+      method: 'POST',
+      body: JSON.stringify({ current_password: current, new_password: next }),
+    });
+    setLoading(false);
+    if (res.success) onComplete(res.data);
+    else setError(res.error || 'Could not update the password');
+  }
+
+  return React.createElement(AuthShell, { subtitle: 'Choose your password' },
+    React.createElement('form', { onSubmit: handleSubmit, className: 'space-y-4' },
+      React.createElement('p', { className: 'text-sm text-gray-600' },
+        'Welcome' + (currentUser && (currentUser.name || currentUser.email) ? ', ' + (currentUser.name || currentUser.email) : '') + '! Before continuing, set a password of your own.'
+      ),
+      React.createElement(AuthInput, { label: 'Invite passcode (or current password)', type: 'password', value: current, onChange: function (e) { setCurrent(e.target.value); }, autoComplete: 'current-password' }),
+      React.createElement(AuthInput, { label: 'New password', type: 'password', value: next, onChange: function (e) { setNext(e.target.value); }, hint: 'At least 10 characters.', autoComplete: 'new-password' }),
+      React.createElement(AuthInput, { label: 'Confirm new password', type: 'password', value: confirm, onChange: function (e) { setConfirm(e.target.value); }, autoComplete: 'new-password' }),
+      error && React.createElement('p', { className: 'text-red-500 text-sm' }, error),
+      React.createElement('button', {
+        type: 'submit', disabled: loading,
+        className: 'w-full py-3 bg-toledo-blue text-white rounded-lg hover:bg-toledo-dark transition-colors font-medium disabled:opacity-50',
+      }, loading ? 'Saving...' : 'Set Password & Continue'),
+      onSignOut && React.createElement('button', {
+        type: 'button', onClick: onSignOut,
+        className: 'w-full text-xs text-gray-400 hover:text-gray-600 text-center',
+      }, 'Sign out')
+    )
+  );
+}
+
+// ResetWithTokenScreen: landing page for /reset-password?token=… links.
+function ResetWithTokenScreen({ token }) {
+  const [next, setNext] = useState('');
+  const [confirm, setConfirm] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [done, setDone] = useState(false);
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    setError('');
+    if (next.length < 10) { setError('New password must be at least 10 characters.'); return; }
+    if (next !== confirm) { setError('New passwords do not match.'); return; }
+    setLoading(true);
+    const res = await api('/auth/reset', {
+      method: 'POST',
+      body: JSON.stringify({ token: token, new_password: next }),
+    });
+    setLoading(false);
+    if (res.success) setDone(true);
+    else setError(res.error || 'Could not reset the password');
+  }
+
+  return React.createElement(AuthShell, { subtitle: 'Reset your password' },
+    done
+      ? React.createElement('div', { className: 'text-center space-y-4' },
+          React.createElement('p', { className: 'text-sm text-gray-600' }, 'Your password has been updated. Sign in with your new password.'),
+          React.createElement('button', {
+            onClick: function () { window.location.href = '/'; },
+            className: 'w-full py-3 bg-toledo-blue text-white rounded-lg hover:bg-toledo-dark transition-colors font-medium',
+          }, 'Go to Sign In')
+        )
+      : React.createElement('form', { onSubmit: handleSubmit, className: 'space-y-4' },
+          React.createElement(AuthInput, { label: 'New password', type: 'password', value: next, onChange: function (e) { setNext(e.target.value); }, hint: 'At least 10 characters.', autoComplete: 'new-password' }),
+          React.createElement(AuthInput, { label: 'Confirm new password', type: 'password', value: confirm, onChange: function (e) { setConfirm(e.target.value); }, autoComplete: 'new-password' }),
+          error && React.createElement('p', { className: 'text-red-500 text-sm' }, error),
+          React.createElement('button', {
+            type: 'submit', disabled: loading,
+            className: 'w-full py-3 bg-toledo-blue text-white rounded-lg hover:bg-toledo-dark transition-colors font-medium disabled:opacity-50',
+          }, loading ? 'Saving...' : 'Reset Password'),
+          React.createElement('button', {
+            type: 'button', onClick: function () { window.location.href = '/'; },
+            className: 'w-full text-xs text-gray-400 hover:text-gray-600 text-center',
+          }, '← Back to sign in')
+        )
   );
 }
 `;

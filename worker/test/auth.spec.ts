@@ -1,0 +1,289 @@
+import { env } from 'cloudflare:test';
+import { describe, it, expect, beforeAll } from 'vitest';
+import {
+  applySchema,
+  mockResend,
+  createUser,
+  createUserAndLogin,
+  login,
+  apiCall,
+} from './helpers';
+import { hashPassword, verifyPassword, generateToken, sha256Hex } from '../src/services/passwords';
+
+beforeAll(async () => {
+  await applySchema();
+  mockResend();
+});
+
+describe('password hashing', () => {
+  it('verifies a correct password and rejects a wrong one', async () => {
+    const hash = await hashPassword('hunter2-but-longer');
+    expect(await verifyPassword('hunter2-but-longer', hash)).toBe(true);
+    expect(await verifyPassword('wrong-password!', hash)).toBe(false);
+  });
+
+  it('rejects tampered or malformed stored hashes', async () => {
+    const hash = await hashPassword('hunter2-but-longer');
+    expect(await verifyPassword('hunter2-but-longer', hash.slice(0, -4) + 'AAAA')).toBe(false);
+    expect(await verifyPassword('x', 'not-a-hash')).toBe(false);
+    expect(await verifyPassword('x', null)).toBe(false);
+  });
+});
+
+describe('global auth gate', () => {
+  it('rejects unauthenticated API requests', async () => {
+    const res = await apiCall('/api/categories');
+    expect(res.status).toBe(401);
+    expect(res.json.success).toBe(false);
+  });
+
+  it('rejects API routes that used to fall through to the SPA', async () => {
+    const res = await apiCall('/api/orgchart');
+    expect(res.status).toBe(401);
+  });
+
+  it('allows authenticated requests through', async () => {
+    const user = await createUserAndLogin();
+    const res = await apiCall('/api/categories', { token: user.token });
+    expect(res.status).toBe(200);
+    expect(res.json.success).toBe(true);
+  });
+});
+
+describe('login', () => {
+  it('returns a working session token', async () => {
+    const user = await createUserAndLogin();
+    const me = await apiCall('/api/auth/me', { token: user.token });
+    expect(me.status).toBe(200);
+    expect(me.json.data.user.email).toBe(user.email);
+    expect(me.json.data.user.password_hash).toBeUndefined();
+  });
+
+  it('rejects a wrong password with a generic error', async () => {
+    const user = await createUser();
+    const res = await apiCall('/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email: user.email, password: 'incorrect-password' }),
+    });
+    expect(res.status).toBe(401);
+    expect(res.json.error).toBe('Invalid email or password');
+  });
+
+  it('rejects unknown accounts with the same generic error', async () => {
+    const res = await apiCall('/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email: 'nobody@utoledo.edu', password: 'whatever-12345' }),
+    });
+    expect(res.status).toBe(401);
+    expect(res.json.error).toBe('Invalid email or password');
+  });
+
+  it('rejects disabled accounts', async () => {
+    const user = await createUser({ status: 'disabled' });
+    const res = await apiCall('/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email: user.email, password: user.password }),
+    });
+    expect(res.status).toBe(403);
+  });
+
+  it('rejects an expired invite passcode', async () => {
+    const user = await createUser({
+      mustReset: true,
+      passwordSetAt: null,
+      passcodeExpiresAt: new Date(Date.now() - 1000).toISOString(),
+    });
+    const res = await apiCall('/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email: user.email, password: user.password }),
+    });
+    expect(res.status).toBe(401);
+    expect(res.json.error).toContain('expired');
+  });
+
+  it('rate limits repeated attempts from one IP', async () => {
+    const ip = 'rate-limit-test-ip';
+    let last = 0;
+    for (let i = 0; i < 11; i++) {
+      const res = await apiCall('/api/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({ email: 'nobody@utoledo.edu', password: 'bad-password-1' }),
+        ip,
+      });
+      last = res.status;
+    }
+    expect(last).toBe(429);
+  });
+});
+
+describe('forced password reset (invite flow)', () => {
+  it('blocks the API until the password is changed, then unblocks', async () => {
+    const user = await createUser({
+      mustReset: true,
+      passwordSetAt: null,
+      passcodeExpiresAt: new Date(Date.now() + 60_000).toISOString(),
+    });
+    const token = await login(user.email, user.password);
+
+    const blocked = await apiCall('/api/tasks', { token });
+    expect(blocked.status).toBe(403);
+    expect(blocked.json.code).toBe('PASSWORD_RESET_REQUIRED');
+
+    const me = await apiCall('/api/auth/me', { token });
+    expect(me.status).toBe(200);
+    expect(me.json.data.must_reset).toBe(true);
+
+    const change = await apiCall('/api/auth/change-password', {
+      method: 'POST',
+      token,
+      body: JSON.stringify({ current_password: user.password, new_password: 'my-new-password-1' }),
+    });
+    expect(change.status).toBe(200);
+    expect(change.json.data.must_reset).toBe(false);
+    expect(change.json.data.user.status).toBe('active');
+
+    const unblocked = await apiCall('/api/tasks', { token });
+    expect(unblocked.status).toBe(200);
+  });
+
+  it('enforces the password policy', async () => {
+    const user = await createUserAndLogin();
+    const tooShort = await apiCall('/api/auth/change-password', {
+      method: 'POST',
+      token: user.token,
+      body: JSON.stringify({ current_password: user.password, new_password: 'short' }),
+    });
+    expect(tooShort.status).toBe(400);
+  });
+
+  it('changing the password signs out other sessions', async () => {
+    const user = await createUser();
+    const tokenA = await login(user.email, user.password);
+    const tokenB = await login(user.email, user.password);
+
+    const change = await apiCall('/api/auth/change-password', {
+      method: 'POST',
+      token: tokenB,
+      body: JSON.stringify({ current_password: user.password, new_password: 'rotated-password-9' }),
+    });
+    expect(change.status).toBe(200);
+
+    expect((await apiCall('/api/auth/me', { token: tokenA })).status).toBe(401);
+    expect((await apiCall('/api/auth/me', { token: tokenB })).status).toBe(200);
+  });
+});
+
+describe('forgot / reset password', () => {
+  it('answers 200 whether or not the account exists', async () => {
+    const res = await apiCall('/api/auth/forgot', {
+      method: 'POST',
+      body: JSON.stringify({ email: 'ghost@utoledo.edu' }),
+    });
+    expect(res.status).toBe(200);
+    expect(res.json.success).toBe(true);
+  });
+
+  it('sends a reset email and logs it for real accounts', async () => {
+    const user = await createUser();
+    await apiCall('/api/auth/forgot', { method: 'POST', body: JSON.stringify({ email: user.email }) });
+    const log = await env.DB.prepare(
+      "SELECT * FROM EmailLog WHERE email_type = 'password_reset' AND to_email = ?"
+    )
+      .bind(user.email)
+      .first();
+    expect(log).toBeTruthy();
+    const row = await env.DB.prepare('SELECT * FROM PasswordResets WHERE user_id = ?')
+      .bind(user.id)
+      .first();
+    expect(row).toBeTruthy();
+  });
+
+  it('resets the password with a valid token, exactly once', async () => {
+    const user = await createUser();
+    const raw = generateToken();
+    await env.DB.prepare(
+      'INSERT INTO PasswordResets (user_id, token_hash, expires_at) VALUES (?, ?, ?)'
+    )
+      .bind(user.id, await sha256Hex(raw), new Date(Date.now() + 60_000).toISOString())
+      .run();
+    const oldToken = await login(user.email, user.password);
+
+    const reset = await apiCall('/api/auth/reset', {
+      method: 'POST',
+      body: JSON.stringify({ token: raw, new_password: 'fresh-password-22' }),
+    });
+    expect(reset.status).toBe(200);
+
+    // All sessions revoked; old password dead; new one works; token single-use.
+    expect((await apiCall('/api/auth/me', { token: oldToken })).status).toBe(401);
+    await expect(login(user.email, user.password)).rejects.toThrow();
+    await login(user.email, 'fresh-password-22');
+    const again = await apiCall('/api/auth/reset', {
+      method: 'POST',
+      body: JSON.stringify({ token: raw, new_password: 'another-password-3' }),
+    });
+    expect(again.status).toBe(400);
+  });
+
+  it('rejects expired tokens', async () => {
+    const user = await createUser();
+    const raw = generateToken();
+    await env.DB.prepare(
+      'INSERT INTO PasswordResets (user_id, token_hash, expires_at) VALUES (?, ?, ?)'
+    )
+      .bind(user.id, await sha256Hex(raw), new Date(Date.now() - 1000).toISOString())
+      .run();
+    const res = await apiCall('/api/auth/reset', {
+      method: 'POST',
+      body: JSON.stringify({ token: raw, new_password: 'fresh-password-22' }),
+    });
+    expect(res.status).toBe(400);
+  });
+});
+
+describe('bootstrap', () => {
+  it('issues the first admin passcode exactly once, guarded by the secret', async () => {
+    await env.DB.prepare(
+      "INSERT INTO Users (email, role, status) VALUES ('boot.admin@utoledo.edu', 'admin', 'invited')"
+    ).run();
+
+    const noToken = await apiCall('/api/auth/bootstrap', { method: 'POST' });
+    expect(noToken.status).toBe(403);
+
+    const wrong = await apiCall('/api/auth/bootstrap', {
+      method: 'POST',
+      headers: { 'x-bootstrap-token': 'wrong' },
+    });
+    expect(wrong.status).toBe(403);
+
+    const ok = await apiCall('/api/auth/bootstrap', {
+      method: 'POST',
+      headers: { 'x-bootstrap-token': 'test-bootstrap-token' },
+    });
+    expect(ok.status).toBe(200);
+    expect(ok.json.data.email).toBe('boot.admin@utoledo.edu');
+    const passcode = ok.json.data.passcode as string;
+    expect(passcode).toMatch(/^[A-Z2-9]{4}-[A-Z2-9]{4}-[A-Z2-9]{4}$/);
+
+    // The passcode logs in and lands in the forced-reset state.
+    const token = await login('boot.admin@utoledo.edu', passcode);
+    const me = await apiCall('/api/auth/me', { token });
+    expect(me.json.data.must_reset).toBe(true);
+
+    // Inert once the admin has credentials.
+    const again = await apiCall('/api/auth/bootstrap', {
+      method: 'POST',
+      headers: { 'x-bootstrap-token': 'test-bootstrap-token' },
+    });
+    expect(again.status).toBe(409);
+  });
+});
+
+describe('logout', () => {
+  it('revokes the session', async () => {
+    const user = await createUserAndLogin();
+    const out = await apiCall('/api/auth/logout', { method: 'POST', token: user.token });
+    expect(out.status).toBe(200);
+    expect((await apiCall('/api/auth/me', { token: user.token })).status).toBe(401);
+  });
+});

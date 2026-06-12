@@ -1,8 +1,8 @@
 import { Hono } from 'hono';
-import { Bindings } from '../types';
+import { AppEnv } from '../types';
 import { escapeSqlLiteral, expandSearchTerms } from '../services/query-utils';
 
-const search = new Hono<{ Bindings: Bindings }>();
+const search = new Hono<AppEnv>();
 
 function buildWeightedScore(
   fields: Array<{ name: string; weight: number }>,
@@ -82,7 +82,7 @@ search.get('/', async (c) => {
              ], terms, phrase, 'Articles.title')} as match_score
       FROM Articles
       LEFT JOIN Categories ON Articles.category_id = Categories.id
-      WHERE ${buildWhereClause(articleFields, terms, phrase)}
+      WHERE Articles.is_active = 1 AND (${buildWhereClause(articleFields, terms, phrase)})
       ORDER BY
         match_score DESC,
         Articles.last_updated DESC,

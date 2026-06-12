@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
-import { Bindings } from '../types';
+import { AppEnv } from '../types';
 
-const articles = new Hono<{ Bindings: Bindings }>();
+const articles = new Hono<AppEnv>();
 
 // GET all articles (with optional category filter and search)
 articles.get('/', async (c) => {
@@ -13,7 +13,8 @@ articles.get('/', async (c) => {
     FROM Articles
     LEFT JOIN Categories ON Articles.category_id = Categories.id
   `;
-  const conditions: string[] = [];
+  // Soft-deleted articles are hidden everywhere outside the admin CMS.
+  const conditions: string[] = ['Articles.is_active = 1'];
   const bindings: unknown[] = [];
 
   if (categoryId) {
@@ -45,7 +46,7 @@ articles.get('/:id', async (c) => {
     SELECT Articles.*, Categories.name as category_name
     FROM Articles
     LEFT JOIN Categories ON Articles.category_id = Categories.id
-    WHERE Articles.id = ?
+    WHERE Articles.id = ? AND Articles.is_active = 1
   `)
     .bind(id)
     .first();
