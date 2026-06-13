@@ -26,14 +26,32 @@ function getIndexHtml(): string {
             'toledo-blue': '#0B2240',
             'toledo-gold': '#FFCD00',
             'toledo-dark': '#000F3E',
+            'toledo-navy': '#06162C',
+            'toledo-slate': '#64748B',
+            'toledo-border': '#DDE5F0',
+            'success': '#16A34A',
+            'warning': '#D97706',
           }
         }
       }
     }
   </script>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Anton&display=swap');
     body { font-family: 'Poppins', sans-serif; }
+    .display-title { font-family: 'Anton', 'Poppins', sans-serif; text-transform: uppercase; letter-spacing: 0.03em; font-weight: 400; }
+    :focus-visible { outline: 2px solid #FFCD00; outline-offset: 2px; }
+    .navy-texture { background-image: radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1px); background-size: 22px 22px; }
+    .gold-trail { background-image: linear-gradient(115deg, transparent 0%, transparent 46%, rgba(255,205,0,0.14) 46.5%, rgba(255,205,0,0.14) 49%, transparent 49.5%, transparent 100%); }
+    .drawer-in { animation: slideInLeft 0.25s ease-out; }
+    @keyframes slideInLeft { from { transform: translateX(-100%); } to { transform: translateX(0); } }
+    .stagger > * { opacity: 0; animation: fadeIn 0.45s ease-out forwards; }
+    .stagger > *:nth-child(1) { animation-delay: 0.04s; }
+    .stagger > *:nth-child(2) { animation-delay: 0.1s; }
+    .stagger > *:nth-child(3) { animation-delay: 0.16s; }
+    .stagger > *:nth-child(4) { animation-delay: 0.22s; }
+    .stagger > *:nth-child(5) { animation-delay: 0.28s; }
+    .stagger > *:nth-child(6) { animation-delay: 0.34s; }
     .prose p { margin-bottom: 1rem; line-height: 1.75; }
     .prose a { color: #0B2240; text-decoration: underline; }
     .prose h1, .prose h2, .prose h3 { font-weight: 700; margin-bottom: 0.5rem; margin-top: 1.25rem; }
@@ -93,7 +111,7 @@ var TOUR_STEPS = [
   {
     icon: '👥',
     title: 'Key Contacts & Resources',
-    body: 'Not sure who to call? The Contacts page lists key people across the department. The Resources page has direct links to every system you need — MyUT, Teamworks, TimeClock Plus, and more.',
+    body: 'Not sure who to call? People & Contacts lists key people across the department, and Systems & Tools (in the left sidebar) has direct links to every system you need — MyUT, Teamworks, TimeClock Plus, and more.',
     target: '[data-tour="contacts"]',
     cta: { label: 'See Key Contacts', view: 'contacts', param: null },
   },
@@ -107,7 +125,7 @@ var TOUR_STEPS = [
   {
     icon: '✨',
     title: 'AI Assistant',
-    body: 'See the blue chat button in the bottom-right corner? That is your AI assistant, scoped to Toledo Athletics onboarding topics. Ask it anything — policies, procedures, who to contact, how to set up parking.',
+    body: 'See the gold "Ask AI Guide" button in the bottom-right corner? That is your AI assistant, scoped to Toledo Athletics onboarding topics. Ask it anything — policies, procedures, who to contact, how to set up parking.',
     target: '[data-tour="ai-chat"]',
     cta: null,
   },
@@ -368,7 +386,7 @@ function OnboardingGuidePage({ currentUser, onNavigate }) {
     var badge = statusBadges[task.my_status];
     return React.createElement('div', {
       key: task.id,
-      className: 'bg-white rounded-xl border border-gray-200 border-l-4 ' + (priorityStyles[task.priority] || '') +
+      className: 'bg-white rounded-xl border border-toledo-border border-l-4 ' + (priorityStyles[task.priority] || '') +
         (task.my_status === 'approved' ? ' opacity-60' : isChecked ? ' opacity-75' : ''),
     },
       // Task header row
@@ -389,6 +407,7 @@ function OnboardingGuidePage({ currentUser, onNavigate }) {
           }, task.title),
           React.createElement('div', { className: 'flex items-center gap-2 flex-shrink-0 ml-3' },
             badge && React.createElement('span', { className: 'text-xs px-2 py-0.5 rounded-full font-medium ' + badge.cls }, badge.label),
+            !badge && !!task.requires_approval && React.createElement('span', { className: 'text-xs px-2 py-0.5 rounded-full font-medium border border-amber-300 text-amber-700 hidden sm:inline-block' }, 'Review required'),
             showPhaseChip && PHASE_META[task.phase] && React.createElement('span', { className: 'text-xs px-2 py-0.5 rounded-full font-medium bg-gray-100 text-gray-500 hidden sm:inline-block' }, PHASE_META[task.phase].label),
             React.createElement('span', { className: 'text-xs px-2 py-0.5 rounded-full font-medium hidden sm:inline-block ' + (priorityColors[task.priority] || '') },
               priorityLabels[task.priority] || ''
@@ -422,32 +441,50 @@ function OnboardingGuidePage({ currentUser, onNavigate }) {
   }
 
   var phaseIds = Object.keys(PHASE_META).sort(function (a, b) { return PHASE_META[a].order - PHASE_META[b].order; });
+  var openList = tasks.filter(function (t) { return !taskIsChecked(t.my_status); });
+  var nextTask = openList.filter(function (t) { return t.priority === 'required'; })[0] || openList[0] || null;
 
   return React.createElement('div', { className: 'max-w-3xl mx-auto px-4 py-8 fade-in' },
-    React.createElement('button', { onClick: function () { onNavigate('home'); }, className: 'flex items-center gap-2 text-toledo-blue hover:text-toledo-dark text-sm font-medium mb-2' },
-      React.createElement(IconArrowLeft), 'Back to Home'),
-    React.createElement('h1', { className: 'text-2xl font-bold text-gray-900 mt-4 mb-1' }, '🗺️ My Onboarding'),
-    React.createElement('p', { className: 'text-gray-500 text-sm mb-6' }, 'Work through each phase at your own pace. Expand any task to learn how to complete it, then check it off. Your progress is saved to your account.'),
+    React.createElement('h1', { className: 'display-title text-2xl text-toledo-blue mb-1' }, 'My Onboarding'),
+    React.createElement('p', { className: 'text-toledo-slate text-sm mb-6' }, 'Work through each phase at your own pace. Expand any task to learn how to complete it, then check it off. Your progress is saved to your account.'),
 
-    // Progress bar
-    React.createElement('div', { className: 'bg-white rounded-xl border border-gray-200 p-5 mb-8' },
+    // Next recommended task
+    nextTask && React.createElement('div', { className: 'bg-white rounded-2xl border border-toledo-border shadow-sm p-5 mb-4 gold-trail' },
+      React.createElement('p', { className: 'text-xs font-bold uppercase tracking-[0.14em] text-toledo-slate mb-1' }, 'Next Recommended Task'),
+      React.createElement('div', { className: 'flex flex-col sm:flex-row sm:items-center justify-between gap-3' },
+        React.createElement('div', null,
+          React.createElement('p', { className: 'font-bold text-toledo-blue' }, nextTask.title),
+          React.createElement('p', { className: 'text-xs text-toledo-slate mt-0.5' },
+            (PHASE_META[nextTask.phase] ? PHASE_META[nextTask.phase].label : '') + (nextTask.priority === 'required' ? ' · Required' : '')
+          )
+        ),
+        React.createElement('button', {
+          onClick: function () { setExpandedItem(nextTask.id); },
+          className: 'flex-shrink-0 px-4 py-2 bg-toledo-gold text-toledo-blue rounded-lg text-sm font-semibold hover:bg-yellow-300 transition-colors',
+        }, 'Show me how')
+      )
+    ),
+
+    // Sticky progress summary
+    React.createElement('div', { className: 'bg-white rounded-2xl border border-toledo-border shadow-sm p-5 mb-8 lg:sticky lg:top-16 z-10' },
       React.createElement('div', { className: 'flex justify-between items-center mb-2' },
         React.createElement('span', { className: 'text-sm font-medium text-gray-700' }, done + ' of ' + total + ' completed'),
-        React.createElement('span', { className: 'text-sm font-semibold text-toledo-blue' }, pct + '%')
+        React.createElement('span', { className: 'display-title text-lg text-toledo-blue' }, pct + '%')
       ),
-      React.createElement('div', { className: 'w-full bg-gray-100 rounded-full h-3' },
+      React.createElement('div', { className: 'w-full bg-gray-100 rounded-full h-2.5' },
         React.createElement('div', {
-          className: 'bg-toledo-blue h-3 rounded-full transition-all duration-300',
+          className: 'bg-gradient-to-r from-toledo-gold to-yellow-400 h-2.5 rounded-full transition-all duration-300',
           style: { width: pct + '%' },
         })
       ),
-      total > 0 && done === total && React.createElement('p', { className: 'text-center text-green-600 font-semibold mt-3 text-sm' }, '🎉 You have completed all onboarding tasks!')
+      total > 0 && done === total && React.createElement('p', { className: 'text-center text-success font-semibold mt-3 text-sm' }, 'You have completed all onboarding tasks!')
     ),
 
     // Assigned-to-you tasks
     assignedTasks.length > 0 && React.createElement('div', { className: 'mb-6' },
-      React.createElement('div', { className: 'flex items-center gap-2 mb-3' },
-        React.createElement('span', { className: 'text-xl' }, '📌'),
+      React.createElement('div', { className: 'flex items-center gap-3 mb-3' },
+        React.createElement('span', { className: 'w-8 h-8 rounded-full bg-toledo-blue text-toledo-gold flex items-center justify-center flex-shrink-0' },
+          React.createElement(IconBookmark)),
         React.createElement('h2', { className: 'text-lg font-bold text-gray-900 flex-1' }, 'Assigned to You'),
         React.createElement('span', { className: 'text-xs font-medium px-2 py-0.5 rounded-full bg-toledo-gold/20 text-toledo-blue' },
           assignedTasks.filter(function (t) { return taskIsChecked(t.my_status); }).length + '/' + assignedTasks.length
@@ -459,15 +496,18 @@ function OnboardingGuidePage({ currentUser, onNavigate }) {
     ),
 
     // Phases
-    phaseIds.map(function (phaseId) {
+    phaseIds.map(function (phaseId, phaseIdx) {
       var meta = PHASE_META[phaseId];
       var phaseTasks = standardTasks.filter(function (t) { return t.phase === phaseId; });
       if (phaseTasks.length === 0) return null;
       var phaseDone = phaseTasks.filter(function (t) { return taskIsChecked(t.my_status); }).length;
       var phaseComplete = phaseDone === phaseTasks.length;
       return React.createElement('div', { key: phaseId, className: 'mb-6' },
-        React.createElement('div', { className: 'flex items-center gap-2 mb-3' },
-          React.createElement('span', { className: 'text-xl' }, meta.icon),
+        React.createElement('div', { className: 'flex items-center gap-3 mb-3' },
+          React.createElement('span', {
+            className: 'w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 ' +
+              (phaseComplete ? 'bg-toledo-gold text-toledo-blue' : 'bg-toledo-blue text-white'),
+          }, phaseComplete ? React.createElement(IconCheck) : (phaseIdx + 1)),
           React.createElement('h2', { className: 'text-lg font-bold text-gray-900 flex-1' }, meta.label),
           React.createElement('span', { className: 'text-xs font-medium px-2 py-0.5 rounded-full ' + (phaseComplete ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500') },
             phaseDone + '/' + phaseTasks.length
@@ -504,6 +544,13 @@ function AIChatWidget({ currentUser }) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [messages]);
+
+  // Hero "Ask the Onboarding Assistant" CTA opens the widget via a window event.
+  useEffect(function () {
+    function openHandler() { setOpen(true); }
+    window.addEventListener('toledo:open-chat', openHandler);
+    return function () { window.removeEventListener('toledo:open-chat', openHandler); };
+  }, []);
 
   async function sendMessage(text) {
     if (!text || !text.trim() || sending) return;
@@ -593,9 +640,12 @@ function AIChatWidget({ currentUser }) {
     return React.createElement('button', {
       onClick: function () { setOpen(true); },
       'data-tour': 'ai-chat',
-      className: 'fixed bottom-6 right-6 w-14 h-14 bg-toledo-blue text-white rounded-full shadow-lg hover:bg-toledo-dark transition-colors flex items-center justify-center z-50',
-      title: 'AI Assistant',
-    }, React.createElement(IconMessageCircle));
+      className: 'fixed bottom-6 right-6 flex items-center gap-2 px-4 py-3 bg-toledo-gold text-toledo-blue rounded-full shadow-lg hover:bg-yellow-300 transition-colors font-semibold text-sm z-40',
+      title: 'Ask AI Guide',
+    },
+      React.createElement(IconSparkles),
+      React.createElement('span', { className: 'hidden sm:inline' }, 'Ask AI Guide')
+    );
   }
 
   function renderAssistantContent(msg) {
@@ -611,18 +661,17 @@ function AIChatWidget({ currentUser }) {
   }
 
   const starterQuestions = [
-    'What should I do on my first day?',
-    'Who do I contact for IT issues?',
-    'How does door access work?',
-    'What is the NIL policy?',
-    'What is the fastest order for setting up MyUT and payroll?',
+    'What do I need to complete this week?',
+    'How do I get access to systems?',
+    'Who should I contact for compliance?',
+    'Where is Savage Arena?',
   ];
 
-  return React.createElement('div', { className: 'fixed bottom-6 right-6 w-80 sm:w-96 bg-white rounded-xl shadow-2xl border border-gray-200 flex flex-col z-50 max-w-[calc(100vw-3rem)]', style: { maxHeight: '540px' } },
-    React.createElement('div', { className: 'flex items-center justify-between px-4 py-3 bg-toledo-blue text-white rounded-t-xl flex-shrink-0' },
+  return React.createElement('div', { className: 'fixed bottom-6 right-6 w-80 sm:w-96 bg-white rounded-2xl shadow-2xl border border-toledo-border flex flex-col z-40 max-w-[calc(100vw-3rem)]', style: { maxHeight: '540px' } },
+    React.createElement('div', { className: 'flex items-center justify-between px-4 py-3 bg-toledo-blue navy-texture text-white rounded-t-2xl flex-shrink-0' },
       React.createElement('div', { className: 'flex items-center gap-2' },
-        React.createElement(IconSparkles),
-        React.createElement('span', { className: 'font-semibold text-sm' }, 'AI Assistant')
+        React.createElement('span', { className: 'text-toledo-gold' }, React.createElement(IconSparkles)),
+        React.createElement('span', { className: 'font-semibold text-sm' }, 'Ask Toledo Athletics')
       ),
       React.createElement('div', { className: 'flex items-center gap-2' },
         messages.length > 0 && React.createElement('button', {
@@ -644,8 +693,8 @@ function AIChatWidget({ currentUser }) {
             return React.createElement('button', {
               key: i,
               onClick: function () { sendMessage(q); },
-              className: 'w-full text-left px-3 py-2 rounded-lg border border-gray-200 text-xs text-gray-600 hover:bg-toledo-blue/5 hover:border-toledo-blue/30 transition-colors',
-            }, '\uD83D\uDCAC ' + q);
+              className: 'w-full text-left px-3 py-2 rounded-full border border-toledo-border text-xs text-gray-600 hover:bg-toledo-gold/10 hover:border-toledo-gold transition-colors',
+            }, q);
           })
         )
       ),
@@ -698,6 +747,9 @@ function ResourcesPage({ onNavigate }) {
   var _useState4 = useState('links');
   var tab = _useState4[0];
   var setTab = _useState4[1];
+  var _useState5 = useState('');
+  var filter = _useState5[0];
+  var setFilter = _useState5[1];
 
   useEffect(function () {
     Promise.all([
@@ -708,44 +760,58 @@ function ResourcesPage({ onNavigate }) {
 
   if (loading) return React.createElement('div', { className: 'max-w-4xl mx-auto px-4 py-12 text-center text-gray-500' }, 'Loading...');
 
-  return React.createElement('div', { className: 'max-w-4xl mx-auto px-4 py-8 fade-in' },
-    React.createElement('button', { onClick: function () { onNavigate('home'); }, className: 'flex items-center gap-2 text-toledo-blue hover:text-toledo-dark mb-6 text-sm font-medium' },
-      React.createElement(IconArrowLeft), 'Back to Home'),
-    React.createElement('h1', { className: 'text-2xl font-bold text-gray-900 flex items-center gap-2 mb-1' },
-      React.createElement(IconLink), 'Resources & Systems'),
-    React.createElement('p', { className: 'text-gray-500 text-sm mb-6' }, 'Quick links, tools, and system access for your daily work.'),
+  var q = filter.trim().toLowerCase();
+  function matches(parts) {
+    if (!q) return true;
+    return parts.join(' ').toLowerCase().indexOf(q) !== -1;
+  }
+  var shownLinks = links.filter(function (l) { return matches([l.title || '', l.description || '', l.category || '']); });
+  var shownSystems = systems.filter(function (s) { return matches([s.system_name || '', s.description || '', s.category || '', s.owner_department || '']); });
 
-    // Tabs
-    React.createElement('div', { className: 'flex gap-1 mb-6 bg-gray-100 p-1 rounded-lg w-fit' },
-      [
-        { id: 'links', label: '🔗 Quick Links' },
-        { id: 'systems', label: '💻 Systems' },
-      ].map(function (t) {
-        return React.createElement('button', {
-          key: t.id,
-          onClick: function () { setTab(t.id); },
-          className: 'px-4 py-1.5 rounded-md text-sm font-medium transition-colors ' + (tab === t.id ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'),
-        }, t.label);
+  return React.createElement('div', { className: 'max-w-4xl mx-auto px-4 py-8 fade-in' },
+    React.createElement('h1', { className: 'display-title text-2xl text-toledo-blue mb-1' }, 'Systems & Tools'),
+    React.createElement('p', { className: 'text-toledo-slate text-sm mb-6' }, 'Quick links, tools, and system access for your daily work.'),
+
+    // Tabs + filter
+    React.createElement('div', { className: 'flex flex-col sm:flex-row sm:items-center gap-3 mb-6' },
+      React.createElement('div', { className: 'flex gap-1 bg-gray-100 p-1 rounded-lg w-fit flex-shrink-0' },
+        [
+          { id: 'links', label: 'Quick Links', icon: IconLink },
+          { id: 'systems', label: 'Systems', icon: IconServer },
+        ].map(function (t) {
+          return React.createElement('button', {
+            key: t.id,
+            onClick: function () { setTab(t.id); },
+            className: 'flex items-center gap-1.5 px-4 py-1.5 rounded-md text-sm font-medium transition-colors ' + (tab === t.id ? 'bg-toledo-blue text-white shadow-sm' : 'text-gray-600 hover:text-gray-900'),
+          }, React.createElement(t.icon), t.label);
+        })
+      ),
+      React.createElement('input', {
+        type: 'text', value: filter,
+        onChange: function (e) { setFilter(e.target.value); },
+        placeholder: 'Filter by name, category, or department...',
+        className: 'flex-1 px-4 py-2 border border-toledo-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-toledo-blue bg-white',
       })
     ),
 
     // Quick Links Tab
     tab === 'links' && React.createElement('div', null,
-      links.length === 0
-        ? React.createElement('p', { className: 'text-center text-gray-400 py-8' }, 'No quick links available.')
-        : React.createElement('div', { className: 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4' },
-            links.map(function (link, i) {
+      shownLinks.length === 0
+        ? React.createElement('p', { className: 'text-center text-gray-400 py-8' }, q ? 'No quick links match your filter.' : 'No quick links available.')
+        : React.createElement('div', { className: 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 stagger' },
+            shownLinks.map(function (link, i) {
               return React.createElement('a', {
                 key: link.id || i,
                 href: link.url,
                 target: '_blank', rel: 'noopener noreferrer',
-                className: 'bg-white rounded-xl border border-gray-200 p-5 hover:shadow-md hover:border-toledo-blue/30 transition-all group block',
+                className: 'bg-white rounded-2xl border border-toledo-border p-5 hover:shadow-md hover:border-toledo-gold transition-all group block',
               },
                 React.createElement('div', { className: 'flex items-start justify-between mb-2' },
                   React.createElement('h3', { className: 'font-semibold text-gray-900 group-hover:text-toledo-blue transition-colors text-sm' }, link.title),
                   React.createElement(IconExternalLink)
                 ),
-                link.description && React.createElement('p', { className: 'text-sm text-gray-500 line-clamp-2' }, link.description)
+                link.description && React.createElement('p', { className: 'text-sm text-toledo-slate line-clamp-2' }, link.description),
+                link.category && React.createElement('span', { className: 'inline-block mt-2 text-[11px] px-2 py-0.5 rounded-full bg-toledo-blue/8 text-toledo-blue font-medium' }, link.category)
               );
             })
           )
@@ -753,23 +819,23 @@ function ResourcesPage({ onNavigate }) {
 
     // Systems Tab — clickable buttons like Quick Links
     tab === 'systems' && React.createElement('div', null,
-      systems.length === 0
-        ? React.createElement('p', { className: 'text-center text-gray-400 py-8' }, 'No systems available.')
-        : React.createElement('div', { className: 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4' },
-            systems.map(function (sys, i) {
+      shownSystems.length === 0
+        ? React.createElement('p', { className: 'text-center text-gray-400 py-8' }, q ? 'No systems match your filter.' : 'No systems available.')
+        : React.createElement('div', { className: 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 stagger' },
+            shownSystems.map(function (sys, i) {
               return React.createElement('a', {
                 key: sys.id || i,
                 href: sys.access_url || '#',
                 target: sys.access_url ? '_blank' : undefined,
                 rel: sys.access_url ? 'noopener noreferrer' : undefined,
-                className: 'bg-white rounded-xl border border-gray-200 p-5 hover:shadow-md hover:border-toledo-blue/30 transition-all group block',
+                className: 'bg-white rounded-2xl border border-toledo-border p-5 hover:shadow-md hover:border-toledo-gold transition-all group block',
               },
                 React.createElement('div', { className: 'flex items-start justify-between mb-2' },
                   React.createElement('h3', { className: 'font-semibold text-gray-900 group-hover:text-toledo-blue transition-colors text-sm' }, sys.system_name),
                   sys.access_url && React.createElement(IconExternalLink)
                 ),
-                sys.description && React.createElement('p', { className: 'text-sm text-gray-500 mb-2 line-clamp-2' }, sys.description),
-                sys.login_notes && React.createElement('p', { className: 'text-xs text-yellow-700 bg-yellow-50 rounded-lg px-2 py-1' }, '\uD83D\uDCA1 ' + sys.login_notes)
+                sys.description && React.createElement('p', { className: 'text-sm text-toledo-slate mb-2 line-clamp-2' }, sys.description),
+                sys.login_notes && React.createElement('p', { className: 'text-xs text-warning bg-amber-50 border border-amber-100 rounded-lg px-2 py-1' }, 'Note: ' + sys.login_notes)
               );
             })
           )
@@ -785,6 +851,12 @@ function ContactsPage({ onNavigate }) {
   var _useState2 = useState(true);
   var loading = _useState2[0];
   var setLoading = _useState2[1];
+  var _useState3 = useState('');
+  var search = _useState3[0];
+  var setSearch = _useState3[1];
+  var _useState4 = useState('all');
+  var area = _useState4[0];
+  var setArea = _useState4[1];
 
   useEffect(function () {
     api('/contacts').then(function (r) {
@@ -795,33 +867,70 @@ function ContactsPage({ onNavigate }) {
 
   if (loading) return React.createElement('div', { className: 'max-w-4xl mx-auto px-4 py-12 text-center text-gray-500' }, 'Loading...');
 
+  var areas = [];
+  contacts.forEach(function (c) {
+    var a = c.function_area || c.department;
+    if (a && areas.indexOf(a) === -1) areas.push(a);
+  });
+
+  var q = search.trim().toLowerCase();
+  var shown = contacts.filter(function (c) {
+    var cArea = c.function_area || c.department;
+    if (area !== 'all' && cArea !== area) return false;
+    if (!q) return true;
+    return [c.contact_name || '', c.title || '', c.department || '', c.function_area || '', c.email || '']
+      .join(' ').toLowerCase().indexOf(q) !== -1;
+  });
+
   return React.createElement('div', { className: 'max-w-4xl mx-auto px-4 py-8 fade-in' },
-    React.createElement('button', { onClick: function () { onNavigate('home'); }, className: 'flex items-center gap-2 text-toledo-blue hover:text-toledo-dark mb-6 text-sm font-medium' },
-      React.createElement(IconArrowLeft), 'Back to Home'),
-    React.createElement('h1', { className: 'text-2xl font-bold text-gray-900 flex items-center gap-2 mb-1' },
-      React.createElement(IconUsers), 'Key Contacts'),
-    React.createElement('p', { className: 'text-gray-500 text-sm mb-6' }, 'Important contacts across the department.'),
-    contacts.length === 0
-      ? React.createElement('p', { className: 'text-center text-gray-400 py-8' }, 'No contacts available.')
-      : React.createElement('div', { className: 'grid grid-cols-1 md:grid-cols-2 gap-4' },
-          contacts.map(function (contact, i) {
-            return React.createElement('div', { key: contact.id || i, className: 'bg-white rounded-xl border border-gray-200 p-5' },
+    React.createElement('h1', { className: 'display-title text-2xl text-toledo-blue mb-1' }, 'People & Contacts'),
+    React.createElement('p', { className: 'text-toledo-slate text-sm mb-6' }, 'Find the right person by name, department, or role.'),
+
+    React.createElement('input', {
+      type: 'text', value: search,
+      onChange: function (e) { setSearch(e.target.value); },
+      placeholder: 'Search by name, role, or department...',
+      className: 'w-full px-4 py-2.5 border border-toledo-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-toledo-blue bg-white mb-3',
+    }),
+
+    areas.length > 1 && React.createElement('div', { className: 'flex flex-wrap gap-2 mb-6' },
+      ['all'].concat(areas).map(function (a) {
+        var active = area === a;
+        return React.createElement('button', {
+          key: a,
+          onClick: function () { setArea(a); },
+          className: 'px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ' +
+            (active ? 'bg-toledo-blue text-white border-toledo-blue' : 'bg-white text-gray-600 border-toledo-border hover:border-toledo-blue/40 hover:text-toledo-blue'),
+        }, a === 'all' ? 'All' : a);
+      })
+    ),
+
+    shown.length === 0
+      ? React.createElement('p', { className: 'text-center text-gray-400 py-8' }, q || area !== 'all' ? 'No contacts match your search.' : 'No contacts available.')
+      : React.createElement('div', { className: 'grid grid-cols-1 md:grid-cols-2 gap-4 stagger' },
+          shown.map(function (contact, i) {
+            var cArea = contact.function_area || contact.department;
+            return React.createElement('div', { key: contact.id || i, className: 'bg-white rounded-2xl border border-toledo-border p-5 hover:shadow-md transition-shadow' },
               React.createElement('div', { className: 'flex items-start gap-3' },
-                React.createElement('div', { className: 'w-10 h-10 bg-toledo-blue/10 text-toledo-blue rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0' },
+                React.createElement('div', { className: 'w-10 h-10 bg-toledo-blue text-toledo-gold rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0' },
                   contact.contact_name ? contact.contact_name.charAt(0).toUpperCase() : '?'
                 ),
-                React.createElement('div', { className: 'min-w-0' },
+                React.createElement('div', { className: 'min-w-0 flex-1' },
                   React.createElement('h3', { className: 'font-semibold text-gray-900 text-sm' }, contact.contact_name),
-                  contact.title && React.createElement('p', { className: 'text-xs text-gray-500' }, contact.title),
+                  contact.title && React.createElement('p', { className: 'text-xs text-toledo-slate' }, contact.title),
                   contact.department && React.createElement('p', { className: 'text-xs text-gray-400' }, contact.department)
-                )
-              ),
-              React.createElement('div', { className: 'mt-3 pt-3 border-t border-gray-100 space-y-1' },
-                contact.email && React.createElement('p', { className: 'text-xs text-gray-600 flex items-center gap-1' },
-                  '✉️ ',
-                  React.createElement('a', { href: 'mailto:' + contact.email, className: 'text-toledo-blue hover:underline' }, contact.email)
                 ),
-                contact.phone && React.createElement('p', { className: 'text-xs text-gray-600' }, '📞 ' + contact.phone)
+                cArea && React.createElement('span', { className: 'flex-shrink-0 text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full bg-toledo-gold/20 text-toledo-blue' }, cArea)
+              ),
+              React.createElement('div', { className: 'mt-3 pt-3 border-t border-gray-100 flex flex-wrap gap-2' },
+                contact.email && React.createElement('a', {
+                  href: 'mailto:' + contact.email,
+                  className: 'text-xs font-medium px-3 py-1.5 rounded-lg bg-toledo-blue text-white hover:bg-toledo-navy transition-colors',
+                }, 'Email'),
+                contact.phone && React.createElement('a', {
+                  href: 'tel:' + contact.phone,
+                  className: 'text-xs font-medium px-3 py-1.5 rounded-lg border border-toledo-border text-toledo-blue hover:border-toledo-blue transition-colors',
+                }, contact.phone)
               )
             );
           })
@@ -848,25 +957,31 @@ function PoliciesPage({ onNavigate }) {
   if (loading) return React.createElement('div', { className: 'max-w-4xl mx-auto px-4 py-12 text-center text-gray-500' }, 'Loading...');
 
   return React.createElement('div', { className: 'max-w-4xl mx-auto px-4 py-8 fade-in' },
-    React.createElement('button', { onClick: function () { onNavigate('home'); }, className: 'flex items-center gap-2 text-toledo-blue hover:text-toledo-dark mb-6 text-sm font-medium' },
-      React.createElement(IconArrowLeft), 'Back to Home'),
-    React.createElement('h1', { className: 'text-2xl font-bold text-gray-900 flex items-center gap-2 mb-1' },
-      React.createElement(IconDocument), 'Policies & Procedures'),
-    React.createElement('p', { className: 'text-gray-500 text-sm mb-6' }, 'Important policies and compliance documents.'),
+    React.createElement('div', { className: 'flex items-center gap-3 mb-1' },
+      React.createElement('span', { className: 'w-10 h-10 rounded-xl bg-toledo-blue text-toledo-gold flex items-center justify-center flex-shrink-0' },
+        React.createElement(IconDocument)),
+      React.createElement('h1', { className: 'display-title text-2xl text-toledo-blue' }, 'Policies & Compliance')
+    ),
+    React.createElement('p', { className: 'text-toledo-slate text-sm mb-6' }, 'The rules, procedures, and compliance documents that govern how Toledo Athletics operates. When in doubt, read the policy first.'),
     policies.length === 0
       ? React.createElement('p', { className: 'text-center text-gray-400 py-8' }, 'No policies available.')
-      : React.createElement('div', { className: 'space-y-3' },
+      : React.createElement('div', { className: 'space-y-3 stagger' },
           policies.map(function (policy, i) {
-            return React.createElement('div', { key: policy.id || i, className: 'bg-white rounded-xl border border-gray-200 p-5' },
-              React.createElement('div', { className: 'flex items-start justify-between' },
+            return React.createElement('div', { key: policy.id || i, className: 'bg-white rounded-2xl border border-toledo-border p-5 hover:shadow-md transition-shadow' },
+              React.createElement('div', { className: 'flex items-start justify-between gap-4' },
                 React.createElement('div', { className: 'flex-1 min-w-0' },
+                  React.createElement('div', { className: 'flex flex-wrap items-center gap-2 mb-1' },
+                    policy.policy_code && React.createElement('span', { className: 'text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded bg-toledo-blue text-white' }, policy.policy_code),
+                    policy.category && React.createElement('span', { className: 'text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full bg-toledo-gold/20 text-toledo-blue' }, policy.category),
+                    policy.applies_to && React.createElement('span', { className: 'text-[11px] text-toledo-slate' }, 'Applies to: ' + policy.applies_to)
+                  ),
                   React.createElement('h3', { className: 'font-semibold text-gray-900 text-sm' }, policy.title),
-                  policy.summary && React.createElement('p', { className: 'text-sm text-gray-500 mt-1 line-clamp-2' }, policy.summary)
+                  policy.summary && React.createElement('p', { className: 'text-sm text-toledo-slate mt-1 line-clamp-2' }, policy.summary)
                 ),
                 policy.url && React.createElement('a', {
                   href: policy.url, target: '_blank', rel: 'noopener noreferrer',
-                  className: 'text-toledo-blue hover:text-toledo-dark flex-shrink-0 ml-3',
-                }, React.createElement(IconExternalLink))
+                  className: 'flex-shrink-0 inline-flex items-center gap-1.5 text-xs font-semibold text-toledo-blue border border-toledo-border hover:border-toledo-blue px-3 py-1.5 rounded-lg transition-colors',
+                }, 'Open policy', React.createElement(IconExternalLink))
               )
             );
           })
@@ -901,13 +1016,16 @@ function FeedbackButton({ currentUser }) {
     });
   }
 
-  return React.createElement('div', { className: 'fixed bottom-6 left-6 z-40' },
-    React.createElement('button', {
-      onClick: function () { setShowModal(true); setSent(false); },
-      className: 'flex items-center gap-1.5 px-3 py-2 bg-white border border-gray-200 rounded-lg shadow-md text-xs text-gray-500 hover:text-toledo-blue hover:border-toledo-blue/30 transition-colors',
-    }, React.createElement(IconFlag), 'Report Issue'),
-    showModal && React.createElement('div', { className: 'fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4' },
-      React.createElement('div', { className: 'bg-white rounded-xl shadow-xl p-6 w-full max-w-md' },
+  // Opened from the sidebar "Report an Issue" entry instead of a floating button.
+  useEffect(function () {
+    function openHandler() { setShowModal(true); setSent(false); }
+    window.addEventListener('toledo:open-feedback', openHandler);
+    return function () { window.removeEventListener('toledo:open-feedback', openHandler); };
+  }, []);
+
+  return React.createElement('div', null,
+    showModal && React.createElement('div', { className: 'fixed inset-0 bg-black/40 flex items-center justify-center z-[60] p-4' },
+      React.createElement('div', { className: 'bg-white rounded-2xl shadow-xl p-6 w-full max-w-md' },
         sent
           ? React.createElement('div', { className: 'text-center py-4' },
               React.createElement(IconCheck),
@@ -936,48 +1054,27 @@ function FeedbackButton({ currentUser }) {
 
 // ── Footer ────────────────────────────────────────────────────────────────────
 function Footer({ onNavigate }) {
-  return React.createElement('footer', { className: 'bg-toledo-dark text-white mt-12' },
-    React.createElement('div', { className: 'max-w-7xl mx-auto px-4 py-8' },
-      React.createElement('div', { className: 'grid grid-cols-1 md:grid-cols-3 gap-8' },
-        React.createElement('div', null,
-          React.createElement('div', { className: 'flex items-center gap-2 mb-3' },
-            React.createElement('img', { src: '/branding/Primary_Logo_for_Dark_Background.png', alt: 'Toledo Athletics', className: 'h-8 w-auto' }),
-            React.createElement('div', null,
-              React.createElement('p', { className: 'text-sm font-bold' }, 'Toledo Athletics'),
-              React.createElement('p', { className: 'text-xs text-blue-300' }, 'Onboarding Portal')
-            )
-          ),
-          React.createElement('p', { className: 'text-xs text-blue-300' }, 'Your complete guide to getting started at the University of Toledo Athletic Department.')
-        ),
-        React.createElement('div', null,
-          React.createElement('h4', { className: 'text-sm font-semibold mb-3' }, 'Quick Access'),
-          React.createElement('div', { className: 'grid grid-cols-2 gap-1' },
-            [
-              { id: 'home', label: 'Home' },
-              { id: 'guide', label: 'My Onboarding' },
-              { id: 'resources', label: 'Resources' },
-              { id: 'contacts', label: 'Contacts' },
-              { id: 'policies', label: 'Policies' },
-              { id: 'submit', label: 'Contribute' },
-            ].map(function (item) {
-              return React.createElement('button', {
-                key: item.id,
-                onClick: function () { onNavigate(item.id); },
-                className: 'text-xs text-blue-300 hover:text-white text-left py-0.5 transition-colors',
-              }, item.label);
-            })
-          )
-        ),
-        React.createElement('div', null,
-          React.createElement('h4', { className: 'text-sm font-semibold mb-3' }, 'Information'),
-          React.createElement('p', { className: 'text-xs text-blue-300 mb-1' }, 'Maintained by Toledo Athletics Communications'),
-          React.createElement('p', { className: 'text-xs text-blue-300 mb-1' }, 'For issues, use the Report Issue button on any page.'),
-          React.createElement('p', { className: 'text-xs text-blue-300 mt-3' }, 'Last Updated: ' + new Date().toLocaleDateString())
-        )
+  return React.createElement('footer', { className: 'bg-toledo-navy text-white' },
+    React.createElement('div', { className: 'px-4 py-4 flex flex-col sm:flex-row items-center justify-between gap-3' },
+      React.createElement('div', { className: 'flex items-center gap-2' },
+        React.createElement('img', { src: '/branding/Primary_Logo_for_Dark_Background.png', alt: 'Toledo Athletics', className: 'h-6 w-auto' }),
+        React.createElement('p', { className: 'text-xs text-blue-300' }, '© ' + new Date().getFullYear() + ' University of Toledo Athletics')
       ),
-      React.createElement('div', { className: 'border-t border-white/10 mt-6 pt-4 text-center' },
-        React.createElement('p', { className: 'text-xs text-blue-400' }, '© ' + new Date().getFullYear() + ' University of Toledo Athletics. All rights reserved.')
-      )
+      React.createElement('div', { className: 'flex flex-wrap items-center justify-center gap-x-4 gap-y-1' },
+        [
+          { id: 'guide', label: 'My Onboarding' },
+          { id: 'resources', label: 'Systems' },
+          { id: 'contacts', label: 'Contacts' },
+          { id: 'policies', label: 'Policies' },
+        ].map(function (item) {
+          return React.createElement('button', {
+            key: item.id,
+            onClick: function () { onNavigate(item.id); },
+            className: 'text-xs text-blue-300 hover:text-white transition-colors',
+          }, item.label);
+        })
+      ),
+      React.createElement('p', { className: 'text-[10px] uppercase tracking-[0.2em] text-toledo-gold' }, '#TeamToledo')
     )
   );
 }
@@ -1152,26 +1249,7 @@ function App() {
       content = React.createElement(OnboardingGuidePage, { currentUser: currentUser, onNavigate: navigate });
       break;
     case 'categories':
-      content = React.createElement('div', { className: 'max-w-7xl mx-auto px-4 py-8 fade-in' },
-        React.createElement('h1', { className: 'text-2xl font-bold text-gray-900 mb-6' }, 'All Categories'),
-        React.createElement('div', { className: 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4' },
-          categories.map(function (cat) {
-            return React.createElement('button', {
-              key: cat.id,
-              onClick: function () { navigate('category', cat.id); },
-              className: 'bg-white rounded-xl border border-gray-200 p-5 text-left hover:shadow-md hover:border-toledo-blue/30 transition-all group',
-            },
-              React.createElement('div', { className: 'flex items-start gap-3' },
-                React.createElement('span', { className: 'text-2xl' }, CATEGORY_ICONS[cat.name] || '📄'),
-                React.createElement('div', null,
-                  React.createElement('h3', { className: 'font-semibold text-gray-900 group-hover:text-toledo-blue' }, cat.name),
-                  React.createElement('p', { className: 'text-sm text-gray-500 mt-1' }, cat.description)
-                )
-              )
-            );
-          })
-        )
-      );
+      content = React.createElement(BrowseTopicsPage, { categories: categories, onNavigate: navigate });
       break;
     case 'category':
       content = React.createElement(CategoryView, { categoryId: viewParam, onNavigate: navigate });
@@ -1209,11 +1287,13 @@ function App() {
       content = React.createElement(HomePage, { categories: categories, stats: stats, onNavigate: navigate, onSearch: handleSearch, currentUser: currentUser });
   }
 
-  return React.createElement('div', { className: 'min-h-screen bg-gray-50 flex flex-col' },
+  return React.createElement(AppShell, {
+    currentUser: currentUser, currentView: view, onNavigate: navigate,
+    onSearch: handleSearch, onSignOut: handleSignOut,
+    onStartTour: function () { setShowTour(true); },
+  },
     showTour && React.createElement(QuickTour, { onDone: dismissTour, onNavigate: navigate }),
-    React.createElement(Header, { currentUser: currentUser, onNavigate: navigate, currentView: view, onSignOut: handleSignOut, onStartTour: function () { setShowTour(true); } }),
-    React.createElement('main', { className: 'flex-1' }, content),
-    React.createElement(Footer, { onNavigate: navigate }),
+    content,
     React.createElement(AIChatWidget, { currentUser: currentUser }),
     React.createElement(FeedbackButton, { currentUser: currentUser })
   );

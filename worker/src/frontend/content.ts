@@ -2,104 +2,318 @@
 
 export function getContentCode(): string {
   return `
-// ── HomePage ──────────────────────────────────────────────────────────────────
+// ── HomePage (dashboard) ──────────────────────────────────────────────────────
 function HomePage({ categories, stats, onNavigate, onSearch, currentUser }) {
+  var _tasksState = useState(null);
+  var tasks = _tasksState[0];
+  var setTasks = _tasksState[1];
+  var _contactsState = useState([]);
+  var keyContacts = _contactsState[0];
+  var setKeyContacts = _contactsState[1];
+  var _newsState = useState([]);
+  var news = _newsState[0];
+  var setNews = _newsState[1];
 
-  // Checklist progress now lives in the database (synced across devices)
-  var _progressState = useState({ done: 0, total: 0, pct: 0 });
-  var checklistProgress = _progressState[0];
-  var setChecklistProgress = _progressState[1];
   useEffect(function () {
-    api('/tasks').then(function (r) {
+    api('/tasks').then(function (r) { if (r.success) setTasks(r.data || []); });
+    api('/contacts').then(function (r) { if (r.success) setKeyContacts((r.data || []).slice(0, 3)); });
+    api('/articles').then(function (r) {
       if (!r.success) return;
-      var list = r.data || [];
-      var done = list.filter(function (t) {
-        return t.my_status === 'done' || t.my_status === 'approved' || t.my_status === 'pending_approval';
-      }).length;
-      var total = list.length;
-      setChecklistProgress({ done: done, total: total, pct: total > 0 ? Math.round((done / total) * 100) : 0 });
+      var sorted = (r.data || []).slice().sort(function (a, b) {
+        return new Date(b.last_updated).getTime() - new Date(a.last_updated).getTime();
+      });
+      setNews(sorted.slice(0, 3));
     });
   }, []);
 
-  return React.createElement('div', { className: 'fade-in' },
-    // Hero banner
-    React.createElement('div', { className: 'bg-gradient-to-br from-toledo-blue via-toledo-dark to-toledo-blue text-white py-16' },
-      React.createElement('div', { className: 'max-w-4xl mx-auto px-4 text-center' },
-        React.createElement('img', { src: '/branding/Primary_Logo_for_Dark_Background.png', alt: 'Toledo Athletics', className: 'h-20 w-auto mx-auto mb-6' }),
-        React.createElement('h1', { className: 'text-4xl md:text-5xl font-extrabold mb-4 tracking-tight' }, 'Welcome to Toledo Athletics'),
-        React.createElement('p', { className: 'text-xl text-blue-200 mb-8 max-w-2xl mx-auto' }, 'Your complete onboarding guide — everything you need to succeed from day one.'),
-        React.createElement('div', { className: 'max-w-xl mx-auto' }, React.createElement(SearchBar, { onSearch, onNavigate }))
-      )
-    ),
+  var taskList = tasks || [];
+  var total = taskList.length;
+  var doneCount = taskList.filter(function (t) { return taskIsChecked(t.my_status); }).length;
+  var pct = total > 0 ? Math.round((doneCount / total) * 100) : 0;
+  var started = doneCount > 0;
 
-    // Quick Actions
-    React.createElement('div', { className: 'max-w-7xl mx-auto px-4 -mt-8 relative z-10' },
-      React.createElement('div', { className: 'grid grid-cols-2 md:grid-cols-4 gap-4' },
-        [
-          { id: 'guide', icon: '🗺️', label: 'My Onboarding', desc: 'Guide + checklist' },
-          { id: 'resources', icon: '🔗', label: 'Resources & Systems', desc: 'Links and tools' },
-          { id: 'contacts', icon: '👥', label: 'Key Contacts', desc: 'Who to reach out to' },
-          { id: 'policies', icon: '📋', label: 'Policies', desc: 'Compliance & procedures' },
-        ].map(function (action) {
-          return React.createElement('button', {
-            key: action.id, onClick: function () { onNavigate(action.id); },
-            className: 'bg-white rounded-xl border border-gray-200 p-5 text-center hover:shadow-lg hover:border-toledo-blue/30 transition-all group shadow-md',
-          },
-            React.createElement('span', { className: 'text-3xl block mb-2' }, action.icon),
-            React.createElement('h3', { className: 'font-semibold text-gray-900 group-hover:text-toledo-blue transition-colors text-sm' }, action.label),
-            React.createElement('p', { className: 'text-xs text-gray-500 mt-1' }, action.desc)
-          );
-        })
-      )
-    ),
+  // Next best action: first unchecked required task, falling back to any open task.
+  var openTasks = taskList.filter(function (t) { return !taskIsChecked(t.my_status); });
+  var nextTask = openTasks.filter(function (t) { return t.priority === 'required'; })[0] || openTasks[0] || null;
 
-    // Onboarding Progress Widget
-    React.createElement('div', { className: 'max-w-7xl mx-auto px-4 py-10' },
-      React.createElement('div', { className: 'bg-white rounded-xl border border-gray-200 shadow-sm p-6' },
-        React.createElement('div', { className: 'flex items-center justify-between mb-3' },
-          React.createElement('div', null,
-            React.createElement('h2', { className: 'text-lg font-bold text-gray-900' }, 'Your Onboarding Progress'),
-            React.createElement('p', { className: 'text-sm text-gray-500 mt-0.5' },
-              checklistProgress.done + ' of ' + checklistProgress.total + ' tasks completed'
-            )
-          ),
-          React.createElement('span', { className: 'text-2xl font-bold text-toledo-blue' }, checklistProgress.pct + '%')
-        ),
-        React.createElement('div', { className: 'w-full bg-gray-100 rounded-full h-3 mb-4' },
-          React.createElement('div', {
-            className: 'bg-toledo-blue h-3 rounded-full transition-all duration-500',
-            style: { width: checklistProgress.pct + '%' },
-          })
-        ),
-        checklistProgress.total > 0 && checklistProgress.done === checklistProgress.total
-          ? React.createElement('p', { className: 'text-green-600 font-semibold text-sm mb-3' }, "🎉 You've completed all onboarding tasks!")
-          : React.createElement('p', { className: 'text-sm text-gray-400 mb-3' },
-              checklistProgress.done === 0 ? "Start by clicking 'My Onboarding' above." : "Keep going — you're making great progress!"
-            ),
-        React.createElement('button', {
-          onClick: function () { onNavigate('guide'); },
-          className: 'px-5 py-2 bg-toledo-blue text-white rounded-lg hover:bg-toledo-dark transition-colors font-medium text-sm',
-        }, checklistProgress.done === 0 ? '▶ Start Onboarding' : '▶ Continue Onboarding')
-      )
-    ),
+  // Right-rail "today": open required tasks first, then items awaiting review.
+  var pendingReview = taskList.filter(function (t) { return t.my_status === 'pending_approval'; });
+  var todayItems = openTasks.filter(function (t) { return t.priority === 'required'; })
+    .concat(pendingReview).slice(0, 4);
 
-    // Explore by Category
-    React.createElement('div', { className: 'max-w-7xl mx-auto px-4 pb-12' },
-      React.createElement('h2', { className: 'text-2xl font-bold text-gray-900 mb-6' }, 'Explore by Topic'),
-      React.createElement('div', { className: 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4' },
-        categories.map((cat) => React.createElement('button', {
-          key: cat.id, onClick: () => onNavigate('category', cat.id),
-          className: 'bg-white rounded-xl border border-gray-200 p-5 text-left hover:shadow-md hover:border-toledo-blue/30 transition-all group'
-        },
-          React.createElement('div', { className: 'flex items-start gap-3' },
-            React.createElement('span', { className: 'text-2xl' }, CATEGORY_ICONS[cat.name] || '📄'),
-            React.createElement('div', null,
-              React.createElement('h3', { className: 'font-semibold text-gray-900 group-hover:text-toledo-blue transition-colors' }, cat.name),
-              React.createElement('p', { className: 'text-sm text-gray-500 mt-1 line-clamp-2' }, cat.description)
+  var phaseIds = Object.keys(PHASE_META).sort(function (a, b) { return PHASE_META[a].order - PHASE_META[b].order; });
+  var phaseStats = phaseIds.map(function (pid) {
+    var pts = taskList.filter(function (t) { return t.phase === pid && t.audience !== 'assigned'; });
+    var pdone = pts.filter(function (t) { return taskIsChecked(t.my_status); }).length;
+    return { id: pid, label: PHASE_META[pid].label, done: pdone, total: pts.length };
+  }).filter(function (p) { return p.total > 0; });
+  var currentPhaseIdx = phaseStats.findIndex(function (p) { return p.done < p.total; });
+
+  function openChat() {
+    try { window.dispatchEvent(new CustomEvent('toledo:open-chat')); } catch (e) {}
+  }
+
+  var quickLinks = [
+    { id: 'guide',      num: '01', label: 'Checklist', desc: 'Your onboarding tasks' },
+    { id: 'policies',   num: '02', label: 'Policies',  desc: 'Compliance & handbooks' },
+    { id: 'resources',  num: '03', label: 'Systems',   desc: 'Tools & access' },
+    { id: 'contacts',   num: '04', label: 'Contacts',  desc: 'People & departments' },
+    { id: 'categories', num: '05', label: 'Topics',    desc: 'Browse all guides' },
+  ];
+
+  function railCard(title, children) {
+    return React.createElement('div', { className: 'bg-white rounded-2xl border border-toledo-border shadow-sm p-5' },
+      React.createElement('div', { className: 'flex items-center gap-2 mb-4' },
+        React.createElement('span', { className: 'w-2 h-2 rounded-full bg-toledo-gold flex-shrink-0' }),
+        React.createElement('h3', { className: 'text-xs font-bold uppercase tracking-[0.14em] text-toledo-blue' }, title)
+      ),
+      children
+    );
+  }
+
+  return React.createElement('div', { className: 'max-w-7xl mx-auto px-4 py-6 fade-in' },
+    React.createElement('div', { className: 'grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_320px] gap-6 items-start' },
+
+      // ── Main column ──
+      React.createElement('div', { className: 'space-y-6 min-w-0 stagger' },
+
+        // Hero
+        React.createElement('div', { className: 'relative overflow-hidden rounded-2xl shadow-lg min-h-[280px] flex' },
+          React.createElement('img', { src: '/branding/savage-arena.jpg', alt: 'Savage Arena', className: 'absolute inset-0 w-full h-full object-cover' }),
+          React.createElement('div', { className: 'absolute inset-0 bg-gradient-to-r from-toledo-blue via-toledo-blue/85 to-toledo-blue/30' }),
+          React.createElement('div', { className: 'relative z-10 p-8 md:p-10 text-white flex flex-col justify-center max-w-xl' },
+            React.createElement('span', { className: 'inline-block w-fit px-3 py-1 bg-toledo-gold text-toledo-blue text-[10px] font-bold uppercase tracking-[0.2em] rounded-full mb-4' }, 'For Toledo'),
+            React.createElement('h1', { className: 'display-title text-3xl md:text-5xl leading-tight' }, 'Welcome to Toledo Athletics'),
+            React.createElement('p', { className: 'text-blue-100 mt-3 text-sm md:text-base leading-relaxed' }, 'Your first steps, key systems, and people — all in one place.'),
+            React.createElement('div', { className: 'flex flex-wrap gap-3 mt-6' },
+              React.createElement('button', {
+                onClick: function () { onNavigate('guide'); },
+                className: 'inline-flex items-center gap-2 px-5 py-2.5 bg-toledo-gold text-toledo-blue rounded-lg font-semibold text-sm hover:bg-yellow-300 transition-colors',
+              }, React.createElement(IconPlay), started ? 'Continue Onboarding' : 'Start Onboarding'),
+              React.createElement('button', {
+                onClick: openChat,
+                className: 'px-5 py-2.5 bg-white/10 border border-white/40 text-white rounded-lg font-medium text-sm hover:bg-white/20 transition-colors',
+              }, 'Ask the Onboarding Assistant')
             )
           )
-        ))
+        ),
+
+        // Next best action
+        nextTask && React.createElement('div', { className: 'bg-white rounded-2xl border border-toledo-border shadow-sm p-6 gold-trail' },
+          React.createElement('p', { className: 'text-xs font-bold uppercase tracking-[0.14em] text-toledo-slate mb-2' }, 'Next Best Action'),
+          React.createElement('div', { className: 'flex flex-col sm:flex-row sm:items-center gap-4 justify-between' },
+            React.createElement('div', { className: 'min-w-0' },
+              React.createElement('h2', { className: 'text-xl font-bold text-toledo-blue' }, nextTask.title),
+              React.createElement('p', { className: 'text-sm text-toledo-slate mt-1' },
+                (PHASE_META[nextTask.phase] ? PHASE_META[nextTask.phase].label : '') +
+                (nextTask.priority === 'required' ? ' · Required' : '') +
+                (nextTask.requires_approval ? ' · Reviewed by an administrator' : '')
+              )
+            ),
+            React.createElement('button', {
+              onClick: function () { onNavigate('guide'); },
+              className: 'flex-shrink-0 px-5 py-2.5 bg-toledo-blue text-white rounded-lg font-medium text-sm hover:bg-toledo-navy transition-colors',
+            }, 'Open My Onboarding')
+          )
+        ),
+        !nextTask && tasks !== null && total > 0 && React.createElement('div', { className: 'bg-white rounded-2xl border border-toledo-border shadow-sm p-6 flex items-center gap-3' },
+          React.createElement('span', { className: 'w-10 h-10 rounded-full bg-green-100 text-success flex items-center justify-center flex-shrink-0' }, React.createElement(IconCheckCircle)),
+          React.createElement('div', null,
+            React.createElement('h2', { className: 'text-lg font-bold text-toledo-blue' }, 'All onboarding tasks complete'),
+            React.createElement('p', { className: 'text-sm text-toledo-slate' }, 'Nothing waiting on you — explore the topics below or help improve the portal.')
+          )
+        ),
+
+        // Quick links
+        React.createElement('div', { className: 'bg-white rounded-2xl border border-toledo-border shadow-sm p-6' },
+          React.createElement('p', { className: 'text-xs font-bold uppercase tracking-[0.14em] text-toledo-slate mb-4' }, 'Quick Links'),
+          React.createElement('div', { className: 'grid grid-cols-2 md:grid-cols-5 gap-3' },
+            quickLinks.map(function (q) {
+              return React.createElement('button', {
+                key: q.id,
+                onClick: function () { onNavigate(q.id); },
+                className: 'group text-left rounded-xl border border-toledo-border p-4 hover:border-toledo-gold hover:shadow-md transition-all',
+              },
+                React.createElement('p', { className: 'display-title text-2xl text-toledo-gold leading-none' }, q.num),
+                React.createElement('p', { className: 'text-sm font-semibold text-toledo-blue mt-2 group-hover:underline' }, q.label),
+                React.createElement('p', { className: 'text-[11px] text-toledo-slate mt-0.5 leading-snug' }, q.desc)
+              );
+            })
+          )
+        ),
+
+        // Progress timeline
+        React.createElement('div', { className: 'bg-white rounded-2xl border border-toledo-border shadow-sm p-6' },
+          React.createElement('div', { className: 'flex items-center justify-between mb-4' },
+            React.createElement('p', { className: 'text-xs font-bold uppercase tracking-[0.14em] text-toledo-slate' }, 'Your Onboarding Progress'),
+            React.createElement('p', { className: 'text-sm text-toledo-slate' },
+              React.createElement('span', { className: 'display-title text-xl text-toledo-blue mr-1' }, doneCount + ' / ' + total),
+              'completed'
+            )
+          ),
+          React.createElement('div', { className: 'w-full bg-gray-100 rounded-full h-2.5 mb-6' },
+            React.createElement('div', {
+              className: 'bg-gradient-to-r from-toledo-gold to-yellow-400 h-2.5 rounded-full transition-all duration-700',
+              style: { width: pct + '%' },
+            })
+          ),
+          phaseStats.length > 0 && React.createElement('div', { className: 'grid grid-cols-2 md:grid-cols-4 gap-3' },
+            phaseStats.map(function (p, i) {
+              var complete = p.done === p.total;
+              var isCurrent = i === currentPhaseIdx;
+              var circleCls = complete
+                ? 'bg-toledo-gold text-toledo-blue'
+                : isCurrent
+                  ? 'bg-toledo-blue text-white ring-2 ring-toledo-gold ring-offset-2'
+                  : 'bg-white text-gray-400 border-2 border-gray-200';
+              return React.createElement('button', {
+                key: p.id,
+                onClick: function () { onNavigate('guide'); },
+                className: 'flex items-center gap-3 rounded-xl p-2 hover:bg-gray-50 transition-colors text-left',
+              },
+                React.createElement('span', { className: 'w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ' + circleCls },
+                  complete ? React.createElement(IconCheck) : (i + 1)
+                ),
+                React.createElement('span', { className: 'min-w-0' },
+                  React.createElement('span', { className: 'block text-xs font-semibold text-toledo-blue truncate' }, p.label),
+                  React.createElement('span', { className: 'block text-[11px] text-toledo-slate' }, p.done + '/' + p.total + (isCurrent ? ' · current' : complete ? ' · done' : ''))
+                )
+              );
+            })
+          ),
+          total > 0 && doneCount === total && React.createElement('p', { className: 'text-success font-semibold text-sm mt-4 flex items-center gap-1.5' },
+            React.createElement(IconCheckCircle), 'You have completed all onboarding tasks!'
+          )
+        ),
+
+        // Browse topics strip
+        categories.length > 0 && React.createElement('div', null,
+          React.createElement('div', { className: 'flex items-center justify-between mb-3' },
+            React.createElement('h2', { className: 'display-title text-lg text-toledo-blue' }, 'Browse Topics'),
+            React.createElement('button', {
+              onClick: function () { onNavigate('categories'); },
+              className: 'text-sm font-medium text-toledo-blue hover:underline',
+            }, 'View all →')
+          ),
+          React.createElement('div', { className: 'grid grid-cols-1 sm:grid-cols-3 gap-3' },
+            categories.slice(0, 3).map(function (cat) {
+              return React.createElement('button', {
+                key: cat.id, onClick: function () { onNavigate('category', cat.id); },
+                className: 'bg-white rounded-2xl border border-toledo-border p-4 text-left hover:shadow-md hover:border-toledo-gold transition-all group flex items-start gap-3',
+              },
+                React.createElement(CategoryIcon, { name: cat.name }),
+                React.createElement('div', { className: 'min-w-0' },
+                  React.createElement('h3', { className: 'font-semibold text-sm text-gray-900 group-hover:text-toledo-blue transition-colors' }, cat.name),
+                  React.createElement('p', { className: 'text-xs text-toledo-slate mt-1 line-clamp-2' }, cat.description)
+                )
+              );
+            })
+          )
+        )
+      ),
+
+      // ── Right rail ──
+      React.createElement('div', { className: 'space-y-6 stagger' },
+
+        railCard('Today', tasks === null
+          ? React.createElement('p', { className: 'text-sm text-toledo-slate' }, 'Loading…')
+          : todayItems.length === 0
+            ? React.createElement('p', { className: 'text-sm text-toledo-slate' }, 'Nothing due — you are all caught up.')
+            : React.createElement('div', { className: 'space-y-2' },
+                React.createElement('p', { className: 'text-lg font-bold text-toledo-blue mb-2' }, todayItems.length + (todayItems.length === 1 ? ' priority task' : ' priority tasks')),
+                todayItems.map(function (t) {
+                  var awaiting = t.my_status === 'pending_approval';
+                  return React.createElement('button', {
+                    key: t.id,
+                    onClick: function () { onNavigate('guide'); },
+                    className: 'w-full flex items-center gap-2.5 rounded-xl border border-toledo-border px-3 py-2.5 text-left hover:border-toledo-gold transition-colors',
+                  },
+                    React.createElement('span', { className: 'w-2 h-2 rounded-full flex-shrink-0 ' + (awaiting ? 'bg-warning' : 'bg-toledo-gold') }),
+                    React.createElement('span', { className: 'min-w-0 flex-1' },
+                      React.createElement('span', { className: 'block text-xs font-medium text-gray-900 truncate' }, t.title),
+                      React.createElement('span', { className: 'block text-[11px] text-toledo-slate' },
+                        awaiting ? 'Awaiting review' : (PHASE_META[t.phase] ? PHASE_META[t.phase].label : ''))
+                    )
+                  );
+                }),
+                React.createElement('button', {
+                  onClick: function () { onNavigate('guide'); },
+                  className: 'text-xs font-semibold text-toledo-blue hover:underline pt-1',
+                }, 'View all tasks →')
+              )
+        ),
+
+        railCard('Announcements', news.length === 0
+          ? React.createElement('p', { className: 'text-sm text-toledo-slate' }, 'No recent updates.')
+          : React.createElement('div', { className: 'divide-y divide-gray-100' },
+              news.map(function (a) {
+                return React.createElement('button', {
+                  key: a.id,
+                  onClick: function () { onNavigate('article', a.id); },
+                  className: 'w-full text-left py-2.5 first:pt-0 last:pb-0 group',
+                },
+                  React.createElement('p', { className: 'text-xs font-medium text-gray-900 group-hover:text-toledo-blue transition-colors line-clamp-2' }, a.title),
+                  React.createElement('p', { className: 'text-[11px] text-toledo-slate mt-0.5' }, 'Updated ' + new Date(a.last_updated).toLocaleDateString())
+                );
+              })
+            )
+        ),
+
+        railCard('Your Support Team', keyContacts.length === 0
+          ? React.createElement('p', { className: 'text-sm text-toledo-slate' }, 'No contacts available yet.')
+          : React.createElement('div', { className: 'space-y-4' },
+              keyContacts.map(function (c, i) {
+                return React.createElement('div', { key: c.id || i, className: 'flex items-start gap-3' },
+                  React.createElement('span', { className: 'w-9 h-9 rounded-full bg-toledo-blue text-toledo-gold flex items-center justify-center text-sm font-bold flex-shrink-0' },
+                    c.contact_name ? c.contact_name.charAt(0).toUpperCase() : '?'),
+                  React.createElement('div', { className: 'min-w-0 flex-1' },
+                    React.createElement('p', { className: 'text-sm font-semibold text-gray-900 truncate' }, c.contact_name),
+                    (c.title || c.function_area) && React.createElement('p', { className: 'text-[11px] text-toledo-slate truncate' }, c.title || c.function_area),
+                    React.createElement('div', { className: 'flex gap-2 mt-1.5' },
+                      c.email && React.createElement('a', {
+                        href: 'mailto:' + c.email,
+                        className: 'text-[11px] font-medium px-2 py-0.5 rounded-md bg-toledo-blue text-white hover:bg-toledo-navy transition-colors',
+                      }, 'Email'),
+                      c.phone && React.createElement('a', {
+                        href: 'tel:' + c.phone,
+                        className: 'text-[11px] font-medium px-2 py-0.5 rounded-md border border-toledo-border text-toledo-blue hover:border-toledo-blue transition-colors',
+                      }, 'Call')
+                    )
+                  )
+                );
+              }),
+              React.createElement('button', {
+                onClick: function () { onNavigate('contacts'); },
+                className: 'text-xs font-semibold text-toledo-blue hover:underline',
+              }, 'Open directory →')
+            )
+        )
       )
+    )
+  );
+}
+
+// ── BrowseTopicsPage ──────────────────────────────────────────────────────────
+function BrowseTopicsPage({ categories, onNavigate }) {
+  return React.createElement('div', { className: 'max-w-7xl mx-auto px-4 py-8 fade-in' },
+    React.createElement('h1', { className: 'display-title text-2xl text-toledo-blue mb-1' }, 'Browse Topics'),
+    React.createElement('p', { className: 'text-toledo-slate text-sm mb-6' }, 'Guides and articles for every part of working in Toledo Athletics.'),
+    React.createElement('div', { className: 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 stagger' },
+      categories.map(function (cat) {
+        return React.createElement('button', {
+          key: cat.id,
+          onClick: function () { onNavigate('category', cat.id); },
+          className: 'bg-white rounded-2xl border border-toledo-border p-5 text-left hover:shadow-md hover:border-toledo-gold transition-all group',
+        },
+          React.createElement('div', { className: 'flex items-start gap-3' },
+            React.createElement(CategoryIcon, { name: cat.name }),
+            React.createElement('div', null,
+              React.createElement('h3', { className: 'font-semibold text-gray-900 group-hover:text-toledo-blue transition-colors' }, cat.name),
+              React.createElement('p', { className: 'text-sm text-toledo-slate mt-1' }, cat.description)
+            )
+          )
+        );
+      })
     )
   );
 }
@@ -114,21 +328,21 @@ function CategoryView({ categoryId, onNavigate }) {
   }, [categoryId]);
   if (!category) return React.createElement('div', { className: 'max-w-4xl mx-auto px-4 py-12 text-center text-gray-500' }, 'Loading...');
   return React.createElement('div', { className: 'max-w-4xl mx-auto px-4 py-8 fade-in' },
-    React.createElement('button', { onClick: () => onNavigate('home'), className: 'flex items-center gap-2 text-toledo-blue hover:text-toledo-dark mb-6 text-sm font-medium' },
-      React.createElement(IconArrowLeft), 'Back to Home'),
+    React.createElement('button', { onClick: () => onNavigate('categories'), className: 'flex items-center gap-2 text-toledo-blue hover:text-toledo-navy mb-6 text-sm font-medium' },
+      React.createElement(IconArrowLeft), 'All topics'),
     React.createElement('div', { className: 'flex items-center gap-3 mb-8' },
-      React.createElement('span', { className: 'text-3xl' }, CATEGORY_ICONS[category.name] || '📄'),
+      React.createElement(CategoryIcon, { name: category.name }),
       React.createElement('div', null,
-        React.createElement('h1', { className: 'text-3xl font-bold text-gray-900' }, category.name),
-        React.createElement('p', { className: 'text-gray-500 mt-1' }, category.description)
+        React.createElement('h1', { className: 'display-title text-2xl md:text-3xl text-toledo-blue' }, category.name),
+        React.createElement('p', { className: 'text-toledo-slate mt-1 text-sm' }, category.description)
       )
     ),
     articles.length === 0
       ? React.createElement('p', { className: 'text-gray-500 text-center py-8' }, 'No articles in this category yet.')
-      : React.createElement('div', { className: 'space-y-3' },
+      : React.createElement('div', { className: 'space-y-3 stagger' },
           articles.map((article) => React.createElement('button', {
             key: article.id, onClick: () => onNavigate('article', article.id),
-            className: 'w-full bg-white rounded-xl border border-gray-200 p-5 text-left hover:shadow-md hover:border-toledo-blue/30 transition-all'
+            className: 'w-full bg-white rounded-2xl border border-toledo-border p-5 text-left hover:shadow-md hover:border-toledo-gold transition-all'
           },
             React.createElement('h3', { className: 'font-semibold text-gray-900' }, article.title),
             React.createElement('p', { className: 'text-sm text-gray-500 mt-1 line-clamp-2' },
@@ -187,12 +401,12 @@ function ArticleView({ articleId, onNavigate }) {
     return text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\\n/g,'<br>');
   }
   return React.createElement('div', { className: 'max-w-4xl mx-auto px-4 py-8 fade-in' },
-    React.createElement('button', { onClick: () => article.category_id ? onNavigate('category', article.category_id) : onNavigate('home'), className: 'flex items-center gap-2 text-toledo-blue hover:text-toledo-dark mb-6 text-sm font-medium' },
+    React.createElement('button', { onClick: () => article.category_id ? onNavigate('category', article.category_id) : onNavigate('home'), className: 'flex items-center gap-2 text-toledo-blue hover:text-toledo-navy mb-6 text-sm font-medium' },
       React.createElement(IconArrowLeft), 'Back'),
-    React.createElement('div', { className: 'bg-white rounded-xl border border-gray-200 shadow-sm' },
-      React.createElement('div', { className: 'p-6 md:p-8 border-b' },
-        article.category_name && React.createElement('span', { className: 'inline-block px-3 py-1 bg-toledo-blue/10 text-toledo-blue text-xs font-medium rounded-full mb-3' }, article.category_name),
-        React.createElement('h1', { className: 'text-2xl md:text-3xl font-bold text-gray-900' }, article.title),
+    React.createElement('div', { className: 'bg-white rounded-2xl border border-toledo-border shadow-sm' },
+      React.createElement('div', { className: 'p-6 md:p-8 border-b border-toledo-border' },
+        article.category_name && React.createElement('span', { className: 'inline-block px-3 py-1 bg-toledo-gold/20 text-toledo-blue text-xs font-semibold rounded-full mb-3' }, article.category_name),
+        React.createElement('h1', { className: 'text-2xl md:text-3xl font-bold text-toledo-blue' }, article.title),
         React.createElement('p', { className: 'text-sm text-gray-400 mt-2' }, 'Last updated: ' + new Date(article.last_updated).toLocaleDateString())
       ),
       React.createElement('div', { className: 'p-6 md:p-8 prose max-w-none', dangerouslySetInnerHTML: { __html: renderMarkdown(article.current_content) } })
@@ -256,7 +470,7 @@ function SearchResults({ query, onNavigate }) {
     else if (type === 'policy') onNavigate('policies');
   }
 
-  const typeLabels = { all: 'All', article: '\uD83D\uDCC4 Articles', contact: '\uD83D\uDC64 Contacts', system: '\uD83D\uDCBB Systems', policy: '\uD83D\uDCCB Policies' };
+  const typeLabels = { all: 'All', article: 'Articles', contact: 'Contacts', system: 'Systems', policy: 'Policies' };
   const typeBadgeColor = { article: 'bg-blue-50 text-blue-600', contact: 'bg-purple-50 text-purple-700', system: 'bg-green-50 text-green-700', policy: 'bg-orange-50 text-orange-700' };
   const typeOrder = ['all', 'article', 'contact', 'system', 'policy'];
 
@@ -269,10 +483,8 @@ function SearchResults({ query, onNavigate }) {
   const filtered = activeType === 'all' ? results : results.filter(function (r) { return (r.result_type || 'article') === activeType; });
 
   return React.createElement('div', { className: 'max-w-4xl mx-auto px-4 py-8 fade-in' },
-    React.createElement('button', { onClick: () => onNavigate('home'), className: 'flex items-center gap-2 text-toledo-blue hover:text-toledo-dark mb-6 text-sm font-medium' },
-      React.createElement(IconArrowLeft), 'Back to Home'),
-    React.createElement('h1', { className: 'text-2xl font-bold text-gray-900 mb-1' }, 'Search Results'),
-    React.createElement('p', { className: 'text-gray-500 mb-5' }, 'Results for "' + query + '"'),
+    React.createElement('h1', { className: 'display-title text-2xl text-toledo-blue mb-1' }, 'Search Results'),
+    React.createElement('p', { className: 'text-toledo-slate mb-5' }, 'Results for "' + query + '"'),
 
     // Type filter chips
     !loading && results.length > 0 && React.createElement('div', { className: 'flex flex-wrap gap-2 mb-6' },
@@ -283,7 +495,7 @@ function SearchResults({ query, onNavigate }) {
           key: type,
           onClick: function () { setActiveType(type); },
           className: 'px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ' +
-            (active ? 'bg-toledo-blue text-white border-toledo-blue' : 'bg-white text-gray-600 border-gray-200 hover:border-toledo-blue/40 hover:text-toledo-blue'),
+            (active ? 'bg-toledo-blue text-white border-toledo-blue' : 'bg-white text-gray-600 border-toledo-border hover:border-toledo-blue/40 hover:text-toledo-blue'),
         }, typeLabels[type] + ' (' + count + ')');
       })
     ),
@@ -299,7 +511,7 @@ function SearchResults({ query, onNavigate }) {
               const snippet = getSnippet(item, query);
               return React.createElement('button', {
                 key: idx, onClick: function () { handleItemClick(item); },
-                className: 'w-full bg-white rounded-xl border border-gray-200 p-5 text-left hover:shadow-md hover:border-toledo-blue/30 transition-all',
+                className: 'w-full bg-white rounded-2xl border border-toledo-border p-5 text-left hover:shadow-md hover:border-toledo-gold transition-all',
               },
                 React.createElement('div', { className: 'flex items-center gap-2 mb-1' },
                   React.createElement('span', { className: 'text-xs px-2 py-0.5 rounded-full font-medium ' + (typeBadgeColor[type] || 'bg-gray-100 text-gray-600') }, typeLabels[type] || type),
@@ -308,8 +520,8 @@ function SearchResults({ query, onNavigate }) {
                 React.createElement('h3', { className: 'font-semibold text-gray-900 mb-1', dangerouslySetInnerHTML: { __html: highlightText(title, query) } }),
                 snippet && React.createElement('p', { className: 'text-sm text-gray-500 line-clamp-2', dangerouslySetInnerHTML: { __html: highlightText(snippet, query) } }),
                 type === 'contact' && React.createElement('div', { className: 'mt-2 flex flex-wrap gap-3 text-xs text-gray-400' },
-                  item.email && React.createElement('span', null, '\u2709\uFE0F ' + item.email),
-                  item.phone && React.createElement('span', null, '\uD83D\uDCDE ' + item.phone)
+                  item.email && React.createElement('span', null, item.email),
+                  item.phone && React.createElement('span', null, item.phone)
                 )
               );
             })
@@ -417,15 +629,13 @@ function SubmitForm({ currentUser, categories, onNavigate }) {
     )
   );
   return React.createElement('div', { className: 'max-w-6xl mx-auto px-4 py-8 fade-in' },
-    React.createElement('button', { onClick: () => onNavigate('home'), className: 'flex items-center gap-2 text-toledo-blue hover:text-toledo-dark mb-6 text-sm font-medium' },
-      React.createElement(IconArrowLeft), 'Back to Home'),
     React.createElement('div', { className: 'flex items-end justify-between gap-4 mb-8' },
       React.createElement('div', null,
         React.createElement('p', { className: 'text-xs uppercase tracking-[0.2em] text-toledo-blue font-semibold mb-2' }, 'Contribution Desk'),
-        React.createElement('h1', { className: 'text-3xl font-bold text-gray-900 mb-2' }, 'Create a ticket from what you found on the site'),
+        React.createElement('h1', { className: 'display-title text-2xl md:text-3xl text-toledo-blue mb-2' }, 'Give Feedback'),
         React.createElement('p', { className: 'text-gray-500 max-w-2xl' }, 'Turn corrections, missing content, access issues, and policy questions into structured tickets. The form suggests an owner using the existing portal knowledge base and contact directory.')
       ),
-      React.createElement('div', { className: 'hidden lg:block bg-toledo-dark text-white rounded-2xl px-5 py-4 min-w-[240px]' },
+      React.createElement('div', { className: 'hidden lg:block bg-toledo-navy navy-texture text-white rounded-2xl px-5 py-4 min-w-[240px]' },
         React.createElement('p', { className: 'text-xs uppercase tracking-wide text-blue-200 mb-1' }, 'Routing mode'),
         React.createElement('p', { className: 'text-lg font-semibold' }, 'Portal-aware assignment'),
         React.createElement('p', { className: 'text-xs text-blue-200 mt-1' }, 'Uses current articles, categories, and contacts to suggest the right queue.')
@@ -442,7 +652,7 @@ function SubmitForm({ currentUser, categories, onNavigate }) {
                 key: type.id,
                 type: 'button',
                 onClick: () => setRequestType(type.id),
-                className: 'text-left rounded-xl border p-4 transition-colors ' + (active ? 'border-toledo-blue bg-toledo-blue/5' : 'border-gray-200 hover:border-toledo-blue/40 hover:bg-gray-50')
+                className: 'text-left rounded-xl border p-4 transition-colors border-l-4 ' + (active ? 'border-toledo-blue border-l-toledo-gold bg-toledo-blue/5' : 'border-gray-200 border-l-gray-200 hover:border-toledo-blue/40 hover:bg-gray-50')
               },
                 React.createElement('p', { className: 'text-sm font-semibold text-gray-900' }, type.label),
                 React.createElement('p', { className: 'text-xs text-gray-500 mt-1' }, type.desc)
@@ -502,7 +712,7 @@ function SubmitForm({ currentUser, categories, onNavigate }) {
               )
             : React.createElement('p', { className: 'text-sm text-gray-500' }, 'Start filling in the ticket and the portal will suggest the best queue and contact.')
         ),
-        React.createElement('div', { className: 'bg-toledo-dark text-white rounded-2xl p-5 shadow-sm' },
+        React.createElement('div', { className: 'bg-toledo-navy navy-texture text-white rounded-2xl p-5 shadow-sm' },
           React.createElement('p', { className: 'text-xs uppercase tracking-wide text-blue-200 mb-2' }, 'How this works'),
           React.createElement('ol', { className: 'space-y-3 text-sm text-blue-50 list-decimal pl-4' },
             React.createElement('li', null, 'Pick the ticket type and describe the gap.'),
@@ -569,10 +779,8 @@ function ModerationDashboard({ currentUser, onNavigate }) {
   }
 
   return React.createElement('div', { className: 'max-w-4xl mx-auto px-4 py-8 fade-in' },
-    React.createElement('button', { onClick: () => onNavigate('home'), className: 'flex items-center gap-2 text-toledo-blue hover:text-toledo-dark mb-6 text-sm font-medium' },
-      React.createElement(IconArrowLeft), 'Back to Home'),
-    React.createElement('h1', { className: 'text-2xl font-bold text-gray-900 mb-1' }, 'Moderation Queue'),
-    React.createElement('p', { className: 'text-gray-500 text-sm mb-5' }, 'Review and manage community submissions'),
+    React.createElement('h1', { className: 'display-title text-2xl text-toledo-blue mb-1' }, 'Moderation Queue'),
+    React.createElement('p', { className: 'text-toledo-slate text-sm mb-5' }, 'Review and manage community submissions'),
     React.createElement('div', { className: 'flex gap-1 mb-4 bg-gray-100 p-1 rounded-lg w-fit' },
       ['submissions', 'tips'].map(t => React.createElement('button', {
         key: t,
@@ -666,7 +874,7 @@ function ModerationDashboard({ currentUser, onNavigate }) {
                 React.createElement('button', {
                   onClick: () => handleAction(item.id, 'approve'),
                   disabled: !!processing,
-                  className: 'flex items-center gap-1 px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-50'
+                  className: 'flex items-center gap-1 px-4 py-2 bg-success text-white rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-50'
                 }, React.createElement(IconCheck), 'Approve & Publish'),
                 React.createElement('button', {
                   onClick: () => handleAction(item.id, 'reject'),

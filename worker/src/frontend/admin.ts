@@ -9,9 +9,9 @@ export function getAdminCode(): string {
   return `
 // ── Admin shared bits ─────────────────────────────────────────────────────────
 function AdminModal({ title, onClose, children, wide }) {
-  return React.createElement('div', { className: 'fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4' },
-    React.createElement('div', { className: 'bg-white rounded-xl shadow-xl w-full ' + (wide ? 'max-w-3xl' : 'max-w-lg') + ' max-h-[90vh] overflow-y-auto' },
-      React.createElement('div', { className: 'flex items-center justify-between px-6 py-4 border-b border-gray-100 sticky top-0 bg-white rounded-t-xl' },
+  return React.createElement('div', { className: 'fixed inset-0 bg-black/40 flex items-center justify-center z-[60] p-4' },
+    React.createElement('div', { className: 'bg-white rounded-2xl border border-toledo-border shadow-xl w-full ' + (wide ? 'max-w-3xl' : 'max-w-lg') + ' max-h-[90vh] overflow-y-auto' },
+      React.createElement('div', { className: 'flex items-center justify-between px-6 py-4 border-b border-gray-100 sticky top-0 bg-white rounded-t-2xl' },
         React.createElement('h3', { className: 'font-semibold text-gray-900' }, title),
         React.createElement('button', { onClick: onClose, className: 'text-gray-400 hover:text-gray-600' }, React.createElement(IconX))
       ),
@@ -28,9 +28,9 @@ function AdminField({ label, children, hint }) {
   );
 }
 
-var adminInputCls = 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-toledo-blue';
-var adminBtnPrimary = 'px-4 py-2 bg-toledo-blue text-white rounded-lg text-sm font-medium hover:bg-toledo-dark disabled:opacity-50';
-var adminBtnSecondary = 'px-4 py-2 border border-gray-200 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-50 disabled:opacity-50';
+var adminInputCls = 'w-full px-3 py-2 border border-toledo-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-toledo-blue';
+var adminBtnPrimary = 'px-4 py-2 bg-toledo-blue text-white rounded-lg text-sm font-medium hover:bg-toledo-navy disabled:opacity-50 transition-colors';
+var adminBtnSecondary = 'px-4 py-2 border border-toledo-border text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-50 disabled:opacity-50 transition-colors';
 
 function statusPill(status) {
   var map = {
@@ -1012,12 +1012,12 @@ function AdminDashboard({ currentUser, onNavigate }) {
   }, []);
 
   var sections = [
-    { id: 'users', label: '👥 Users' },
-    { id: 'tasks', label: '✅ Tasks' },
-    { id: 'approvals', label: '🔏 Approvals' + (pendingCount > 0 ? ' (' + pendingCount + ')' : '') },
-    { id: 'content', label: '📚 Content' },
-    { id: 'email', label: '✉️ Email Log' },
-    { id: 'settings', label: '⚙️ Settings' },
+    { id: 'users', label: 'Users', icon: IconUsers },
+    { id: 'tasks', label: 'Tasks', icon: IconClipboardCheck },
+    { id: 'approvals', label: 'Approvals' + (pendingCount > 0 ? ' (' + pendingCount + ')' : ''), icon: IconCheckCircle },
+    { id: 'content', label: 'Content', icon: IconDocument },
+    { id: 'email', label: 'Email Log', icon: IconSend },
+    { id: 'settings', label: 'Settings', icon: IconServer },
   ];
 
   var body;
@@ -1028,22 +1028,21 @@ function AdminDashboard({ currentUser, onNavigate }) {
   else if (section === 'email') body = React.createElement(AdminEmailLog);
   else body = React.createElement(AdminSettings);
 
-  return React.createElement('div', { className: 'max-w-6xl mx-auto px-4 py-8 fade-in' },
-    React.createElement('button', { onClick: function () { onNavigate('home'); }, className: 'flex items-center gap-2 text-toledo-blue hover:text-toledo-dark mb-6 text-sm font-medium' },
-      React.createElement(IconArrowLeft), 'Back to Home'),
+  return React.createElement('div', { className: 'max-w-7xl mx-auto px-4 py-8 fade-in' },
     React.createElement('div', { className: 'flex items-center gap-3 mb-1' },
-      React.createElement('span', { className: 'text-2xl' }, '🔒'),
-      React.createElement('h1', { className: 'text-2xl font-bold text-gray-900' }, 'Super Admin')
+      React.createElement('span', { className: 'w-9 h-9 rounded-xl bg-toledo-blue text-toledo-gold flex items-center justify-center flex-shrink-0' },
+        React.createElement(IconLock)),
+      React.createElement('h1', { className: 'display-title text-2xl text-toledo-blue' }, 'Admin')
     ),
-    React.createElement('p', { className: 'text-gray-500 text-sm mb-6' }, 'Manage users, tasks, approvals, and every piece of site content.'),
+    React.createElement('p', { className: 'text-toledo-slate text-sm mb-6' }, 'Manage users, tasks, approvals, and every piece of site content.'),
     React.createElement('div', { className: 'flex flex-col md:flex-row gap-6' },
-      React.createElement('nav', { className: 'md:w-48 flex md:flex-col gap-1 flex-wrap' },
+      React.createElement('nav', { className: 'md:w-48 flex md:flex-col gap-1 flex-wrap flex-shrink-0' },
         sections.map(function (s) {
           return React.createElement('button', {
             key: s.id,
             onClick: function () { setSection(s.id); },
-            className: 'px-3 py-2 rounded-lg text-sm font-medium text-left transition-colors ' + (section === s.id ? 'bg-toledo-blue text-white' : 'text-gray-600 hover:bg-gray-100'),
-          }, s.label);
+            className: 'flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-left transition-colors ' + (section === s.id ? 'bg-toledo-blue text-white' : 'text-gray-600 hover:bg-gray-100'),
+          }, React.createElement(s.icon), s.label);
         })
       ),
       React.createElement('div', { className: 'flex-1 min-w-0' }, body)

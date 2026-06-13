@@ -65,19 +65,39 @@ function IconDocument()      { return React.createElement(Icon, { d: 'M9 12h6m-6
 function IconServer()        { return React.createElement(Icon, { d: 'M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2' }); }
 function IconMessageCircle() { return React.createElement(Icon, { d: 'M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z', size: 'w-6 h-6' }); }
 function IconPlay()          { return React.createElement('svg', { className: 'w-4 h-4', fill: 'currentColor', viewBox: '0 0 24 24' }, React.createElement('path', { d: 'M8 5v14l11-7z' })); }
+function IconHome()          { return React.createElement(Icon, { d: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' }); }
+function IconClipboardCheck() { return React.createElement(Icon, { d: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4' }); }
+function IconGrid()          { return React.createElement(Icon, { d: 'M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z' }); }
+function IconLock()          { return React.createElement(Icon, { d: 'M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z' }); }
+function IconBuilding()      { return React.createElement(Icon, { d: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4' }); }
+function IconScale()         { return React.createElement(Icon, { d: 'M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3' }); }
+function IconBriefcase()     { return React.createElement(Icon, { d: 'M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z' }); }
+function IconDesktop()       { return React.createElement(Icon, { d: 'M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z' }); }
+function IconMapPin()        { return React.createElement(Icon, { d: 'M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0zM15 11a3 3 0 11-6 0 3 3 0 016 0z' }); }
+function IconAcademicCap()   { return React.createElement(Icon, { d: 'M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14zm-4 6v-7.5l4-2.222' }); }
+function IconBell()          { return React.createElement(Icon, { d: 'M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9' }); }
+function IconClock()         { return React.createElement(Icon, { d: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' }); }
+function IconMenu()          { return React.createElement(Icon, { d: 'M4 6h16M4 12h16M4 18h16' }); }
 
 // ── Constants ─────────────────────────────────────────────────────────────────
-const CATEGORY_ICONS = {
-  'Department Overview': '🏛️',
-  'NCAA Compliance': '📋',
-  'Title IX & Gender Equity': '⚖️',
-  'NIL (Name, Image & Likeness)': '💼',
-  'HR & Benefits': '👤',
-  'IT & Campus Access': '💻',
-  'Parking & Transportation': '🅿️',
-  'Student-Athlete Development': '🎓',
-  'Relocation & Toledo Life': '🏠',
+const CATEGORY_ICON_COMPONENTS = {
+  'Department Overview': IconBuilding,
+  'NCAA Compliance': IconClipboardCheck,
+  'Title IX & Gender Equity': IconScale,
+  'NIL (Name, Image & Likeness)': IconBriefcase,
+  'HR & Benefits': IconUsers,
+  'IT & Campus Access': IconDesktop,
+  'Parking & Transportation': IconMapPin,
+  'Student-Athlete Development': IconAcademicCap,
+  'Relocation & Toledo Life': IconHome,
 };
+
+function CategoryIcon({ name }) {
+  var Comp = CATEGORY_ICON_COMPONENTS[name] || IconDocument;
+  return React.createElement('span', { className: 'w-10 h-10 rounded-xl bg-toledo-blue/8 text-toledo-blue flex items-center justify-center flex-shrink-0' },
+    React.createElement(Comp)
+  );
+}
 
 const ROLE_ARCHETYPES = [
   { id: 'Coach',            label: 'Coach / Sport Staff',   desc: 'Coaches and sport-specific athletic staff' },
@@ -88,96 +108,183 @@ const ROLE_ARCHETYPES = [
   { id: 'Operations Staff', label: 'Operations Staff',       desc: 'Facilities, events, and operations staff' },
 ];
 
-// ── Header ────────────────────────────────────────────────────────────────────
-function Header({ currentUser, onNavigate, currentView, onSignOut, onStartTour }) {
-  const [menuOpen, setMenuOpen] = useState(false);
-  const isMod = currentUser && (currentUser.role === 'moderator' || currentUser.role === 'admin');
-  const isSuperAdmin = currentUser && currentUser.role === 'admin';
+// ── App Shell (SidebarNav + TopBar) ───────────────────────────────────────────
+var VIEW_TO_NAV = {
+  home: 'home', search: 'home',
+  guide: 'guide', checklist: 'guide',
+  categories: 'categories', category: 'categories', article: 'categories',
+  resources: 'resources', contacts: 'contacts', policies: 'policies',
+  submit: 'submit', moderate: 'moderate', admin: 'admin',
+};
 
-  const navItems = [
-    { id: 'home',       label: 'Home' },
-    { id: 'guide',      label: 'My Onboarding' },
-    { id: 'categories', label: 'Browse' },
-    { id: 'resources',  label: 'Resources' },
-    { id: 'contacts',   label: 'Contacts' },
-    { id: 'policies',   label: 'Policies' },
-    { id: 'submit',     label: 'Contribute' },
-    ...(isMod ? [{ id: 'moderate', label: 'Moderate' }] : []),
-    ...(isSuperAdmin ? [{ id: 'admin', label: '🔒 Admin' }] : []),
+function SidebarNav({ currentUser, currentView, onNavigate, onItemClick }) {
+  var isMod = currentUser && (currentUser.role === 'moderator' || currentUser.role === 'admin');
+  var isAdmin = currentUser && currentUser.role === 'admin';
+  var activeNav = VIEW_TO_NAV[currentView] || currentView;
+
+  var mainItems = [
+    { id: 'home',       label: 'Dashboard',             icon: IconHome },
+    { id: 'guide',      label: 'My Onboarding',         icon: IconClipboardCheck, tour: 'guide' },
+    { id: 'policies',   label: 'Policies & Compliance', icon: IconDocument },
+    { id: 'resources',  label: 'Systems & Tools',       icon: IconServer },
+    { id: 'contacts',   label: 'People & Contacts',     icon: IconUsers, tour: 'contacts' },
+    { id: 'categories', label: 'Browse Topics',         icon: IconGrid, tour: 'categories' },
+    { id: 'submit',     label: 'Give Feedback',         icon: IconLightbulb, tour: 'submit' },
   ];
+  var manageItems = [];
+  if (isMod) manageItems.push({ id: 'moderate', label: 'Moderate', icon: IconFlag });
+  if (isAdmin) manageItems.push({ id: 'admin', label: 'Admin', icon: IconLock });
 
-  const navBtn = (item) => React.createElement('button', {
-    key: item.id,
-    'data-tour': item.id,
-    onClick: () => { onNavigate(item.id); setMenuOpen(false); },
-    className: 'px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ' +
-      (currentView === item.id ? 'bg-white/20 text-white' : 'text-blue-200 hover:bg-white/10 hover:text-white'),
-  }, item.label);
+  function go(viewId) {
+    onNavigate(viewId);
+    if (onItemClick) onItemClick();
+  }
 
-  return React.createElement('header', { className: 'bg-toledo-blue text-white shadow-lg sticky top-0 z-50' },
-    React.createElement('div', { className: 'max-w-7xl mx-auto px-4' },
-      React.createElement('div', { className: 'flex items-center justify-between h-14' },
-        // Logo
-        React.createElement('div', { className: 'flex items-center gap-3 cursor-pointer flex-shrink-0', onClick: () => onNavigate('home') },
-          React.createElement('img', { src: '/branding/Primary_Logo_for_Dark_Background.png', alt: 'Toledo Athletics', className: 'h-9 w-auto' }),
-          React.createElement('div', { className: 'hidden sm:block' },
-            React.createElement('p', { className: 'text-sm font-bold leading-tight' }, 'Toledo Athletics'),
-            React.createElement('p', { className: 'text-xs text-blue-200 leading-tight' }, 'Onboarding Portal'),
-          )
-        ),
-        // Desktop nav
-        React.createElement('nav', { className: 'hidden lg:flex items-center gap-0.5 flex-1 justify-center' },
-          navItems.map(navBtn)
-        ),
-        // User avatar + mobile toggle
-        React.createElement('div', { className: 'flex items-center gap-2' },
-          currentUser && React.createElement('div', { className: 'hidden sm:flex items-center gap-2' },
-            React.createElement('div', { className: 'w-7 h-7 bg-toledo-gold text-toledo-blue rounded-full flex items-center justify-center text-xs font-bold' },
-              currentUser.email[0].toUpperCase()
-            ),
-            React.createElement('span', { className: 'text-xs text-blue-200 hidden md:block max-w-[130px] truncate' }, currentUser.name || currentUser.email)
-          ),
-          currentUser && onSignOut && React.createElement('button', {
-            onClick: onSignOut,
-            className: 'hidden sm:flex items-center gap-1 text-xs text-blue-200 hover:text-white border border-blue-400/30 hover:border-white/40 px-2.5 py-1 rounded-lg transition-colors flex-shrink-0',
-          }, '↩ Sign out'),
-          onStartTour && React.createElement('button', {
-            onClick: onStartTour,
-            className: 'hidden sm:flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold text-blue-200 hover:text-white border border-blue-400/30 hover:border-white/40 transition-colors flex-shrink-0',
-            title: 'Quick Tour',
-          }, '?'),
-          React.createElement('button', {
-            className: 'lg:hidden p-1.5 rounded-lg text-blue-200 hover:bg-white/10',
-            onClick: () => setMenuOpen(m => !m),
-          },
-            menuOpen
-              ? React.createElement(IconX)
-              : React.createElement(Icon, { d: 'M4 6h16M4 12h16M4 18h16', size: 'w-5 h-5' })
-          )
-        )
+  function navBtn(item) {
+    var active = activeNav === item.id;
+    return React.createElement('button', {
+      key: item.id,
+      'data-tour': item.tour || undefined,
+      onClick: function () { go(item.id); },
+      'aria-current': active ? 'page' : undefined,
+      className: 'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors text-left ' +
+        (active ? 'bg-toledo-gold text-toledo-blue font-semibold shadow-sm' : 'font-medium text-blue-200 hover:bg-white/10 hover:text-white'),
+    },
+      React.createElement('span', { className: 'flex-shrink-0' }, React.createElement(item.icon)),
+      React.createElement('span', { className: 'truncate' }, item.label)
+    );
+  }
+
+  return React.createElement('div', { className: 'flex flex-col h-full bg-gradient-to-b from-toledo-blue to-toledo-navy navy-texture text-white' },
+    React.createElement('button', {
+      onClick: function () { go('home'); },
+      className: 'flex items-center gap-3 px-4 pt-5 pb-4 text-left',
+    },
+      React.createElement('img', { src: '/branding/Primary_Logo_for_Dark_Background.png', alt: 'Toledo Athletics', className: 'h-10 w-auto flex-shrink-0' }),
+      React.createElement('div', { className: 'min-w-0' },
+        React.createElement('p', { className: 'text-sm font-bold leading-tight' }, 'Toledo Athletics'),
+        React.createElement('p', { className: 'text-[10px] uppercase tracking-[0.18em] text-toledo-gold leading-tight mt-0.5' }, 'Onboarding Portal')
+      )
+    ),
+    React.createElement('p', { className: 'px-4 mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-blue-300/70' }, 'Workspace'),
+    React.createElement('nav', { className: 'flex-1 px-3 space-y-1 overflow-y-auto pb-2' },
+      mainItems.map(navBtn),
+      manageItems.length > 0 && React.createElement('div', { className: 'pt-3 mt-3 border-t border-white/10' },
+        React.createElement('p', { className: 'px-1 mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-blue-300/70' }, 'Manage'),
+        manageItems.map(navBtn)
+      )
+    ),
+    React.createElement('div', { className: 'px-3 pb-4 pt-3 border-t border-white/10' },
+      React.createElement('button', {
+        onClick: function () {
+          try { window.dispatchEvent(new CustomEvent('toledo:open-feedback')); } catch (e) {}
+          if (onItemClick) onItemClick();
+        },
+        className: 'w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium text-blue-200 hover:bg-white/10 hover:text-white transition-colors text-left',
+      },
+        React.createElement(IconFlag), 'Report an Issue'
       ),
-      // Mobile menu
-      menuOpen && React.createElement('div', { className: 'lg:hidden border-t border-white/20 py-2 pb-3' },
-        React.createElement('div', { className: 'grid grid-cols-3 gap-1 mb-2' },
-          navItems.map(navBtn)
-        ),
-        React.createElement('div', { className: 'flex gap-2 mt-1' },
-          onSignOut && React.createElement('button', {
-            onClick: function () { setMenuOpen(false); onSignOut(); },
-            className: 'flex-1 py-1.5 text-xs text-red-300 hover:text-white border border-red-400/30 hover:border-red-300/60 rounded-lg transition-colors',
-          }, '↩ Sign Out'),
-          onStartTour && React.createElement('button', {
-            onClick: function () { setMenuOpen(false); onStartTour(); },
-            className: 'flex-1 py-1.5 text-xs text-blue-200 hover:text-white border border-blue-400/30 hover:border-white/40 rounded-lg transition-colors',
-          }, '? Quick Tour')
-        )
+      React.createElement('div', { className: 'mt-3 rounded-xl border border-white/10 bg-white/5 gold-trail px-3 py-3' },
+        React.createElement('p', { className: 'text-[10px] uppercase tracking-[0.25em] text-blue-300' }, 'For'),
+        React.createElement('p', { className: 'display-title text-xl text-toledo-gold leading-none mt-0.5' }, 'Toledo'),
+        React.createElement('p', { className: 'text-[10px] text-blue-300 mt-1.5' }, '#TeamToledo')
       )
     )
   );
 }
 
+function TopBar({ currentUser, onNavigate, onSearch, onSignOut, onStartTour, onOpenDrawer, drawerOpen }) {
+  return React.createElement('header', { className: 'sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-toledo-border' },
+    React.createElement('div', { className: 'flex items-center gap-3 h-14 px-4' },
+      React.createElement('button', {
+        onClick: onOpenDrawer,
+        'aria-expanded': drawerOpen ? 'true' : 'false',
+        'aria-label': 'Open navigation menu',
+        className: 'lg:hidden p-2 -ml-1 rounded-lg text-toledo-blue hover:bg-gray-100 flex-shrink-0',
+      }, React.createElement(IconMenu)),
+      React.createElement('div', { className: 'flex-1 max-w-xl' },
+        React.createElement(SearchBar, { onSearch: onSearch, onNavigate: onNavigate, compact: true })
+      ),
+      React.createElement('div', { className: 'flex items-center gap-2 ml-auto flex-shrink-0' },
+        onStartTour && React.createElement('button', {
+          onClick: onStartTour,
+          className: 'hidden sm:flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold text-toledo-slate hover:text-toledo-blue border border-toledo-border hover:border-toledo-blue/40 transition-colors',
+          title: 'Quick Tour',
+        }, '?'),
+        currentUser && React.createElement('div', { className: 'flex items-center gap-2' },
+          React.createElement('div', { className: 'w-8 h-8 bg-toledo-gold text-toledo-blue rounded-full flex items-center justify-center text-xs font-bold' },
+            currentUser.email[0].toUpperCase()
+          ),
+          React.createElement('span', { className: 'text-xs text-gray-700 font-medium hidden md:block max-w-[140px] truncate' }, currentUser.name || currentUser.email)
+        ),
+        currentUser && onSignOut && React.createElement('button', {
+          onClick: onSignOut,
+          className: 'hidden sm:block text-xs font-medium text-toledo-slate hover:text-toledo-blue border border-toledo-border hover:border-toledo-blue/40 px-2.5 py-1.5 rounded-lg transition-colors',
+        }, 'Sign out')
+      )
+    )
+  );
+}
+
+function AppShell({ currentUser, currentView, onNavigate, onSearch, onSignOut, onStartTour, children }) {
+  var _drawerState = useState(false);
+  var drawerOpen = _drawerState[0];
+  var setDrawerOpen = _drawerState[1];
+  var drawerRef = useRef(null);
+
+  useEffect(function () {
+    if (!drawerOpen) return;
+    function onKey(e) { if (e.key === 'Escape') setDrawerOpen(false); }
+    document.addEventListener('keydown', onKey);
+    document.body.style.overflow = 'hidden';
+    // Move focus into the drawer for keyboard users.
+    setTimeout(function () {
+      if (drawerRef.current) {
+        var first = drawerRef.current.querySelector('button');
+        if (first) first.focus();
+      }
+    }, 0);
+    return function () {
+      document.removeEventListener('keydown', onKey);
+      document.body.style.overflow = '';
+    };
+  }, [drawerOpen]);
+
+  function closeDrawer() { setDrawerOpen(false); }
+
+  return React.createElement('div', { className: 'min-h-screen bg-[#F4F7FB]' },
+    React.createElement('aside', { className: 'hidden lg:block fixed inset-y-0 left-0 w-64 z-30' },
+      React.createElement(SidebarNav, { currentUser: currentUser, currentView: currentView, onNavigate: onNavigate })
+    ),
+    drawerOpen && React.createElement('div', { className: 'lg:hidden' },
+      React.createElement('div', { className: 'fixed inset-0 bg-black/50 z-40', onClick: closeDrawer }),
+      React.createElement('aside', {
+        ref: drawerRef,
+        role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Navigation',
+        className: 'fixed inset-y-0 left-0 w-72 z-50 drawer-in shadow-2xl',
+      },
+        React.createElement('button', {
+          onClick: closeDrawer,
+          'aria-label': 'Close navigation menu',
+          className: 'absolute top-4 right-3 z-10 p-1.5 rounded-lg text-blue-200 hover:bg-white/10 hover:text-white',
+        }, React.createElement(IconX)),
+        React.createElement(SidebarNav, { currentUser: currentUser, currentView: currentView, onNavigate: onNavigate, onItemClick: closeDrawer })
+      )
+    ),
+    React.createElement('div', { className: 'lg:pl-64 flex flex-col min-h-screen' },
+      React.createElement(TopBar, {
+        currentUser: currentUser, onNavigate: onNavigate, onSearch: onSearch,
+        onSignOut: onSignOut, onStartTour: onStartTour,
+        onOpenDrawer: function () { setDrawerOpen(true); }, drawerOpen: drawerOpen,
+      }),
+      React.createElement('main', { className: 'flex-1 pb-24' }, children),
+      React.createElement(Footer, { onNavigate: onNavigate })
+    )
+  );
+}
+
 // ── SearchBar ─────────────────────────────────────────────────────────────────
-function SearchBar({ onSearch, onNavigate }) {
+function SearchBar({ onSearch, onNavigate, compact }) {
   const [q, setQ] = useState('');
   const [suggestions, setSuggestions] = useState([]);
   const [showDrop, setShowDrop] = useState(false);
@@ -229,7 +336,6 @@ function SearchBar({ onSearch, onNavigate }) {
     }
   }
 
-  const typeIcon = { article: '📄', contact: '👤', system: '💻', policy: '📋' };
   const typeColor = { article: 'bg-blue-50 text-blue-600', contact: 'bg-purple-50 text-purple-600', system: 'bg-green-50 text-green-600', policy: 'bg-orange-50 text-orange-600' };
 
   return React.createElement('div', { className: 'relative', ref: wrapRef },
@@ -238,8 +344,9 @@ function SearchBar({ onSearch, onNavigate }) {
       React.createElement('input', {
         type: 'text', value: q, onChange: handleChange,
         onFocus: function () { if (suggestions.length > 0) setShowDrop(true); },
-        placeholder: 'Search by topic, system, policy, or person...',
-        className: 'w-full pl-12 pr-4 py-3 bg-white border border-gray-200 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-toledo-blue shadow-sm text-sm ' +
+        placeholder: compact ? 'Search systems, policies, contacts...' : 'Search by topic, system, policy, or person...',
+        className: 'w-full pl-12 pr-4 ' + (compact ? 'py-2 bg-gray-50 focus:bg-white border-toledo-border' : 'py-3 bg-white border-gray-200 shadow-sm') +
+          ' border text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-toledo-blue text-sm ' +
           (showDrop && suggestions.length > 0 ? 'rounded-t-xl rounded-b-none' : 'rounded-xl'),
       })
     ),
@@ -256,7 +363,6 @@ function SearchBar({ onSearch, onNavigate }) {
           onClick: function () { handleSuggestionClick(item); },
           className: 'w-full px-4 py-3 text-left hover:bg-gray-50 flex items-start gap-3 border-t border-gray-100 transition-colors',
         },
-          React.createElement('span', { className: 'flex-shrink-0 text-base mt-0.5' }, typeIcon[type] || '📄'),
           React.createElement('div', { className: 'flex-1 min-w-0' },
             React.createElement('p', { className: 'text-sm font-medium text-gray-900 truncate' }, title),
             meta && React.createElement('p', { className: 'text-[11px] uppercase tracking-wide text-gray-400 mt-0.5 truncate' }, meta),
@@ -275,14 +381,26 @@ function SearchBar({ onSearch, onNavigate }) {
 
 // ── Auth screens ──────────────────────────────────────────────────────────────
 function AuthShell({ children, subtitle }) {
-  return React.createElement('div', { className: 'min-h-screen bg-gradient-to-br from-toledo-blue via-toledo-dark to-toledo-blue flex items-center justify-center px-4' },
-    React.createElement('div', { className: 'bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md fade-in' },
-      React.createElement('div', { className: 'text-center mb-8' },
-        React.createElement('img', { src: '/branding/Primary_Logo_for_Light_Background.png', alt: 'Toledo Athletics', className: 'h-16 w-auto mx-auto mb-4' }),
-        React.createElement('h1', { className: 'text-2xl font-bold text-gray-900' }, 'Toledo Athletics'),
-        React.createElement('p', { className: 'text-gray-500 mt-1' }, subtitle || 'Onboarding Portal')
-      ),
-      children
+  return React.createElement('div', { className: 'min-h-screen flex bg-toledo-navy' },
+    // Brand panel with the Savage Arena photo (desktop only)
+    React.createElement('div', { className: 'hidden lg:block relative w-1/2 overflow-hidden' },
+      React.createElement('img', { src: '/branding/savage-arena.jpg', alt: '', className: 'absolute inset-0 w-full h-full object-cover' }),
+      React.createElement('div', { className: 'absolute inset-0 bg-gradient-to-t from-toledo-navy via-toledo-blue/75 to-toledo-blue/35' }),
+      React.createElement('div', { className: 'relative z-10 flex flex-col justify-end h-full p-12 text-white' },
+        React.createElement('span', { className: 'inline-block w-fit px-3 py-1 bg-toledo-gold text-toledo-blue text-xs font-bold uppercase tracking-[0.2em] rounded-full mb-4' }, 'For Toledo'),
+        React.createElement('h2', { className: 'display-title text-5xl leading-tight' }, 'Built for Rockets'),
+        React.createElement('p', { className: 'text-blue-200 mt-3 max-w-md text-sm leading-relaxed' }, 'Your first steps, key systems, and people — all in one place.')
+      )
+    ),
+    React.createElement('div', { className: 'flex-1 flex items-center justify-center px-4 py-10 bg-gradient-to-br from-toledo-blue via-toledo-navy to-toledo-blue navy-texture' },
+      React.createElement('div', { className: 'bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md fade-in' },
+        React.createElement('div', { className: 'text-center mb-8' },
+          React.createElement('img', { src: '/branding/Primary_Logo_for_Light_Background.png', alt: 'Toledo Athletics', className: 'h-16 w-auto mx-auto mb-4' }),
+          React.createElement('h1', { className: 'display-title text-2xl text-toledo-blue' }, 'Toledo Athletics'),
+          React.createElement('p', { className: 'text-toledo-slate mt-1 text-sm' }, subtitle || 'Onboarding Portal')
+        ),
+        children
+      )
     )
   );
 }
@@ -333,7 +451,7 @@ function LoginScreen({ onLogin }) {
             React.createElement('p', { className: 'text-xs text-gray-400' }, 'Nothing arriving? Ask an administrator to re-invite you instead.'),
             React.createElement('button', {
               onClick: function () { setView('login'); setError(''); },
-              className: 'w-full py-3 bg-toledo-blue text-white rounded-lg hover:bg-toledo-dark transition-colors font-medium',
+              className: 'w-full py-3 bg-toledo-gold text-toledo-blue rounded-lg hover:bg-yellow-300 transition-colors font-semibold',
             }, 'Back to Sign In')
           )
         : React.createElement('form', { onSubmit: handleForgot, className: 'space-y-4' },
@@ -341,7 +459,7 @@ function LoginScreen({ onLogin }) {
             error && React.createElement('p', { className: 'text-red-500 text-sm' }, error),
             React.createElement('button', {
               type: 'submit', disabled: loading,
-              className: 'w-full py-3 bg-toledo-blue text-white rounded-lg hover:bg-toledo-dark transition-colors font-medium disabled:opacity-50',
+              className: 'w-full py-3 bg-toledo-gold text-toledo-blue rounded-lg hover:bg-yellow-300 transition-colors font-semibold disabled:opacity-50',
             }, loading ? 'Sending...' : 'Email Me a Reset Link'),
             React.createElement('button', {
               type: 'button',
@@ -359,7 +477,7 @@ function LoginScreen({ onLogin }) {
       error && React.createElement('p', { className: 'text-red-500 text-sm' }, error),
       React.createElement('button', {
         type: 'submit', disabled: loading,
-        className: 'w-full py-3 bg-toledo-blue text-white rounded-lg hover:bg-toledo-dark transition-colors font-medium disabled:opacity-50',
+        className: 'w-full py-3 bg-toledo-gold text-toledo-blue rounded-lg hover:bg-yellow-300 transition-colors font-semibold disabled:opacity-50',
       }, loading ? 'Signing in...' : 'Sign In'),
       React.createElement('button', {
         type: 'button',
@@ -410,7 +528,7 @@ function ForceResetScreen({ currentUser, onComplete, onSignOut }) {
       error && React.createElement('p', { className: 'text-red-500 text-sm' }, error),
       React.createElement('button', {
         type: 'submit', disabled: loading,
-        className: 'w-full py-3 bg-toledo-blue text-white rounded-lg hover:bg-toledo-dark transition-colors font-medium disabled:opacity-50',
+        className: 'w-full py-3 bg-toledo-gold text-toledo-blue rounded-lg hover:bg-yellow-300 transition-colors font-semibold disabled:opacity-50',
       }, loading ? 'Saving...' : 'Set Password & Continue'),
       onSignOut && React.createElement('button', {
         type: 'button', onClick: onSignOut,
@@ -449,7 +567,7 @@ function ResetWithTokenScreen({ token }) {
           React.createElement('p', { className: 'text-sm text-gray-600' }, 'Your password has been updated. Sign in with your new password.'),
           React.createElement('button', {
             onClick: function () { window.location.href = '/'; },
-            className: 'w-full py-3 bg-toledo-blue text-white rounded-lg hover:bg-toledo-dark transition-colors font-medium',
+            className: 'w-full py-3 bg-toledo-gold text-toledo-blue rounded-lg hover:bg-yellow-300 transition-colors font-semibold',
           }, 'Go to Sign In')
         )
       : React.createElement('form', { onSubmit: handleSubmit, className: 'space-y-4' },
@@ -458,7 +576,7 @@ function ResetWithTokenScreen({ token }) {
           error && React.createElement('p', { className: 'text-red-500 text-sm' }, error),
           React.createElement('button', {
             type: 'submit', disabled: loading,
-            className: 'w-full py-3 bg-toledo-blue text-white rounded-lg hover:bg-toledo-dark transition-colors font-medium disabled:opacity-50',
+            className: 'w-full py-3 bg-toledo-gold text-toledo-blue rounded-lg hover:bg-yellow-300 transition-colors font-semibold disabled:opacity-50',
           }, loading ? 'Saving...' : 'Reset Password'),
           React.createElement('button', {
             type: 'button', onClick: function () { window.location.href = '/'; },
