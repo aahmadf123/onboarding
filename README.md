@@ -27,6 +27,8 @@ npx wrangler d1 execute toledo-onboarding-db-prod --local --file=../db/seed.sql
 npx wrangler d1 execute toledo-onboarding-db-prod --local --file=../db/seed-v2.sql
 npx wrangler d1 execute toledo-onboarding-db-prod --local --file=../db/migrations/0003_auth_tasks_email.sql
 npx wrangler d1 execute toledo-onboarding-db-prod --local --file=../db/seed-v3.sql
+npx wrangler d1 execute toledo-onboarding-db-prod --local --file=../db/migrations/2026-06-12-submissions-ticket-upgrade.sql
+npx wrangler d1 execute toledo-onboarding-db-prod --local --file=../db/migrations/2026-06-14-directory-refresh.sql
 
 npx wrangler dev
 # Then bootstrap the first admin (passcode is in the response):
@@ -53,6 +55,7 @@ npx wrangler secret put BOOTSTRAP_TOKEN     # e.g. openssl rand -hex 32
 # Migrate the production DB first (additive; safe for the running worker)
 npx wrangler d1 execute toledo-onboarding-db-prod --remote --file=../db/migrations/0003_auth_tasks_email.sql
 npx wrangler d1 execute toledo-onboarding-db-prod --remote --file=../db/seed-v3.sql
+npx wrangler d1 execute toledo-onboarding-db-prod --remote --file=../db/migrations/2026-06-14-directory-refresh.sql
 npx wrangler d1 execute toledo-onboarding-db-prod --remote \
   --command "UPDATE AppConfig SET value='https://<your-worker-url>' WHERE key='app_base_url'"
 
@@ -78,6 +81,8 @@ npx wrangler d1 execute toledo-onboarding-db-prod --file=../db/seed.sql
 npx wrangler d1 execute toledo-onboarding-db-prod --file=../db/seed-v2.sql
 npx wrangler d1 execute toledo-onboarding-db-prod --file=../db/migrations/0003_auth_tasks_email.sql
 npx wrangler d1 execute toledo-onboarding-db-prod --file=../db/seed-v3.sql
+npx wrangler d1 execute toledo-onboarding-db-prod --file=../db/migrations/2026-06-12-submissions-ticket-upgrade.sql
+npx wrangler d1 execute toledo-onboarding-db-prod --file=../db/migrations/2026-06-14-directory-refresh.sql
 ```
 
 ## Maintenance
