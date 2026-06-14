@@ -819,7 +819,7 @@ function ContentFormModal({ entity, row, categories, onClose, onSaved }) {
           preview && React.createElement('div', {
             className: 'prose prose-sm max-w-none border border-gray-100 rounded-lg p-3 overflow-y-auto bg-gray-50',
             style: { maxHeight: '340px' },
-            dangerouslySetInnerHTML: { __html: typeof marked !== 'undefined' ? marked.parse(renderMapDirectives(form[f.key] || '')) : '' },
+            dangerouslySetInnerHTML: { __html: sanitizeHtml(typeof marked !== 'undefined' ? marked.parse(renderMapDirectives(form[f.key] || '')) : '') },
           })
         ),
         React.createElement('p', { className: 'text-xs text-gray-400 mt-1' }, 'Tip: a line like "::map <google-maps-embed-url>" becomes an embedded map on the article page.')

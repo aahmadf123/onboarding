@@ -400,7 +400,7 @@ function ArticleView({ articleId, onNavigate }) {
     // Fallback: preserve line breaks
     return text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\\n/g,'<br>');
   }
-  return React.createElement('div', { className: 'max-w-4xl mx-auto px-4 py-8 fade-in' },
+  return React.createElement('div', { className: 'max-w-3xl mx-auto px-4 py-8 fade-in' },
     React.createElement('button', { onClick: () => article.category_id ? onNavigate('category', article.category_id) : onNavigate('home'), className: 'flex items-center gap-2 text-toledo-blue hover:text-toledo-navy mb-6 text-sm font-medium' },
       React.createElement(IconArrowLeft), 'Back'),
     React.createElement('div', { className: 'bg-white rounded-2xl border border-toledo-border shadow-sm' },
@@ -409,7 +409,7 @@ function ArticleView({ articleId, onNavigate }) {
         React.createElement('h1', { className: 'text-2xl md:text-3xl font-bold text-toledo-blue' }, article.title),
         React.createElement('p', { className: 'text-sm text-gray-400 mt-2' }, 'Last updated: ' + new Date(article.last_updated).toLocaleDateString())
       ),
-      React.createElement('div', { className: 'p-6 md:p-8 prose max-w-none', dangerouslySetInnerHTML: { __html: renderMarkdown(article.current_content) } })
+      React.createElement('div', { className: 'p-6 md:p-8 prose max-w-none', dangerouslySetInnerHTML: { __html: sanitizeHtml(renderMarkdown(article.current_content)) } })
     )
   );
 }

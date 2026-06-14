@@ -51,7 +51,9 @@ Only `https://www.google.com/maps…` / `maps.google.com` URLs render (anything 
 ## Database files (bootstrap / bulk changes only)
 
 Apply order for a fresh database:
-1. `db/schema.sql` → 2. `db/schema-v2.sql` → 3. `db/seed.sql` → 4. `db/seed-v2.sql` → 5. `db/migrations/0003_auth_tasks_email.sql` → 6. `db/seed-v3.sql`
+1. `db/schema.sql` → 2. `db/schema-v2.sql` → 3. `db/seed.sql` → 4. `db/seed-v2.sql` → 5. `db/migrations/0003_auth_tasks_email.sql` → 6. `db/seed-v3.sql` → 7. `db/migrations/2026-06-14-directory-refresh.sql` → 8. `db/migrations/2026-06-14-content-expansion.sql`
+
+> **Do not run `db/migrations/2026-06-12-submissions-ticket-upgrade.sql` on a fresh database** — `schema.sql` already creates the `Submissions` ticketing columns, so this migration errors with "duplicate column". It exists only to upgrade older databases created before those columns were added to `schema.sql`.
 
 ```bash
 npx wrangler d1 execute toledo-onboarding-db-prod --remote --file=../db/<file>
@@ -59,6 +61,8 @@ npx wrangler d1 execute toledo-onboarding-db-prod --remote --file=../db/<file>
 
 - `db/migrations/0003_auth_tasks_email.sql` — auth columns, Sessions, Tasks (the 16 baseline checklist tasks), UserTasks, EmailLog, AppConfig defaults. Additive and idempotent.
 - `db/seed-v3.sql` — the June 2026 researched content refresh (Vector LMS, Rocket Card offices + maps, JobTrax verification, verified benefits/retirement/parking, CBAs, IT contacts incl. the "Athletics IT — JJ" placeholder). Idempotent; safe to re-run.
+- `db/migrations/2026-06-14-directory-refresh.sql` — leadership/org-chart correction from the current staff directory: **Tom Moreland** is now VP & Director of Athletics (replaced Bryan Blair), Nicole Harris disabled (no longer in the directory), **Lauren Best-Hovermale** added (Assoc AD Compliance), **Kim Nigem** added (Faculty Athletic Rep), and a **Title IX** key contact (Michelle McDevitt). Also refreshes the Executive Leadership article and AI index. Idempotent. NOTE: several per-person emails are set by the `firstname.lastname@utoledo.edu` convention and should be verified in Admin → Content.
+- `db/migrations/2026-06-14-content-expansion.sql` — eight new researched articles (Travel & Expense Reimbursement, Title IX reporting, Emergency & Campus Safety, IT Security Essentials, Payroll details, Key Dates & Academic Calendar, Athletic Scholarships overview, Role-Based Compliance & Recruiting Calendar) plus AI-index entries. Idempotent. Calendar dates and the travel mileage rate change over time — verify against the linked official pages periodically.
 
 ⚠️ Re-running `seed.sql`/`seed-v2.sql` on a live database will overwrite content that admins have since edited in the CMS (and `seed-v2.sql` deletes/reinserts several tables). Prefer the CMS for anything incremental.
 
@@ -82,6 +86,13 @@ Admin → Users → Invite User (passcode appears once — share it if email is 
 
 ### An article is out of date
 Admin → Content → Articles → Edit (live markdown preview included). The AI chat index updates automatically on save.
+
+## Security
+
+- **Markdown is sanitized.** All article/AI markdown is run through DOMPurify (`sanitizeHtml` in `worker/src/frontend/shared.ts`) before rendering, so admin- or AI-authored content can't inject scripts. The `::map` Google-Maps iframe is the only embed allowed (enforced by a DOMPurify hook).
+- **Content-Security-Policy + security headers** are set for every response in `worker/src/app.ts` (`hono/secure-headers`). Frames are limited to Google Maps; `object-src`/`base-uri`/`frame-ancestors` are locked down. CDN hosts (cdnjs, cdn.tailwindcss.com, cdn.jsdelivr.net) are allow‑listed because the SPA has no build step yet.
+- **CORS** is restricted to the worker's own origin (same-origin SPA).
+- **Rate limiting** is global when a `RATE_LIMIT` KV namespace is bound (see `worker/wrangler.jsonc`); without it, limiting falls back to a per-isolate in-memory window. To enable globally: `npx wrangler kv namespace create RATE_LIMIT`, then uncomment the `kv_namespaces` block and paste the id.
 
 ## Notes
 - The AI chat widget uses Cloudflare Workers AI (native binding — no API key required). Its knowledge comes from `SiteContentIndex`, which is refreshed automatically when articles are edited in the CMS.

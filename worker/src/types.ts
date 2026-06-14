@@ -9,6 +9,10 @@ export type Bindings = {
   // Secrets (wrangler secret put …) — never committed
   RESEND_API_KEY: string;
   BOOTSTRAP_TOKEN: string;
+  // Optional KV namespace for global (cross-isolate) rate limiting.
+  // When bound in wrangler.jsonc the rate limiter uses it; otherwise it
+  // falls back to a per-isolate in-memory window.
+  RATE_LIMIT?: KVNamespace;
 };
 
 // Hono environment: bindings + per-request variables set by auth middleware

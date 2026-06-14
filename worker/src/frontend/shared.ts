@@ -4,6 +4,44 @@ export function getSharedCode(): string {
   return `
 const { useState, useEffect, useCallback, useRef } = React;
 
+// ── HTML sanitization ───────────────────────────────────────────────────────
+// All markdown rendered via marked.parse() is run through DOMPurify before it
+// is injected with dangerouslySetInnerHTML. We allow the Google-Maps <iframe>
+// used by the ::map directive but enforce that its src is a Google Maps URL,
+// so admin-authored (or AI-generated) content cannot inject arbitrary frames
+// or scripts.
+(function setupSanitizer() {
+  if (typeof DOMPurify === 'undefined') return;
+  DOMPurify.addHook('afterSanitizeAttributes', function (node) {
+    if (node.tagName === 'IFRAME') {
+      // Parse the URL and match the host exactly so look-alike domains like
+      // maps.google.com.evil.example cannot pass a prefix check.
+      var ok = false;
+      try {
+        var u = new URL(node.getAttribute('src') || '');
+        ok = u.protocol === 'https:' && (
+          u.hostname === 'maps.google.com' ||
+          (u.hostname === 'www.google.com' && (u.pathname === '/maps' || u.pathname.startsWith('/maps/') || u.pathname.startsWith('/maps?')))
+        );
+      } catch (e) { ok = false; }
+      if (!ok) { node.parentNode && node.parentNode.removeChild(node); return; }
+      node.setAttribute('referrerpolicy', 'no-referrer-when-downgrade');
+    }
+    // Force external links to open safely.
+    if (node.tagName === 'A' && node.getAttribute('target') === '_blank') {
+      node.setAttribute('rel', 'noopener noreferrer');
+    }
+  });
+})();
+
+function sanitizeHtml(html) {
+  if (typeof DOMPurify === 'undefined') return html;
+  return DOMPurify.sanitize(html, {
+    ADD_TAGS: ['iframe'],
+    ADD_ATTR: ['src', 'allow', 'allowfullscreen', 'frameborder', 'loading', 'referrerpolicy', 'target', 'width', 'height'],
+  });
+}
+
 // ── API Helper ────────────────────────────────────────────────────────────────
 const API_BASE = '/api';
 
