@@ -100,4 +100,31 @@ describe('Toledo Athletics Onboarding Worker', () => {
     expect(text).not.toContain('OrgChartPage');
     expect(text).not.toContain('mailchannels');
   });
+
+  it('sets a Content-Security-Policy and security headers on the SPA shell', async () => {
+    const response = await SELF.fetch('https://example.com/');
+    const csp = response.headers.get('content-security-policy') ?? '';
+    expect(csp).toContain("object-src 'none'");
+    expect(csp).toContain("frame-ancestors 'self'");
+    expect(csp).toContain("base-uri 'self'");
+    // Google Maps embeds are the only allowed frames.
+    expect(csp).toContain('https://www.google.com');
+    expect(response.headers.get('x-content-type-options')).toBe('nosniff');
+  });
+
+  it('loads DOMPurify and routes markdown through sanitizeHtml', async () => {
+    const response = await SELF.fetch('https://example.com/');
+    const text = await response.text();
+    expect(text).toContain('dompurify');
+    expect(text).toContain('function sanitizeHtml');
+    // Every marked.parse() sink is wrapped in sanitizeHtml(...).
+    expect(text).not.toMatch(/__html:\s*marked\.parse/);
+  });
+
+  it('does not reflect a foreign Origin in CORS headers', async () => {
+    const res = await SELF.fetch('https://example.com/api/categories', {
+      headers: { Origin: 'https://evil.example' },
+    });
+    expect(res.headers.get('access-control-allow-origin')).not.toBe('https://evil.example');
+  });
 });

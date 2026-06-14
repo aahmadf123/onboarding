@@ -18,6 +18,10 @@ function getIndexHtml(): string {
   <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.26.9/babel.min.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <!-- DOMPurify sanitizes all marked.parse() output before it is injected via
+       dangerouslySetInnerHTML (see sanitizeHtml in shared). Pinned version;
+       SRI/self-hosting is handled by the build-step migration. -->
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.2.4/dist/purify.min.js"></script>
   <script>
     tailwind.config = {
       theme: {
@@ -657,7 +661,7 @@ function AIChatWidget({ currentUser }) {
       );
     }
     const html = typeof marked !== 'undefined' ? marked.parse(msg.content || '') : (msg.content || '');
-    return React.createElement('div', { className: 'prose prose-sm max-w-none chat-md', dangerouslySetInnerHTML: { __html: html } });
+    return React.createElement('div', { className: 'prose prose-sm max-w-none chat-md', dangerouslySetInnerHTML: { __html: sanitizeHtml(html) } });
   }
 
   const starterQuestions = [

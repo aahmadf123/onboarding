@@ -409,7 +409,7 @@ function ArticleView({ articleId, onNavigate }) {
         React.createElement('h1', { className: 'text-2xl md:text-3xl font-bold text-toledo-blue' }, article.title),
         React.createElement('p', { className: 'text-sm text-gray-400 mt-2' }, 'Last updated: ' + new Date(article.last_updated).toLocaleDateString())
       ),
-      React.createElement('div', { className: 'p-6 md:p-8 prose max-w-none', dangerouslySetInnerHTML: { __html: renderMarkdown(article.current_content) } })
+      React.createElement('div', { className: 'p-6 md:p-8 prose max-w-none', dangerouslySetInnerHTML: { __html: sanitizeHtml(renderMarkdown(article.current_content)) } })
     )
   );
 }

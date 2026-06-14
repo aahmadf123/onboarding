@@ -4,6 +4,36 @@ export function getSharedCode(): string {
   return `
 const { useState, useEffect, useCallback, useRef } = React;
 
+// ── HTML sanitization ───────────────────────────────────────────────────────
+// All markdown rendered via marked.parse() is run through DOMPurify before it
+// is injected with dangerouslySetInnerHTML. We allow the Google-Maps <iframe>
+// used by the ::map directive but enforce that its src is a Google Maps URL,
+// so admin-authored (or AI-generated) content cannot inject arbitrary frames
+// or scripts.
+(function setupSanitizer() {
+  if (typeof DOMPurify === 'undefined') return;
+  DOMPurify.addHook('afterSanitizeAttributes', function (node) {
+    if (node.tagName === 'IFRAME') {
+      var src = node.getAttribute('src') || '';
+      var ok = /^https:\\/\\/(www\\.google\\.com\\/maps|maps\\.google\\.com)/.test(src);
+      if (!ok) { node.parentNode && node.parentNode.removeChild(node); return; }
+      node.setAttribute('referrerpolicy', 'no-referrer-when-downgrade');
+    }
+    // Force external links to open safely.
+    if (node.tagName === 'A' && node.getAttribute('target') === '_blank') {
+      node.setAttribute('rel', 'noopener noreferrer');
+    }
+  });
+})();
+
+function sanitizeHtml(html) {
+  if (typeof DOMPurify === 'undefined') return html;
+  return DOMPurify.sanitize(html, {
+    ADD_TAGS: ['iframe'],
+    ADD_ATTR: ['allow', 'allowfullscreen', 'frameborder', 'loading', 'referrerpolicy', 'target'],
+  });
+}
+
 // ── API Helper ────────────────────────────────────────────────────────────────
 const API_BASE = '/api';
 
