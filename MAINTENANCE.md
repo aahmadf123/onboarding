@@ -51,7 +51,7 @@ Only `https://www.google.com/maps…` / `maps.google.com` URLs render (anything 
 ## Database files (bootstrap / bulk changes only)
 
 Apply order for a fresh database:
-1. `db/schema.sql` → 2. `db/schema-v2.sql` → 3. `db/seed.sql` → 4. `db/seed-v2.sql` → 5. `db/migrations/0003_auth_tasks_email.sql` → 6. `db/seed-v3.sql` → 7. `db/migrations/2026-06-12-submissions-ticket-upgrade.sql` → 8. `db/migrations/2026-06-14-directory-refresh.sql`
+1. `db/schema.sql` → 2. `db/schema-v2.sql` → 3. `db/seed.sql` → 4. `db/seed-v2.sql` → 5. `db/migrations/0003_auth_tasks_email.sql` → 6. `db/seed-v3.sql` → 7. `db/migrations/2026-06-12-submissions-ticket-upgrade.sql` → 8. `db/migrations/2026-06-14-directory-refresh.sql` → 9. `db/migrations/2026-06-14-content-expansion.sql`
 
 ```bash
 npx wrangler d1 execute toledo-onboarding-db-prod --remote --file=../db/<file>
@@ -60,6 +60,7 @@ npx wrangler d1 execute toledo-onboarding-db-prod --remote --file=../db/<file>
 - `db/migrations/0003_auth_tasks_email.sql` — auth columns, Sessions, Tasks (the 16 baseline checklist tasks), UserTasks, EmailLog, AppConfig defaults. Additive and idempotent.
 - `db/seed-v3.sql` — the June 2026 researched content refresh (Vector LMS, Rocket Card offices + maps, JobTrax verification, verified benefits/retirement/parking, CBAs, IT contacts incl. the "Athletics IT — JJ" placeholder). Idempotent; safe to re-run.
 - `db/migrations/2026-06-14-directory-refresh.sql` — leadership/org-chart correction from the current staff directory: **Tom Moreland** is now VP & Director of Athletics (replaced Bryan Blair), Nicole Harris disabled (no longer in the directory), **Lauren Best-Hovermale** added (Assoc AD Compliance), **Kim Nigem** added (Faculty Athletic Rep), and a **Title IX** key contact (Michelle McDevitt). Also refreshes the Executive Leadership article and AI index. Idempotent. NOTE: several per-person emails are set by the `firstname.lastname@utoledo.edu` convention and should be verified in Admin → Content.
+- `db/migrations/2026-06-14-content-expansion.sql` — eight new researched articles (Travel & Expense Reimbursement, Title IX reporting, Emergency & Campus Safety, IT Security Essentials, Payroll details, Key Dates & Academic Calendar, Athletic Scholarships overview, Role-Based Compliance & Recruiting Calendar) plus AI-index entries. Idempotent. Calendar dates and the travel mileage rate change over time — verify against the linked official pages periodically.
 
 ⚠️ Re-running `seed.sql`/`seed-v2.sql` on a live database will overwrite content that admins have since edited in the CMS (and `seed-v2.sql` deletes/reinserts several tables). Prefer the CMS for anything incremental.
 
