@@ -400,7 +400,7 @@ function ArticleView({ articleId, onNavigate }) {
     // Fallback: preserve line breaks
     return text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\\n/g,'<br>');
   }
-  return React.createElement('div', { className: 'max-w-4xl mx-auto px-4 py-8 fade-in' },
+  return React.createElement('div', { className: 'max-w-3xl mx-auto px-4 py-8 fade-in' },
     React.createElement('button', { onClick: () => article.category_id ? onNavigate('category', article.category_id) : onNavigate('home'), className: 'flex items-center gap-2 text-toledo-blue hover:text-toledo-navy mb-6 text-sm font-medium' },
       React.createElement(IconArrowLeft), 'Back'),
     React.createElement('div', { className: 'bg-white rounded-2xl border border-toledo-border shadow-sm' },

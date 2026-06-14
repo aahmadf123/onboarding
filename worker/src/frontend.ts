@@ -63,6 +63,14 @@ function getIndexHtml(): string {
     .prose ol { list-style-type: decimal; padding-left: 1.5rem; margin-bottom: 1rem; }
     .prose li { margin-bottom: 0.25rem; }
     .prose strong { font-weight: 600; }
+    .prose h2 { font-size: 1.3rem; } .prose h3 { font-size: 1.1rem; }
+    .prose img { max-width: 100%; height: auto; border-radius: 0.5rem; margin: 1rem 0; }
+    .prose pre { background: #0B2240; color: #f8fafc; padding: 0.75rem 1rem; border-radius: 0.5rem; overflow-x: auto; margin-bottom: 1rem; font-size: 0.85em; }
+    .prose code { background: #eef2f7; color: #0B2240; padding: 0.1rem 0.35rem; border-radius: 0.3rem; font-size: 0.9em; }
+    .prose pre code { background: transparent; color: inherit; padding: 0; }
+    .prose blockquote { border-left: 3px solid #FFCD00; padding-left: 1rem; color: #475569; margin: 1rem 0; }
+    .prose table { width: 100%; border-collapse: collapse; margin-bottom: 1rem; font-size: 0.9em; }
+    .prose th, .prose td { border: 1px solid #DDE5F0; padding: 0.4rem 0.6rem; text-align: left; }
     .chat-md p { margin-bottom: 0.5rem; line-height: 1.6; }
     .chat-md p:last-child { margin-bottom: 0; }
     .chat-md ul { list-style-type: disc; padding-left: 1.25rem; margin-bottom: 0.5rem; }
@@ -390,8 +398,10 @@ function OnboardingGuidePage({ currentUser, onNavigate }) {
     var badge = statusBadges[task.my_status];
     return React.createElement('div', {
       key: task.id,
+      // Only fully-approved tasks are muted. "Awaiting review" and "sent back"
+      // tasks keep full contrast (with their badge) so action items stay visible.
       className: 'bg-white rounded-xl border border-toledo-border border-l-4 ' + (priorityStyles[task.priority] || '') +
-        (task.my_status === 'approved' ? ' opacity-60' : isChecked ? ' opacity-75' : ''),
+        (task.my_status === 'approved' ? ' opacity-60' : ''),
     },
       // Task header row
       React.createElement('div', { className: 'flex items-center gap-3 p-4' },
