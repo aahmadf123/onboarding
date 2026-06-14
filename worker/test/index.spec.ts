@@ -26,6 +26,18 @@ describe('Toledo Athletics Onboarding Worker', () => {
     expect(text).toContain('<div id="root">');
   });
 
+  it('serves branding images from /branding/*', async () => {
+    const response = await SELF.fetch('https://example.com/branding/Primary_Logo_for_Light_Background.png');
+    expect(response.status).toBe(200);
+    expect(response.headers.get('content-type') || '').toContain('image/png');
+  });
+
+  it('serves branding images from prefixed paths', async () => {
+    const response = await SELF.fetch('https://example.com/onboarding/branding/savage-arena.jpg');
+    expect(response.status).toBe(200);
+    expect(response.headers.get('content-type') || '').toContain('image/jpeg');
+  });
+
   it('returns 400 for /api/search without a query param (authenticated)', async () => {
     const res = await apiCall('/api/search', { token: staff.token });
     expect(res.status).toBe(400);
