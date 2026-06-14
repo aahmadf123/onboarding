@@ -9,11 +9,14 @@ const store = new Map<string, number[]>();
 const WINDOW_MS = 60_000; // 1 minute
 
 function clientIp(c: Context<{ Bindings: Bindings }>): string {
-  return (
-    c.req.header('cf-connecting-ip') ??
-    c.req.header('x-forwarded-for') ??
-    'unknown'
-  );
+  // cf-connecting-ip is set by Cloudflare and is not client-spoofable; prefer it.
+  // x-forwarded-for is a client-controllable comma-separated list — only used as
+  // a fallback, and normalized to the first entry.
+  const cf = c.req.header('cf-connecting-ip');
+  if (cf) return cf.trim();
+  const xff = c.req.header('x-forwarded-for');
+  if (xff) return xff.split(',')[0].trim();
+  return 'unknown';
 }
 
 const limited = (c: Context<{ Bindings: Bindings }>) =>
@@ -34,14 +37,22 @@ export function rateLimit(maxRequests: number) {
 
     if (kv) {
       // Global fixed-window counter keyed by IP + current minute bucket.
-      const windowId = Math.floor(Date.now() / WINDOW_MS);
-      const key = `rl:${ip}:${windowId}`;
-      const current = parseInt((await kv.get(key)) ?? '0', 10) || 0;
-      if (current >= maxRequests) return limited(c);
-      // expirationTtl minimum is 60s; the bucket self-expires after the window.
-      await kv.put(key, String(current + 1), { expirationTtl: 60 });
-      await next();
-      return;
+      // NOTE: KV is eventually consistent and this get/put is not atomic, so the
+      // global limit is best-effort — bursts can slightly exceed it. Strict
+      // enforcement would require a Durable Object counter. On any KV error we
+      // fail open to the in-memory limiter below rather than reject the request.
+      try {
+        const windowId = Math.floor(Date.now() / WINDOW_MS);
+        const key = `rl:${ip}:${windowId}`;
+        const current = parseInt((await kv.get(key)) ?? '0', 10) || 0;
+        if (current >= maxRequests) return limited(c);
+        // expirationTtl minimum is 60s; the bucket self-expires after the window.
+        await kv.put(key, String(current + 1), { expirationTtl: 60 });
+        await next();
+        return;
+      } catch {
+        // fall through to in-memory fallback
+      }
     }
 
     // In-memory fallback (per isolate).

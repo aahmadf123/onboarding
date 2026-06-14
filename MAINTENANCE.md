@@ -51,7 +51,9 @@ Only `https://www.google.com/maps…` / `maps.google.com` URLs render (anything 
 ## Database files (bootstrap / bulk changes only)
 
 Apply order for a fresh database:
-1. `db/schema.sql` → 2. `db/schema-v2.sql` → 3. `db/seed.sql` → 4. `db/seed-v2.sql` → 5. `db/migrations/0003_auth_tasks_email.sql` → 6. `db/seed-v3.sql` → 7. `db/migrations/2026-06-12-submissions-ticket-upgrade.sql` → 8. `db/migrations/2026-06-14-directory-refresh.sql` → 9. `db/migrations/2026-06-14-content-expansion.sql`
+1. `db/schema.sql` → 2. `db/schema-v2.sql` → 3. `db/seed.sql` → 4. `db/seed-v2.sql` → 5. `db/migrations/0003_auth_tasks_email.sql` → 6. `db/seed-v3.sql` → 7. `db/migrations/2026-06-14-directory-refresh.sql` → 8. `db/migrations/2026-06-14-content-expansion.sql`
+
+> **Do not run `db/migrations/2026-06-12-submissions-ticket-upgrade.sql` on a fresh database** — `schema.sql` already creates the `Submissions` ticketing columns, so this migration errors with "duplicate column". It exists only to upgrade older databases created before those columns were added to `schema.sql`.
 
 ```bash
 npx wrangler d1 execute toledo-onboarding-db-prod --remote --file=../db/<file>

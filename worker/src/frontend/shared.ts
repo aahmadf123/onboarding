@@ -14,8 +14,16 @@ const { useState, useEffect, useCallback, useRef } = React;
   if (typeof DOMPurify === 'undefined') return;
   DOMPurify.addHook('afterSanitizeAttributes', function (node) {
     if (node.tagName === 'IFRAME') {
-      var src = node.getAttribute('src') || '';
-      var ok = /^https:\\/\\/(www\\.google\\.com\\/maps|maps\\.google\\.com)/.test(src);
+      // Parse the URL and match the host exactly so look-alike domains like
+      // maps.google.com.evil.example cannot pass a prefix check.
+      var ok = false;
+      try {
+        var u = new URL(node.getAttribute('src') || '');
+        ok = u.protocol === 'https:' && (
+          u.hostname === 'maps.google.com' ||
+          (u.hostname === 'www.google.com' && (u.pathname === '/maps' || u.pathname.indexOf('/maps/') === 0 || u.pathname.indexOf('/maps?') === 0))
+        );
+      } catch (e) { ok = false; }
       if (!ok) { node.parentNode && node.parentNode.removeChild(node); return; }
       node.setAttribute('referrerpolicy', 'no-referrer-when-downgrade');
     }
@@ -30,7 +38,7 @@ function sanitizeHtml(html) {
   if (typeof DOMPurify === 'undefined') return html;
   return DOMPurify.sanitize(html, {
     ADD_TAGS: ['iframe'],
-    ADD_ATTR: ['allow', 'allowfullscreen', 'frameborder', 'loading', 'referrerpolicy', 'target'],
+    ADD_ATTR: ['src', 'allow', 'allowfullscreen', 'frameborder', 'loading', 'referrerpolicy', 'target', 'width', 'height'],
   });
 }
 

@@ -19,8 +19,10 @@ function getIndexHtml(): string {
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <!-- DOMPurify sanitizes all marked.parse() output before it is injected via
-       dangerouslySetInnerHTML (see sanitizeHtml in shared). Pinned version;
-       SRI/self-hosting is handled by the build-step migration. -->
+       dangerouslySetInnerHTML (see sanitizeHtml in shared). Pinned to a specific
+       version. SRI / self-hosting is NOT yet in place (this SPA has no build
+       step); adding it is deferred to a future build-step that bundles and
+       self-hosts the vendor libraries. -->
   <script src="https://cdn.jsdelivr.net/npm/dompurify@3.2.4/dist/purify.min.js"></script>
   <script>
     tailwind.config = {

@@ -125,6 +125,7 @@ describe('Toledo Athletics Onboarding Worker', () => {
     const res = await SELF.fetch('https://example.com/api/categories', {
       headers: { Origin: 'https://evil.example' },
     });
-    expect(res.headers.get('access-control-allow-origin')).not.toBe('https://evil.example');
+    // A disallowed origin should get no Access-Control-Allow-Origin header at all.
+    expect(res.headers.get('access-control-allow-origin')).toBeNull();
   });
 });

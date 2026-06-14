@@ -60,11 +60,11 @@ app.use(
   '/api/*',
   cors({
     origin: (origin, c) => {
-      if (!origin) return origin; // same-origin / non-CORS requests
+      if (!origin) return null; // same-origin / non-CORS requests need no header
       try {
-        return new URL(origin).host === new URL(c.req.url).host ? origin : '';
+        return new URL(origin).host === new URL(c.req.url).host ? origin : null;
       } catch {
-        return '';
+        return null;
       }
     },
   })
