@@ -21,7 +21,7 @@ const { useState, useEffect, useCallback, useRef } = React;
         var u = new URL(node.getAttribute('src') || '');
         ok = u.protocol === 'https:' && (
           u.hostname === 'maps.google.com' ||
-          (u.hostname === 'www.google.com' && (u.pathname === '/maps' || u.pathname.indexOf('/maps/') === 0 || u.pathname.indexOf('/maps?') === 0))
+          (u.hostname === 'www.google.com' && (u.pathname === '/maps' || u.pathname.startsWith('/maps/') || u.pathname.startsWith('/maps?')))
         );
       } catch (e) { ok = false; }
       if (!ok) { node.parentNode && node.parentNode.removeChild(node); return; }
