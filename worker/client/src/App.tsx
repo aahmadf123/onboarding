@@ -18,6 +18,8 @@ import { ModerationDashboard } from './pages/ModerationDashboard';
 import { ResourcesPage } from './pages/ResourcesPage';
 import { ContactsPage } from './pages/ContactsPage';
 import { PoliciesPage } from './pages/PoliciesPage';
+import { AIChatWidget } from './features/AIChatWidget';
+import { FeedbackButton } from './features/FeedbackButton';
 import type { User } from './lib/types';
 
 const TOUR_KEY = 'toledo_tour_done_v1';
@@ -373,6 +375,8 @@ export function App() {
       },
     },
     taskReminder,
-    content
+    content,
+    React.createElement(AIChatWidget, { currentUser: currentUser }),
+    React.createElement(FeedbackButton, { currentUser: currentUser, currentView: view })
   );
 }
