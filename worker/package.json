@@ -11,7 +11,7 @@
 		"test": "vitest",
 		"test:ci": "vite build && vitest run",
 		"typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p client/tsconfig.json",
-		"check:escapes": "node scripts/check-frontend-escapes.mjs",
+		"smoke": "node scripts/browser-smoke.mjs",
 		"cf-typegen": "wrangler types"
 	},
 	"devDependencies": {
@@ -23,6 +23,7 @@
 		"@types/react-dom": "^18.3.7",
 		"@vitejs/plugin-react": "^6.0.4",
 		"@vitest/snapshot": "^4.1.0",
+		"playwright": "^1.62.0",
 		"tailwindcss": "^4.3.3",
 		"typescript": "^5.5.2",
 		"vite": "^8.1.5",

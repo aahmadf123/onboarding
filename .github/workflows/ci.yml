@@ -24,20 +24,28 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+        env:
+          # playwright is only used by scripts/browser-smoke.mjs, which CI does
+          # not run (see below). Skip the ~150MB browser download.
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
 
       - name: Typecheck
         run: npm run typecheck
 
-      # The SPA has no build step, so tsc cannot see inside the template
-      # literals it lives in. This catches backslash escapes the literal strips.
-      # Delete once the inline SPA is gone.
-      - name: Frontend escape check
-        run: npm run check:escapes
+      # The escape check is gone: it existed because the SPA lived in template
+      # literals that tsc could not see inside. The client is real .tsx now, so
+      # typecheck covers what the scanner used to guess at.
 
-      # Builds before testing: assets.directory points at the build output, so
-      # the tests that exercise /branding/* need it to exist.
+      # Builds before testing so assets.directory exists when wrangler reads it.
       - name: Build and test
         run: npm run test:ci
+
+      # NOT RUN HERE: scripts/browser-smoke.mjs. It needs a live `wrangler dev`,
+      # which refuses to start without CLOUDFLARE_API_TOKEN because the Workers
+      # AI binding always resolves remotely. Wiring it up means either putting a
+      # token in CI or testing against a config with the AI binding stripped,
+      # which would no longer be the config we deploy. Run it locally instead —
+      # see the header of that script.
 
       # Advisory until the codebase is fully formatted (see Phase: tooling).
       - name: Format check (Prettier)

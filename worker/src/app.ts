@@ -1,8 +1,7 @@
-import { Hono, type Context } from 'hono';
+import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { secureHeaders } from 'hono/secure-headers';
 import { AppEnv } from './types';
-import { getIndexHtml } from './frontend';
 import { authGate } from './middleware/auth';
 
 import auth from './routes/auth';
@@ -23,68 +22,22 @@ import feedback from './routes/feedback';
 
 const app = new Hono<AppEnv>();
 
-async function serveBrandingAsset(c: Context<AppEnv>, requestedPathname: string): Promise<Response> {
-  const reqUrl = new URL(c.req.url);
-  const basename = requestedPathname.split('/').filter(Boolean).pop() || '';
-
-  // Try multiple path candidates because the ASSETS binding path semantics can
-  // vary by deployment shape (root route vs prefixed route).
-  const candidatePathnames = [
-    requestedPathname,
-    requestedPathname.replace(/^\/branding/, ''),
-    basename ? `/${basename}` : '',
-  ].filter((value, index, arr) => value && arr.indexOf(value) === index);
-
-  let lastResponse: Response | null = null;
-  for (const pathname of candidatePathnames) {
-    const assetUrl = new URL(reqUrl.toString());
-    assetUrl.pathname = pathname;
-    const response = await c.env.ASSETS.fetch(new Request(assetUrl.toString(), c.req.raw));
-    if (response.status !== 404) return response;
-    lastResponse = response;
-  }
-
-  return lastResponse || c.text('Branding asset not found', 404);
-}
-
-// Security headers (incl. Content-Security-Policy) on every response.
-// 'unsafe-inline'/'unsafe-eval' are required because the SPA compiles JSX in
-// the browser with Babel-standalone and Tailwind is loaded via its CDN script;
-// the policy still locks down object-src, base-uri, form-action, frame-ancestors,
-// and restricts frame-src to Google Maps (the only embeds we render).
-const secureHeadersMiddleware = secureHeaders({
-  contentSecurityPolicy: {
-    defaultSrc: ["'self'"],
-    scriptSrc: [
-      "'self'",
-      "'unsafe-inline'",
-      "'unsafe-eval'",
-      'https://cdnjs.cloudflare.com',
-      'https://cdn.tailwindcss.com',
-      'https://cdn.jsdelivr.net',
-    ],
-    styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com', 'https://cdn.tailwindcss.com'],
-    fontSrc: ["'self'", 'https://fonts.gstatic.com', 'data:'],
-    imgSrc: ["'self'", 'data:', 'https:'],
-    frameSrc: ['https://www.google.com', 'https://maps.google.com'],
-    connectSrc: ["'self'"],
-    objectSrc: ["'none'"],
-    baseUri: ["'self'"],
-    formAction: ["'self'"],
-    frameAncestors: ["'self'"],
-  },
-});
-
+// Security headers on API responses.
+//
+// The SPA document and every other static asset are served without invoking
+// this Worker (run_worker_first is scoped to /api/*), so their headers come
+// from client/public/_headers instead. This policy therefore only has to cover
+// JSON: no scripts, styles, fonts or frames are ever served from here.
 app.use(
   '*',
-  async (c, next) => {
-    const pathname = new URL(c.req.url).pathname;
-    if (pathname.includes('/branding/')) {
-      await next();
-      return;
-    }
-    await secureHeadersMiddleware(c, next);
-  }
+  secureHeaders({
+    contentSecurityPolicy: {
+      defaultSrc: ["'none'"],
+      frameAncestors: ["'none'"],
+      baseUri: ["'none'"],
+      formAction: ["'none'"],
+    },
+  })
 );
 
 // CORS for API routes — restricted to the worker's own origin. The SPA is
@@ -125,12 +78,6 @@ app.route('/api/systems', systems);
 app.route('/api/policies', policies);
 app.route('/api/feedback', feedback);
 
-// ── Static assets (branding images) ───────────────────────────
-app.get('/branding/*', async (c) => {
-  const url = new URL(c.req.url);
-  return serveBrandingAsset(c, url.pathname);
-});
-
 // ── API 404 + error handling ──────────────────────────────────
 // Without these, an unmatched /api path fell through to the SPA catch-all and
 // returned HTTP 200 with an HTML document, and a thrown handler returned
@@ -145,20 +92,9 @@ app.onError((err, c) => {
   return c.text('Internal Server Error', 500);
 });
 
-// ── SPA fallback ──────────────────────────────────────────────
-// For any non-API route, serve the React SPA shell (this also covers
-// /reset-password, which the SPA handles client-side).
-app.get('*', async (c) => {
-  const pathname = new URL(c.req.url).pathname;
-  const brandingPathIndex = pathname.indexOf('/branding/');
-
-  // Handle prefixed routes like /onboarding/branding/... so assets still load
-  // when the Worker is deployed under a path prefix.
-  if (brandingPathIndex >= 0) {
-    return serveBrandingAsset(c, pathname.slice(brandingPathIndex));
-  }
-
-  return c.html(getIndexHtml());
-});
+// No SPA fallback route: assets.not_found_handling = "single-page-application"
+// serves index.html for any navigation request that matches no asset, without
+// invoking the Worker at all. That covers deep links like /article/23 and the
+// /reset-password landing page. A catch-all here would only ever shadow it.
 
 export default app;

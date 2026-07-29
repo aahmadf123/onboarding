@@ -1,0 +1,20 @@
+# Headers for static asset responses.
+#
+# The Worker's secureHeaders middleware cannot do this job any more. With
+# run_worker_first scoped to /api/*, asset requests — including the SPA
+# document itself — are served without invoking the Worker, so nothing in
+# app.ts ever sees them. Cloudflare's asset system reads this file instead.
+#
+# Compared with the old inline-SPA policy this drops 'unsafe-eval' and the
+# three CDN hosts, which only existed because Babel compiled the app in the
+# browser and Tailwind, React and DOMPurify came from cdnjs/jsdelivr. It also
+# drops 'unsafe-inline' from script-src: the built index.html has no inline
+# script, only a module tag pointing at a hashed bundle.
+#
+# style-src keeps 'unsafe-inline' because React sets inline style attributes
+# (the tour spotlight, the progress bars), which style-src governs.
+/*
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: https:; frame-src https://www.google.com https://maps.google.com; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  X-Frame-Options: SAMEORIGIN

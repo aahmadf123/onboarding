@@ -11,31 +11,20 @@ beforeAll(async () => {
 });
 
 describe('Toledo Athletics Onboarding Worker', () => {
-  it('serves the SPA shell for the root path without auth', async () => {
-    const response = await SELF.fetch('https://example.com/');
-    expect(response.status).toBe(200);
-    const text = await response.text();
-    expect(text).toContain('Toledo Athletics');
-    expect(text).toContain('<div id="root">');
-  });
-
-  it('serves the SPA shell for the reset-password route', async () => {
-    const response = await SELF.fetch('https://example.com/reset-password?token=abc');
-    expect(response.status).toBe(200);
-    const text = await response.text();
-    expect(text).toContain('<div id="root">');
-  });
-
-  it('serves branding images from /branding/*', async () => {
-    const response = await SELF.fetch('https://example.com/branding/Primary_Logo_for_Light_Background.png');
-    expect(response.status).toBe(200);
-    expect(response.headers.get('content-type') || '').toContain('image/png');
-  });
-
-  it('serves branding images from prefixed paths', async () => {
-    const response = await SELF.fetch('https://example.com/onboarding/branding/savage-arena.jpg');
-    expect(response.status).toBe(200);
-    expect(response.headers.get('content-type') || '').toContain('image/jpeg');
+  // The SPA document, /branding/* and the hashed bundles are all served by
+  // Cloudflare's asset router, which this pool does not run — SELF invokes only
+  // the Worker. Asset behaviour (SPA fallback for deep links, the CSP from
+  // client/public/_headers) is covered by the browser smoke test in
+  // scripts/browser-smoke.mjs, run against `wrangler dev`.
+  //
+  // What is worth asserting here is the inverse: the Worker must NOT claim
+  // those paths. A catch-all would shadow not_found_handling and put us back to
+  // generating the shell in the Worker.
+  it('leaves non-API paths to the asset router', async () => {
+    for (const path of ['/', '/article/23', '/reset-password?token=abc', '/branding/logo.png']) {
+      const response = await SELF.fetch('https://example.com' + path);
+      expect(response.status).toBe(404);
+    }
   });
 
   it('returns 400 for /api/search without a query param (authenticated)', async () => {
@@ -88,70 +77,20 @@ describe('Toledo Athletics Onboarding Worker', () => {
     expect(Array.isArray(res.json.data)).toBe(true);
   });
 
-  it('SPA shell includes the current feature components', async () => {
-    const response = await SELF.fetch('https://example.com/');
-    const text = await response.text();
-    expect(text).toContain('OnboardingGuidePage');
-    expect(text).toContain('AIChatWidget');
-    expect(text).toContain('ResourcesPage');
-    expect(text).toContain('ContactsPage');
-    expect(text).toContain('PoliciesPage');
-    expect(text).toContain('FeedbackButton');
-    expect(text).toContain('Footer');
-    // New auth + admin surfaces
-    expect(text).toContain('LoginScreen');
-    expect(text).toContain('ForceResetScreen');
-    expect(text).toContain('ResetWithTokenScreen');
-    expect(text).toContain('AdminDashboard');
-    expect(text).toContain('AdminContent');
-    expect(text).toContain('renderMapDirectives');
-    // AI chat streaming fetch must carry the bearer token (gated endpoint)
-    expect(text).toContain('streamHeaders');
-    // Removed surfaces
-    expect(text).not.toContain('SuperAdminDashboard');
-    expect(text).not.toContain('OrgChartPage');
-    expect(text).not.toContain('mailchannels');
-  });
-
-  it('ships search regexes with their escapes intact', async () => {
-    const response = await SELF.fetch('https://example.com/');
-    const text = await response.text();
-    // The SPA is built from template literals, so a single backslash is eaten
-    // before the browser sees it. That turned /\s+/ into /s+/ (splitting terms
-    // on the letter "s") and collapsed escapeRegex's character class, which
-    // made any query containing a regex metacharacter throw during render.
-    expect(text).toContain('q.split(/\\s+/)');
-    expect(text).not.toContain('q.split(/s+/)');
-    expect(text).not.toContain(".replace(/s+/g, ' ')");
-    expect(text).toContain("replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&')");
-  });
-
-  it('wraps the app in an error boundary', async () => {
-    const response = await SELF.fetch('https://example.com/');
-    const text = await response.text();
-    expect(text).toContain('class ErrorBoundary');
-    expect(text).toContain('getDerivedStateFromError');
-    expect(text).toContain('React.createElement(ErrorBoundary');
-  });
-
-  it('sets a Content-Security-Policy and security headers on the SPA shell', async () => {
-    const response = await SELF.fetch('https://example.com/');
-    const csp = response.headers.get('content-security-policy') ?? '';
-    expect(csp).toContain("object-src 'none'");
-    expect(csp).toContain("frame-ancestors 'self'");
-    expect(csp).toContain("base-uri 'self'");
-    // Google Maps embeds are the only allowed frames.
-    expect(csp).toContain('https://www.google.com');
-    expect(response.headers.get('x-content-type-options')).toBe('nosniff');
-  });
-
-  it('loads DOMPurify and routes markdown through sanitizeHtml', async () => {
-    const response = await SELF.fetch('https://example.com/');
-    const text = await response.text();
-    expect(text).toContain('dompurify');
-    expect(text).toContain('function sanitizeHtml');
-    // Every marked.parse() sink is wrapped in sanitizeHtml(...).
-    expect(text).not.toMatch(/__html:\s*marked\.parse/);
+  it('sets a locked-down CSP on API responses', async () => {
+    // The Worker now only ever returns JSON, so its policy can be far stricter
+    // than the SPA's. The document's own CSP lives in client/public/_headers.
+    const res = await SELF.fetch('https://example.com/api/categories', {
+      headers: { Authorization: `Bearer ${staff.token}` },
+    });
+    const csp = res.headers.get('content-security-policy') ?? '';
+    expect(csp).toContain("default-src 'none'");
+    expect(csp).toContain("frame-ancestors 'none'");
+    expect(csp).toContain("base-uri 'none'");
+    // The CDN hosts and unsafe-eval only existed for the in-browser Babel build.
+    expect(csp).not.toContain('unsafe-eval');
+    expect(csp).not.toContain('cdnjs.cloudflare.com');
+    expect(res.headers.get('x-content-type-options')).toBe('nosniff');
   });
 
   it('does not reflect a foreign Origin in CORS headers', async () => {
