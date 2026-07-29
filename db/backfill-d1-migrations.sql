@@ -38,20 +38,22 @@ CREATE TABLE IF NOT EXISTS d1_migrations(
     applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
+-- A VALUES row source rather than twelve SELECTs chained with UNION ALL: D1
+-- caps the number of terms in a compound SELECT and rejects that form outright.
 INSERT OR IGNORE INTO d1_migrations (name)
-SELECT name FROM (
-    SELECT '0001_initial_schema.sql'      AS name
-    UNION ALL SELECT '0002_seed_core_content.sql'
-    UNION ALL SELECT '0003_seed_reference_data.sql'
-    UNION ALL SELECT '0004_auth_tasks_email.sql'
-    UNION ALL SELECT '0005_content_refresh.sql'
-    UNION ALL SELECT '0006_directory_refresh.sql'
-    UNION ALL SELECT '0007_content_expansion.sql'
-    UNION ALL SELECT '0008_page_feedback.sql'
-    UNION ALL SELECT '0009_repair_seed_data.sql'
-    UNION ALL SELECT '0010_login_lockout.sql'
-    UNION ALL SELECT '0011_indexes.sql'
-    UNION ALL SELECT '0012_content_placeholders.sql'
+SELECT column1 FROM (VALUES
+    ('0001_initial_schema.sql'),
+    ('0002_seed_core_content.sql'),
+    ('0003_seed_reference_data.sql'),
+    ('0004_auth_tasks_email.sql'),
+    ('0005_content_refresh.sql'),
+    ('0006_directory_refresh.sql'),
+    ('0007_content_expansion.sql'),
+    ('0008_page_feedback.sql'),
+    ('0009_repair_seed_data.sql'),
+    ('0010_login_lockout.sql'),
+    ('0011_indexes.sql'),
+    ('0012_content_placeholders.sql')
 )
 -- Three markers, one from each end of the chain, proving this really is a
 -- database that has been through it: Sessions arrives in 0004, Users.locked_until
