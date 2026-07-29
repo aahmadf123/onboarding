@@ -21,6 +21,7 @@ import { PoliciesPage } from './pages/PoliciesPage';
 import { AIChatWidget } from './features/AIChatWidget';
 import { FeedbackButton } from './features/FeedbackButton';
 import { QuickTour } from './features/QuickTour';
+import { AdminDashboard } from './admin/AdminDashboard';
 import type { User } from './lib/types';
 
 const TOUR_KEY = 'toledo_tour_done_v1';
@@ -293,35 +294,19 @@ export function App() {
       )
     );
 
-  // Scaffolding for the views still to be ported. Reports the state those
-  // pages will consume, so a broken fetch surfaces now rather than later.
-  function notPortedYet() {
-    return React.createElement(
-      'div',
-      { className: 'max-w-3xl mx-auto px-4 py-12 text-center text-gray-500 space-y-2' },
-      React.createElement(
-        'p',
-        null,
-        'This view has not been ported yet: ' + view + (viewParam ? ' / ' + viewParam : '')
-      ),
-      React.createElement(
-        'p',
-        { className: 'text-xs' },
-        categories.length + ' categories loaded' + (showTour ? ' · tour requested' : '')
-      )
-    );
-  }
+  const homePage = () =>
+    React.createElement(HomePage, {
+      categories: categories,
+      stats: stats,
+      onNavigate: navigate,
+      onSearch: handleSearch,
+      currentUser: currentUser,
+    });
 
   let content;
   switch (view) {
     case 'home':
-      content = React.createElement(HomePage, {
-        categories: categories,
-        stats: stats,
-        onNavigate: navigate,
-        onSearch: handleSearch,
-        currentUser: currentUser,
-      });
+      content = homePage();
       break;
     // 'checklist' is the legacy path for the same page; both are routable.
     case 'guide':
@@ -368,8 +353,23 @@ export function App() {
     case 'policies':
       content = React.createElement(PoliciesPage, { onNavigate: navigate });
       break;
+    case 'admin':
+      content =
+        currentUser.role === 'admin'
+          ? React.createElement(AdminDashboard, {
+              currentUser: currentUser,
+              onNavigate: navigate,
+            })
+          : React.createElement(
+              'div',
+              { className: 'max-w-3xl mx-auto px-4 py-12 text-center text-gray-500' },
+              'You need administrator access for this page.'
+            );
+      break;
+    // routeFromPath already coerces unknown paths to 'home', but navigate()
+    // can be called with anything, so keep the dashboard as the fallback.
     default:
-      content = notPortedYet();
+      content = homePage();
   }
 
   return React.createElement(
