@@ -1,6 +1,7 @@
 import { env } from 'cloudflare:test';
 import { describe, it, expect, beforeAll } from 'vitest';
-import { applySchema, mockResend, createUserAndLogin, apiCall, login } from './helpers';
+import { applySchema, mockResend, createUserAndLogin,
+  completeAllRequiredTasks, apiCall, login } from './helpers';
 import { getRelevantContextWithSources } from '../src/services/content-index';
 
 beforeAll(async () => {
@@ -516,12 +517,15 @@ describe('who is behind', () => {
     expect(row).toBeDefined();
     expect(row.open_tasks).toBeGreaterThan(0);
 
-    // Completing the task removes the user from the list.
+    // Completing everything required removes the user from the list. The real
+    // schema seeds a baseline checklist, so finishing only this one task would
+    // leave them legitimately behind.
     await apiCall(`/api/tasks/${taskId}/status`, {
       method: 'PUT',
       token: laggard.token,
       body: JSON.stringify({ done: true }),
     });
+    await completeAllRequiredTasks(laggard.id);
 
     const after = await apiCall('/api/admin/behind', { token: admin.token });
     const stillListed = after.json.data.find((r: { email: string }) => r.email === laggard.email);

@@ -265,8 +265,13 @@ describe('forgot / reset password', () => {
 
 describe('bootstrap', () => {
   it('issues the super admin passcode exactly once, guarded by the secret', async () => {
+    // The real schema seeds this account (migration 0003), so put it back into
+    // the pre-bootstrap state rather than inserting a duplicate. Under the old
+    // hand-built schema the table was empty and an INSERT was the only option.
     await env.DB.prepare(
-      "INSERT INTO Users (email, role, status) VALUES (?, 'admin', 'invited')"
+      `INSERT INTO Users (email, role, status) VALUES (?, 'admin', 'invited')
+       ON CONFLICT(email) DO UPDATE SET
+         role = 'admin', status = 'invited', password_hash = NULL, must_reset = 0`
     )
       .bind(PRIMARY_SUPERADMIN_EMAIL)
       .run();

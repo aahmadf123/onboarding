@@ -1,228 +1,90 @@
 import { env, SELF } from 'cloudflare:test';
 import { hashPassword } from '../src/services/passwords';
 
-// Bootstrap the in-memory D1 database with the post-migration-0003 schema.
-// Tests create tables fresh, so new columns are inlined rather than ALTERed.
-export const SCHEMA_STATEMENTS = [
-`CREATE TABLE IF NOT EXISTS Users (
-id INTEGER PRIMARY KEY AUTOINCREMENT,
-email TEXT UNIQUE NOT NULL,
-role TEXT DEFAULT 'staff',
-created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-name TEXT,
-password_hash TEXT,
-status TEXT DEFAULT 'invited',
-must_reset INTEGER DEFAULT 0,
-passcode_expires_at DATETIME,
-invited_at DATETIME,
-password_set_at DATETIME,
-last_login_at DATETIME,
-localstorage_migrated_at DATETIME
-)`,
-`CREATE TABLE IF NOT EXISTS Categories (
-id INTEGER PRIMARY KEY AUTOINCREMENT,
-name TEXT NOT NULL,
-description TEXT
-)`,
-`CREATE TABLE IF NOT EXISTS Articles (
-id INTEGER PRIMARY KEY AUTOINCREMENT,
-category_id INTEGER,
-title TEXT NOT NULL,
-current_content TEXT,
-last_updated DATETIME DEFAULT CURRENT_TIMESTAMP,
-is_active INTEGER DEFAULT 1
-)`,
-`CREATE TABLE IF NOT EXISTS Submissions (
-id INTEGER PRIMARY KEY AUTOINCREMENT,
-article_id INTEGER,
-author_id INTEGER NOT NULL,
-proposed_title TEXT,
-proposed_content TEXT NOT NULL,
-request_type TEXT DEFAULT 'content_update',
-priority TEXT DEFAULT 'normal',
-topic_area TEXT,
-source_context TEXT,
-assigned_team TEXT,
-assigned_to_name TEXT,
-assigned_to_email TEXT,
-assignment_reason TEXT,
-status TEXT DEFAULT 'pending',
-submitted_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-reviewed_by INTEGER,
-review_notes TEXT
-)`,
-`CREATE TABLE IF NOT EXISTS Tips (
-id INTEGER PRIMARY KEY AUTOINCREMENT,
-author_id INTEGER NOT NULL,
-category_id INTEGER,
-title TEXT NOT NULL,
-content TEXT NOT NULL,
-tags TEXT,
-status TEXT DEFAULT 'pending',
-reviewed_by INTEGER,
-review_notes TEXT,
-submitted_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-approved_at DATETIME,
-last_updated DATETIME DEFAULT CURRENT_TIMESTAMP
-)`,
-`CREATE TABLE IF NOT EXISTS TipFeedback (
-id INTEGER PRIMARY KEY AUTOINCREMENT,
-tip_id INTEGER NOT NULL,
-reporter_id INTEGER NOT NULL,
-reason TEXT NOT NULL,
-details TEXT,
-status TEXT DEFAULT 'open',
-created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-)`,
-`CREATE TABLE IF NOT EXISTS OrgChart (
-id INTEGER PRIMARY KEY AUTOINCREMENT,
-name TEXT NOT NULL,
-title TEXT NOT NULL,
-department TEXT,
-email TEXT,
-phone TEXT,
-parent_id INTEGER,
-display_order INTEGER DEFAULT 0,
-photo_url TEXT,
-is_active INTEGER DEFAULT 1
-)`,
-`CREATE TABLE IF NOT EXISTS SiteContentIndex (
-id INTEGER PRIMARY KEY AUTOINCREMENT,
-source_type TEXT NOT NULL,
-source_id INTEGER,
-source_title TEXT NOT NULL,
-content_text TEXT NOT NULL,
-section_path TEXT,
-last_indexed DATETIME DEFAULT CURRENT_TIMESTAMP
-)`,
-`CREATE TABLE IF NOT EXISTS AppConfig (
-key TEXT PRIMARY KEY,
-value TEXT NOT NULL,
-updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-)`,
-`CREATE TABLE IF NOT EXISTS QuickLinks (
-id INTEGER PRIMARY KEY AUTOINCREMENT,
-title TEXT NOT NULL,
-description TEXT,
-url TEXT NOT NULL,
-category TEXT,
-audience TEXT,
-display_order INTEGER DEFAULT 0,
-is_active INTEGER DEFAULT 1
-)`,
-`CREATE TABLE IF NOT EXISTS KeyContacts (
-id INTEGER PRIMARY KEY AUTOINCREMENT,
-function_area TEXT,
-department TEXT,
-contact_name TEXT,
-title TEXT,
-email TEXT,
-phone TEXT,
-url TEXT,
-notes TEXT,
-is_active INTEGER DEFAULT 1,
-display_order INTEGER DEFAULT 0
-)`,
-`CREATE TABLE IF NOT EXISTS SystemsDirectory (
-id INTEGER PRIMARY KEY AUTOINCREMENT,
-system_name TEXT NOT NULL,
-category TEXT,
-access_url TEXT,
-login_notes TEXT,
-owner_department TEXT,
-support_contact TEXT,
-description TEXT,
-is_active INTEGER DEFAULT 1,
-display_order INTEGER DEFAULT 0
-)`,
-`CREATE TABLE IF NOT EXISTS PolicyResources (
-id INTEGER PRIMARY KEY AUTOINCREMENT,
-policy_code TEXT,
-title TEXT NOT NULL,
-category TEXT,
-applies_to TEXT,
-url TEXT,
-summary TEXT,
-is_active INTEGER DEFAULT 1,
-display_order INTEGER DEFAULT 0
-)`,
-`CREATE TABLE IF NOT EXISTS Sessions (
-id INTEGER PRIMARY KEY AUTOINCREMENT,
-user_id INTEGER NOT NULL,
-token_hash TEXT NOT NULL,
-created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-expires_at DATETIME NOT NULL,
-last_used_at DATETIME,
-user_agent TEXT,
-ip TEXT
-)`,
-`CREATE UNIQUE INDEX IF NOT EXISTS idx_sessions_token ON Sessions(token_hash)`,
-`CREATE TABLE IF NOT EXISTS PasswordResets (
-id INTEGER PRIMARY KEY AUTOINCREMENT,
-user_id INTEGER NOT NULL,
-token_hash TEXT NOT NULL,
-created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-expires_at DATETIME NOT NULL,
-used_at DATETIME
-)`,
-`CREATE TABLE IF NOT EXISTS Tasks (
-id INTEGER PRIMARY KEY AUTOINCREMENT,
-slug TEXT NOT NULL,
-phase TEXT NOT NULL,
-title TEXT NOT NULL,
-description TEXT,
-priority TEXT DEFAULT 'recommended',
-display_order INTEGER DEFAULT 0,
-requires_approval INTEGER DEFAULT 0,
-audience TEXT DEFAULT 'all',
-link_view TEXT,
-link_param TEXT,
-is_active INTEGER DEFAULT 1,
-created_by INTEGER,
-created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-)`,
-`CREATE UNIQUE INDEX IF NOT EXISTS idx_tasks_slug ON Tasks(slug)`,
-`CREATE TABLE IF NOT EXISTS UserTasks (
-id INTEGER PRIMARY KEY AUTOINCREMENT,
-user_id INTEGER NOT NULL,
-task_id INTEGER NOT NULL,
-status TEXT DEFAULT 'open',
-completed_at DATETIME,
-assigned_by INTEGER,
-assigned_at DATETIME,
-reviewed_by INTEGER,
-review_notes TEXT,
-reviewed_at DATETIME,
-updated_at DATETIME
-)`,
-`CREATE UNIQUE INDEX IF NOT EXISTS idx_usertasks_user_task ON UserTasks(user_id, task_id)`,
-`CREATE TABLE IF NOT EXISTS EmailLog (
-id INTEGER PRIMARY KEY AUTOINCREMENT,
-user_id INTEGER,
-to_email TEXT NOT NULL,
-email_type TEXT NOT NULL,
-subject TEXT,
-status TEXT DEFAULT 'sent',
-provider_id TEXT,
-error_text TEXT,
-created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-)`,
+/**
+ * The real production schema, not a hand-written approximation.
+ *
+ * This block used to declare 19 tables inline. Every one of them dropped the
+ * foreign keys, dropped UNIQUE on SystemsDirectory.system_name and relaxed
+ * several NOT NULL columns, so CI validated a schema that is never deployed.
+ * That is what let the /tips/0/feedback foreign-key violation ship: no test
+ * could see the constraint it broke.
+ *
+ * The files and their order match the fresh-database sequence in the README.
+ * 2026-06-12-submissions-ticket-upgrade.sql is deliberately absent — it only
+ * applies to databases created before schema.sql gained those columns, and it
+ * wraps itself in BEGIN TRANSACTION/COMMIT, which D1 rejects.
+ */
+import schemaSql from '../../db/schema.sql?raw';
+import schemaV2Sql from '../../db/schema-v2.sql?raw';
+import authTasksEmailSql from '../../db/migrations/0003_auth_tasks_email.sql?raw';
+import pageFeedbackSql from '../../db/migrations/2026-07-29-page-feedback.sql?raw';
 
-  `CREATE TABLE IF NOT EXISTS PageFeedback (
-id INTEGER PRIMARY KEY AUTOINCREMENT,
-user_id INTEGER,
-page TEXT,
-message TEXT NOT NULL,
-status TEXT NOT NULL DEFAULT 'open',
-created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-resolved_at DATETIME,
-resolved_by INTEGER
-)`,
-];
+const SCHEMA_FILES = [schemaSql, schemaV2Sql, authTasksEmailSql, pageFeedbackSql];
+
+/**
+ * Splits a SQL file into statements.
+ *
+ * D1's exec() wants one statement per line, which multi-line CREATE TABLE
+ * breaks, so we split on semicolons ourselves — tracking single-quoted strings
+ * and line comments so a semicolon inside either is not treated as a boundary.
+ */
+export function splitSqlStatements(sql: string): string[] {
+  const statements: string[] = [];
+  let current = '';
+  let inString = false;
+  let inLineComment = false;
+
+  for (let i = 0; i < sql.length; i++) {
+    const ch = sql[i];
+    const next = sql[i + 1];
+
+    if (inLineComment) {
+      if (ch === '\n') inLineComment = false;
+      current += ch;
+      continue;
+    }
+    if (!inString && ch === '-' && next === '-') {
+      inLineComment = true;
+      current += ch;
+      continue;
+    }
+    if (ch === "'") {
+      // '' inside a string is an escaped quote, not a terminator.
+      if (inString && next === "'") {
+        current += "''";
+        i++;
+        continue;
+      }
+      inString = !inString;
+      current += ch;
+      continue;
+    }
+    if (ch === ';' && !inString) {
+      statements.push(current);
+      current = '';
+      continue;
+    }
+    current += ch;
+  }
+  statements.push(current);
+
+  return statements
+    .map((s) => s.replace(/^\s*(--.*\n)*/, '').trim())
+    .filter((s) => s.length > 0);
+}
 
 export async function applySchema(): Promise<void> {
-  for (const sql of SCHEMA_STATEMENTS) {
-    await env.DB.prepare(sql).run();
+  for (const file of SCHEMA_FILES) {
+    for (const statement of splitSqlStatements(file)) {
+      try {
+        await env.DB.prepare(statement).run();
+      } catch (err) {
+        throw new Error(
+          `Schema statement failed: ${statement.slice(0, 120)}\n${(err as Error).message}`
+        );
+      }
+    }
   }
 }
 
@@ -264,9 +126,21 @@ export async function createUser(opts: {
   userCounter++;
   const email = opts.email ?? `user${userCounter}@utoledo.edu`;
   const password = opts.password ?? 'test-password-123';
+  // ON CONFLICT rather than a bare INSERT: the real schema seeds rows of its
+  // own (migration 0003 creates utdata@utoledo.edu), so a test that wants to
+  // control a seeded account has to update it rather than duplicate it. With
+  // the old hand-built schema the table was always empty and this never came up.
   const info = await env.DB.prepare(
     `INSERT INTO Users (email, role, status, password_hash, must_reset, passcode_expires_at, password_set_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`
+     VALUES (?, ?, ?, ?, ?, ?, ?)
+     ON CONFLICT(email) DO UPDATE SET
+       role = excluded.role,
+       status = excluded.status,
+       password_hash = excluded.password_hash,
+       must_reset = excluded.must_reset,
+       passcode_expires_at = excluded.passcode_expires_at,
+       password_set_at = excluded.password_set_at
+     RETURNING id`
   )
     .bind(
       email,
@@ -277,8 +151,27 @@ export async function createUser(opts: {
       opts.passcodeExpiresAt ?? null,
       opts.passwordSetAt !== undefined ? opts.passwordSetAt : opts.mustReset ? null : new Date().toISOString()
     )
+    .first<{ id: number }>();
+  return { id: info!.id, email, password };
+}
+
+/**
+ * Marks every task that would keep a user on the "behind" list as done.
+ *
+ * The real schema seeds a baseline checklist (migration 0003), so completing a
+ * single task no longer makes anyone caught up — which is exactly what the
+ * hand-built test schema hid, because its Tasks table was always empty.
+ */
+export async function completeAllRequiredTasks(userId: number): Promise<void> {
+  await env.DB.prepare(
+    `INSERT INTO UserTasks (user_id, task_id, status, completed_at)
+     SELECT ?, id, 'done', CURRENT_TIMESTAMP FROM Tasks
+     WHERE is_active = 1 AND priority = 'required'
+     ON CONFLICT(user_id, task_id) DO UPDATE SET
+       status = 'done', completed_at = CURRENT_TIMESTAMP`
+  )
+    .bind(userId)
     .run();
-  return { id: info.meta.last_row_id as number, email, password };
 }
 
 /**
