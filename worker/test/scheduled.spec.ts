@@ -52,6 +52,32 @@ describe('weekly reminder cron', () => {
     void behind;
   });
 
+  it('does not re-send to the same user when the cron is retried', async () => {
+    // Cloudflare retries a failed invocation and the loop restarts from the
+    // first user, so without an EmailLog check everyone already emailed gets a
+    // duplicate.
+    const before = (await reminderRows()).filter((r) => r.to_email === 'behind@utoledo.edu').length;
+    expect(before).toBe(1);
+
+    await runScheduled();
+
+    const after = (await reminderRows()).filter((r) => r.to_email === 'behind@utoledo.edu').length;
+    expect(after).toBe(1);
+  });
+
+  it('emails admins a digest of who is behind', async () => {
+    await createUser({ email: 'digest.admin@utoledo.edu', role: 'admin' });
+
+    await runScheduled();
+
+    const { results } = await env.DB.prepare(
+      "SELECT to_email, subject FROM EmailLog WHERE email_type = 'admin_digest'"
+    ).all<{ to_email: string; subject: string }>();
+
+    expect(results.map((r) => r.to_email)).toContain('digest.admin@utoledo.edu');
+    expect(results[0].subject).toMatch(/outstanding onboarding tasks/);
+  });
+
   it('sends nothing when the weekly reminder is disabled', async () => {
     const before = (await reminderRows()).length;
     await createUser({ email: 'behind2@utoledo.edu' });

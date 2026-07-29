@@ -546,8 +546,13 @@ function LoginScreen({ onLogin }) {
     return React.createElement(AuthShell, { subtitle: 'Reset your password' },
       view === 'sent'
         ? React.createElement('div', { className: 'text-center space-y-4' },
-            React.createElement('p', { className: 'text-sm text-gray-600' }, 'If an account exists for ' + email + ', a reset link is on its way. The link is valid for 60 minutes.'),
-            React.createElement('p', { className: 'text-xs text-gray-400' }, 'Nothing arriving? Ask an administrator to re-invite you instead.'),
+            React.createElement('p', { className: 'text-sm text-gray-600' }, 'If an account exists for ' + email + ', a reset link has been sent. The link is valid for 60 minutes.'),
+            React.createElement('div', { className: 'bg-amber-50 border border-amber-200 rounded-lg p-3 text-left' },
+              React.createElement('p', { className: 'text-xs text-amber-800' },
+                React.createElement('strong', null, 'Check your junk folder. '),
+                'University mail filtering often blocks these, and it may never arrive. If it does not show up within a few minutes, ask an administrator to re-invite you from Admin → Users. They can read you a new passcode on the spot.'
+              )
+            ),
             React.createElement('button', {
               onClick: function () { setView('login'); setError(''); },
               className: 'w-full py-3 bg-toledo-gold text-toledo-blue rounded-lg hover:bg-yellow-300 transition-colors font-semibold',
@@ -588,7 +593,10 @@ function LoginScreen({ onLogin }) {
       }, 'Forgot password?'),
       React.createElement('div', { className: 'bg-blue-50 rounded-lg p-3' },
         React.createElement('p', { className: 'text-xs text-blue-700' },
-          'First time here? Sign in with the one-time passcode from your invite email as your password. Access is by invitation — contact your administrator if you need an account.'
+          'First time here? Sign in with the one-time passcode from your invite as your password.'
+        ),
+        React.createElement('p', { className: 'text-xs text-blue-700 mt-2' },
+          'No passcode, or locked out? Invite emails are often blocked by university mail filtering. Ask the Athletics onboarding administrator to issue you a passcode directly from Admin → Users.'
         )
       )
     )
@@ -632,6 +640,8 @@ function ForceResetScreen({ currentUser, onComplete, onSignOut }) {
         type: 'submit', disabled: loading,
         className: 'w-full py-3 bg-toledo-gold text-toledo-blue rounded-lg hover:bg-yellow-300 transition-colors font-semibold disabled:opacity-50',
       }, loading ? 'Saving...' : 'Set Password & Continue'),
+      React.createElement('p', { className: 'text-xs text-gray-400 text-center' },
+        'Lost your passcode? An administrator can issue a new one from Admin → Users.'),
       onSignOut && React.createElement('button', {
         type: 'button', onClick: onSignOut,
         className: 'w-full text-xs text-gray-400 hover:text-gray-600 text-center',

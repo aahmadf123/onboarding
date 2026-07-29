@@ -68,7 +68,7 @@ function PasscodeReveal({ data, onClose }) {
       React.createElement('button', { onClick: copy, className: adminBtnSecondary }, copied ? '✓ Copied' : 'Copy')
     ),
     React.createElement('div', { className: 'bg-amber-50 rounded-lg p-3 text-xs text-amber-700 mb-4' },
-      'An invite email was also sent — but while the from-address is the resend.dev sandbox, emails are only delivered to the Resend account owner. Hand the passcode over directly until a custom domain is verified in Settings.'),
+      'An invite email was also sent, but do not count on it arriving. Mail to utoledo.edu addresses is accepted by the university\'s servers and then filtered, so it can show as accepted in the Email Log and never reach the inbox. Hand this passcode over directly.'),
     React.createElement('button', { onClick: onClose, className: adminBtnPrimary + ' w-full' }, 'Done')
   );
 }
@@ -881,6 +881,12 @@ function AdminEmailLog() {
   var typeOptions = ['', 'invite', 'password_reset', 'task_assigned', 'weekly_reminder', 'approval_decision', 'test'];
 
   return React.createElement('div', null,
+    React.createElement('div', { className: 'mb-4 bg-amber-50 border border-amber-200 rounded-lg p-3' },
+      React.createElement('p', { className: 'text-xs text-amber-800' },
+        React.createElement('strong', null, '"Accepted" is not "delivered". '),
+        'It means the recipient\'s mail server took the message. University mail systems accept first and filter afterwards, so mail to utoledo.edu addresses can show as accepted here and never reach the inbox. Hand invite passcodes over directly, and use Who Is Behind rather than relying on reminder emails.'
+      )
+    ),
     React.createElement('div', { className: 'flex gap-2 mb-4' },
       React.createElement('select', { value: type, onChange: function (e) { setType(e.target.value); }, className: 'text-sm border border-gray-200 rounded-lg px-2 py-1.5' },
         typeOptions.map(function (t) { return React.createElement('option', { key: t, value: t }, t || 'All types'); })
@@ -897,7 +903,7 @@ function AdminEmailLog() {
             React.createElement('table', { className: 'w-full min-w-[640px]' },
               React.createElement('thead', null,
                 React.createElement('tr', { className: 'bg-gray-50 border-b border-gray-200' },
-                  ['When', 'To', 'Type', 'Status', 'Subject'].map(function (h) {
+                  ['When', 'To', 'Type', 'Provider', 'Subject'].map(function (h) {
                     return React.createElement('th', { key: h, className: 'px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase' }, h);
                   })
                 )
@@ -913,7 +919,7 @@ function AdminEmailLog() {
                       React.createElement('td', { className: 'px-4 py-2.5 text-xs text-gray-800' }, row.to_email),
                       React.createElement('td', { className: 'px-4 py-2.5 text-xs text-gray-500' }, row.email_type),
                       React.createElement('td', { className: 'px-4 py-2.5' },
-                        React.createElement('span', { className: 'px-2 py-0.5 rounded-full text-xs font-medium ' + (row.status === 'sent' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700') }, row.status)
+                        React.createElement('span', { className: 'px-2 py-0.5 rounded-full text-xs font-medium ' + (row.status === 'sent' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700') }, row.status === 'sent' ? 'accepted' : row.status)
                       ),
                       React.createElement('td', { className: 'px-4 py-2.5 text-xs text-gray-500 truncate max-w-[220px]' }, row.subject || '')
                     ),

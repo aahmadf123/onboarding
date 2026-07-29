@@ -8,3 +8,17 @@ RESEND_API_KEY=
 
 # One-time first-admin setup token, e.g. from: openssl rand -hex 32
 BOOTSTRAP_TOKEN=
+
+# Optional: send through Microsoft Graph instead of Resend.
+#
+# Mail sent from mail.utrockets-onboarding.com is accepted by the university's
+# servers and then filtered, so it never reaches utoledo.edu inboxes even though
+# Resend reports it as delivered. Sending as a real mailbox inside the tenant
+# avoids inbound filtering entirely.
+#
+# Needs an app registration with the application permission Mail.Send, admin
+# consented. When all four are set they take priority over Resend.
+# MS_TENANT_ID=
+# MS_CLIENT_ID=
+# MS_CLIENT_SECRET=
+# MS_SENDER_ADDRESS=athletics-onboarding@utoledo.edu

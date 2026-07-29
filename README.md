@@ -31,6 +31,7 @@ npx wrangler d1 execute toledo-onboarding-db-prod --local --file=../db/seed-v3.s
 #  already includes those Submissions columns; it is for older databases only.)
 npx wrangler d1 execute toledo-onboarding-db-prod --local --file=../db/migrations/2026-06-14-directory-refresh.sql
 npx wrangler d1 execute toledo-onboarding-db-prod --local --file=../db/migrations/2026-06-14-content-expansion.sql
+npx wrangler d1 execute toledo-onboarding-db-prod --local --file=../db/migrations/2026-07-29-page-feedback.sql
 
 npx wrangler dev
 # Then bootstrap the first admin (passcode is in the response):
@@ -59,6 +60,7 @@ npx wrangler d1 execute toledo-onboarding-db-prod --remote --file=../db/migratio
 npx wrangler d1 execute toledo-onboarding-db-prod --remote --file=../db/seed-v3.sql
 npx wrangler d1 execute toledo-onboarding-db-prod --remote --file=../db/migrations/2026-06-14-directory-refresh.sql
 npx wrangler d1 execute toledo-onboarding-db-prod --remote --file=../db/migrations/2026-06-14-content-expansion.sql
+npx wrangler d1 execute toledo-onboarding-db-prod --remote --file=../db/migrations/2026-07-29-page-feedback.sql
 # app_base_url is embedded in every invite and password-reset link. The
 # migrations use INSERT OR IGNORE, so an existing database keeps its old value
 # and must be updated explicitly. A stale value sends live reset tokens to
@@ -117,6 +119,7 @@ npx wrangler d1 execute toledo-onboarding-db-prod --file=../db/seed-v3.sql
 #  already includes those Submissions columns; it is for older databases only.)
 npx wrangler d1 execute toledo-onboarding-db-prod --file=../db/migrations/2026-06-14-directory-refresh.sql
 npx wrangler d1 execute toledo-onboarding-db-prod --file=../db/migrations/2026-06-14-content-expansion.sql
+npx wrangler d1 execute toledo-onboarding-db-prod --file=../db/migrations/2026-07-29-page-feedback.sql
 ```
 
 ## Maintenance

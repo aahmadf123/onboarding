@@ -33,8 +33,10 @@
 	// "kv_namespaces": [
 	// 	{ "binding": "RATE_LIMIT", "id": "<paste-kv-namespace-id>" }
 	// ],
-	// Scheduled triggers for email reminders (every Monday at 9 AM UTC)
+	// Weekly reminders + admin digest, Mondays at 13:00 UTC.
+	// Recipients are all US Eastern, so this lands around 9am local. It used to
+	// run at 09:00 UTC, which is 4-5am in Toledo.
 	"triggers": {
-		"crons": ["0 9 * * 1"]
+		"crons": ["0 13 * * 1"]
 	}
 }
