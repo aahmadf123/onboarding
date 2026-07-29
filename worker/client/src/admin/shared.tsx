@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useId, useRef, useState } from 'react';
 import { IconX } from '../components/Icon';
 
 export const adminInputCls =
@@ -16,12 +16,45 @@ interface AdminModalProps {
 }
 
 export function AdminModal({ title, onClose, children, wide }: AdminModalProps) {
+  // None of the modals were dialogs: no role, no label, no Escape, and focus
+  // stayed behind on the element that opened them. The mobile nav drawer
+  // already did this correctly, so the pattern existed in the codebase.
+  const titleId = useId();
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') onClose();
+    }
+    document.addEventListener('keydown', onKey);
+
+    const first = panelRef.current?.querySelector<HTMLElement>(
+      'input, select, textarea, button, [href]'
+    );
+    first?.focus();
+
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      // Returning focus is what stops a keyboard user landing back at the top
+      // of the document every time they close a dialog.
+      previouslyFocused?.focus?.();
+    };
+  }, [onClose]);
+
   return React.createElement(
     'div',
-    { className: 'fixed inset-0 bg-black/40 flex items-center justify-center z-[60] p-4' },
+    {
+      className: 'fixed inset-0 bg-black/40 flex items-center justify-center z-[60] p-4',
+      role: 'dialog',
+      'aria-modal': 'true',
+      'aria-labelledby': titleId,
+    },
     React.createElement(
       'div',
       {
+        ref: panelRef,
         className:
           'bg-white rounded-2xl border border-toledo-border shadow-xl w-full ' +
           (wide ? 'max-w-3xl' : 'max-w-lg') +
@@ -33,7 +66,7 @@ export function AdminModal({ title, onClose, children, wide }: AdminModalProps) 
           className:
             'flex items-center justify-between px-6 py-4 border-b border-gray-100 sticky top-0 bg-white rounded-t-2xl',
         },
-        React.createElement('h3', { className: 'font-semibold text-gray-900' }, title),
+        React.createElement('h3', { id: titleId, className: 'font-semibold text-gray-900' }, title),
         React.createElement(
           'button',
           { onClick: onClose, className: 'text-gray-400 hover:text-gray-600' },
@@ -52,16 +85,31 @@ interface AdminFieldProps {
 }
 
 export function AdminField({ label, children, hint }: AdminFieldProps) {
+  // The field owns the id and injects it into whatever control it wraps, so
+  // every admin input gets a real label association without changing ~40 call
+  // sites. Composite children (the markdown editor, which is a div of controls)
+  // cannot be targeted this way and keep an aria-label on the inner textarea
+  // instead.
+  const id = useId();
+  const hintId = id + '-hint';
+
+  const control = React.isValidElement(children)
+    ? React.cloneElement(children as React.ReactElement<any>, {
+        id: (children as React.ReactElement<any>).props.id ?? id,
+        'aria-describedby': hint ? hintId : undefined,
+      })
+    : children;
+
   return React.createElement(
     'div',
     { className: 'mb-4' },
     React.createElement(
       'label',
-      { className: 'block text-sm font-medium text-gray-700 mb-1' },
+      { htmlFor: id, className: 'block text-sm font-medium text-gray-700 mb-1' },
       label
     ),
-    children,
-    hint && React.createElement('p', { className: 'text-xs text-gray-400 mt-1' }, hint)
+    control,
+    hint && React.createElement('p', { id: hintId, className: 'text-xs text-toledo-slate mt-1' }, hint)
   );
 }
 

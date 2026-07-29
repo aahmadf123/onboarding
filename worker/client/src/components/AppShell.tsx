@@ -50,9 +50,17 @@ interface SidebarNavProps {
   currentView: string;
   onNavigate: NavigateFn;
   onItemClick?: () => void;
+  /** Only passed for the mobile drawer; the desktop sidebar has none. */
+  onSignOut?: () => void;
 }
 
-function SidebarNav({ currentUser, currentView, onNavigate, onItemClick }: SidebarNavProps) {
+function SidebarNav({
+  currentUser,
+  currentView,
+  onNavigate,
+  onItemClick,
+  onSignOut,
+}: SidebarNavProps) {
   const isMod = currentUser && (currentUser.role === 'moderator' || currentUser.role === 'admin');
   const isAdmin = currentUser && currentUser.role === 'admin';
   const activeNav = VIEW_TO_NAV[currentView] || currentView;
@@ -173,6 +181,19 @@ function SidebarNav({ currentUser, currentView, onNavigate, onItemClick }: Sideb
         React.createElement(IconFlag),
         'Report an Issue'
       ),
+      // The top bar's Sign out is `hidden sm:block` and the drawer had no
+      // equivalent, so on a phone there was no way to sign out at all.
+      onSignOut &&
+        React.createElement(
+          'button',
+          {
+            onClick: onSignOut,
+            className:
+              'w-full flex items-center gap-3 px-3 py-2 mt-1 rounded-lg text-xs font-medium text-blue-200 hover:bg-white/10 hover:text-white transition-colors text-left',
+          },
+          React.createElement(IconLock),
+          'Sign out'
+        ),
       React.createElement(
         'div',
         { className: 'mt-3 rounded-xl border border-white/10 bg-white/5 gold-trail px-3 py-3' },
@@ -338,6 +359,16 @@ export function AppShell({
   return React.createElement(
     'div',
     { className: 'min-h-screen bg-[#F4F7FB]' },
+    // Keyboard users had to tab through the whole sidebar on every page.
+    React.createElement(
+      'a',
+      {
+        href: '#main-content',
+        className:
+          'sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[100] focus:px-4 focus:py-2 focus:bg-toledo-blue focus:text-white focus:rounded-lg focus:text-sm focus:font-semibold',
+      },
+      'Skip to main content'
+    ),
     React.createElement(
       'aside',
       { className: 'hidden lg:block fixed inset-y-0 left-0 w-64 z-30' },
@@ -379,6 +410,7 @@ export function AppShell({
             currentView: currentView,
             onNavigate: onNavigate,
             onItemClick: closeDrawer,
+            onSignOut: onSignOut,
           })
         )
       ),
@@ -396,7 +428,7 @@ export function AppShell({
         },
         drawerOpen: drawerOpen,
       }),
-      React.createElement('main', { className: 'flex-1 pb-24' }, children),
+        React.createElement('main', { id: 'main-content', className: 'flex-1 pb-24', tabIndex: -1 }, children),
       React.createElement(Footer, { onNavigate: onNavigate })
     )
   );

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useId } from 'react';
 
 interface AuthShellProps {
   children?: React.ReactNode;
@@ -90,24 +90,37 @@ interface AuthInputProps {
 }
 
 export function AuthInput(props: AuthInputProps) {
+  // There was no htmlFor anywhere in the codebase, so no label was
+  // programmatically associated with its input. A screen reader reached these
+  // fields with nothing to announce, and clicking a label did not focus it.
+  const id = useId();
+  const hintId = id + '-hint';
+
   return React.createElement(
     'div',
     null,
     React.createElement(
       'label',
-      { className: 'block text-sm font-medium text-gray-700 mb-1' },
+      { htmlFor: id, className: 'block text-sm font-medium text-gray-700 mb-1' },
       props.label
     ),
     React.createElement('input', {
+      id,
       type: props.type,
       value: props.value,
       onChange: props.onChange,
       required: true,
       placeholder: props.placeholder || '',
       autoComplete: props.autoComplete,
+      'aria-describedby': props.hint ? hintId : undefined,
       className:
         'w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-toledo-blue',
     }),
-    props.hint && React.createElement('p', { className: 'text-xs text-gray-400 mt-1' }, props.hint)
+    props.hint &&
+      React.createElement(
+        'p',
+        { id: hintId, className: 'text-xs text-toledo-slate mt-1' },
+        props.hint
+      )
   );
 }

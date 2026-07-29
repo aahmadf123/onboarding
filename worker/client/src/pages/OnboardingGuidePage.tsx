@@ -125,6 +125,11 @@ export function OnboardingGuidePage({ onNavigate }: OnboardingGuidePageProps) {
           type: 'checkbox',
           checked: isChecked,
           disabled: task.my_status === 'approved' || busy === task.id,
+          // The title lives in a sibling button, so this had no accessible
+          // name: a screen reader announced "checkbox, not checked" once per
+          // task, with nothing to distinguish them — on the app's core
+          // interaction.
+          'aria-label': task.title,
           onChange: function () {
             toggle(task);
           },
@@ -154,7 +159,7 @@ export function OnboardingGuidePage({ onNavigate }: OnboardingGuidePageProps) {
           ),
           React.createElement(
             'div',
-            { className: 'flex items-center gap-2 flex-shrink-0 ml-3' },
+            { className: 'flex flex-wrap items-center justify-end gap-1.5 flex-shrink-0 ml-3' },
             badge &&
               React.createElement(
                 'span',
@@ -167,7 +172,7 @@ export function OnboardingGuidePage({ onNavigate }: OnboardingGuidePageProps) {
                 'span',
                 {
                   className:
-                    'text-xs px-2 py-0.5 rounded-full font-medium border border-amber-300 text-amber-700 hidden sm:inline-block',
+                    'text-xs px-2 py-0.5 rounded-full font-medium border border-amber-300 text-amber-700',
                 },
                 'Review required'
               ),
@@ -177,7 +182,7 @@ export function OnboardingGuidePage({ onNavigate }: OnboardingGuidePageProps) {
                 'span',
                 {
                   className:
-                    'text-xs px-2 py-0.5 rounded-full font-medium bg-gray-100 text-gray-500 hidden sm:inline-block',
+                    'text-xs px-2 py-0.5 rounded-full font-medium bg-gray-100 text-gray-600 hidden sm:inline-block',
                 },
                 PHASE_META[task.phase].label
               ),
@@ -185,7 +190,7 @@ export function OnboardingGuidePage({ onNavigate }: OnboardingGuidePageProps) {
               'span',
               {
                 className:
-                  'text-xs px-2 py-0.5 rounded-full font-medium hidden sm:inline-block ' +
+                  'text-xs px-2 py-0.5 rounded-full font-medium ' +
                   (PRIORITY_COLORS[task.priority] || ''),
               },
               PRIORITY_LABELS[task.priority] || ''
