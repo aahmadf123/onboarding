@@ -9,9 +9,18 @@
 	"compatibility_flags": [
 		"nodejs_compat"
 	],
+	// The Vite plugin overwrites `directory` in the generated output config to
+	// point at the client build, so this value only matters to tooling that
+	// reads this file directly (wrangler CLI, the vitest pool). Branding images
+	// now live in client/public/branding and are copied into the build.
+	//
+	// `single-page-application` is what makes /policies and /article/23 work on
+	// refresh: a navigation request that matches no asset is served index.html
+	// without invoking the Worker, so no catch-all route is needed.
 	"assets": {
-		"directory": "../branding",
-		"binding": "ASSETS"
+		"directory": "./dist/client",
+		"binding": "ASSETS",
+		"not_found_handling": "single-page-application"
 	},
 	"d1_databases": [
 		{
