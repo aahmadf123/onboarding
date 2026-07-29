@@ -20,6 +20,7 @@ import { ContactsPage } from './pages/ContactsPage';
 import { PoliciesPage } from './pages/PoliciesPage';
 import { AIChatWidget } from './features/AIChatWidget';
 import { FeedbackButton } from './features/FeedbackButton';
+import { QuickTour } from './features/QuickTour';
 import type { User } from './lib/types';
 
 const TOUR_KEY = 'toledo_tour_done_v1';
@@ -213,6 +214,15 @@ export function App() {
     navigate('search', query);
   }
 
+  function dismissTour() {
+    setShowTour(false);
+    try {
+      localStorage.setItem(TOUR_KEY, '1');
+    } catch {
+      /* storage disabled; the tour just shows again next time */
+    }
+  }
+
   // Deliberately does not reload: the sign-out transition stays in-app so the
   // login screen animates in rather than the tab going white first.
   function handleSignOut() {
@@ -374,6 +384,7 @@ export function App() {
         setShowTour(true);
       },
     },
+    showTour && React.createElement(QuickTour, { onDone: dismissTour, onNavigate: navigate }),
     taskReminder,
     content,
     React.createElement(AIChatWidget, { currentUser: currentUser }),
