@@ -1,11 +1,20 @@
 // Small helpers for the AppConfig key-value table.
 
 export const CONFIG_DEFAULTS: Record<string, string> = {
-  email_from_address: 'onboarding@resend.dev',
+  email_from_address: 'onboarding@mail.utrockets-onboarding.com',
   email_from_name: 'Toledo Athletics Onboarding',
   weekly_reminder_enabled: '1',
-  app_base_url: 'https://onboarding.utdata.workers.dev',
+  // Deliberately separate from weekly_reminder_enabled. The per-user reminders
+  // are frequently filtered by university mail, so an admin may well turn them
+  // off while still wanting the digest, which is the channel that works.
+  admin_digest_enabled: '1',
+  // Embedded in every invite and password-reset link. A wrong value here does
+  // not just break the links, it delivers live reset tokens to another host.
+  app_base_url: 'https://utrockets-onboarding.com',
 };
+
+/** The Resend sandbox sender, which only delivers to the account owner. */
+export const SANDBOX_FROM_ADDRESS = 'onboarding@resend.dev';
 
 /** Keys exposed through the admin Settings UI. */
 export const EDITABLE_CONFIG_KEYS = Object.keys(CONFIG_DEFAULTS);

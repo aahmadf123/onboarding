@@ -56,23 +56,76 @@ function setSessionToken(token) {
   } catch (e) {}
 }
 
-function clearAuthAndReload() {
+// Reason is stashed so the sign-in screen can explain why the user landed there
+// instead of dropping them on a bare login form with no context.
+function clearAuthAndReload(reason) {
   setSessionToken(null);
   try { localStorage.removeItem('toledo_auth_user'); } catch (e) {}
+  try { if (reason) sessionStorage.setItem('toledo_signout_reason', reason); } catch (e) {}
   window.location.href = '/';
 }
 
+function takeSignOutReason() {
+  try {
+    const reason = sessionStorage.getItem('toledo_signout_reason');
+    if (reason) sessionStorage.removeItem('toledo_signout_reason');
+    return reason || '';
+  } catch (e) { return ''; }
+}
+
+// Always resolves to a { success, error? } shape. A rejected fetch or a
+// non-JSON body (Hono's plain-text 500, a proxy interstitial, the SPA shell
+// served for an unmatched /api path) used to reject here, which left every
+// caller's loading flag stuck on forever.
 async function api(path, options = {}) {
   const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
   const token = getSessionToken();
   if (token) headers['Authorization'] = 'Bearer ' + token;
-  const res = await fetch(API_BASE + path, { ...options, headers });
+
+  let res;
+  try {
+    res = await fetch(API_BASE + path, { ...options, headers });
+  } catch (e) {
+    return { success: false, error: 'Could not reach the server. Check your connection and try again.' };
+  }
+
+  const isAuthPath = path.indexOf('/auth/') === 0;
+
   // A 401 outside the auth endpoints means the session is gone — start over.
-  if (res.status === 401 && path.indexOf('/auth/') !== 0 && token) {
-    clearAuthAndReload();
+  if (res.status === 401 && !isAuthPath && token) {
+    clearAuthAndReload('Your session expired. Please sign in again.');
     return { success: false, error: 'Session expired' };
   }
-  return res.json();
+
+  let body = null;
+  try {
+    body = await res.json();
+  } catch (e) {
+    body = null;
+  }
+
+  // The gate returns 403 for disabled accounts and for accounts still owing a
+  // password reset. Neither used to be handled, so the UI just froze.
+  if (res.status === 403 && body) {
+    if (body.code === 'PASSWORD_RESET_REQUIRED') {
+      window.dispatchEvent(new CustomEvent('toledo:password-reset-required'));
+      return body;
+    }
+    if (body.code === 'ACCOUNT_DISABLED') {
+      clearAuthAndReload('This account has been disabled. Contact an administrator.');
+      return body;
+    }
+  }
+
+  if (body === null) {
+    return {
+      success: false,
+      error: res.ok
+        ? 'The server sent a response we could not read. Please try again.'
+        : 'Something went wrong (error ' + res.status + '). Please try again.',
+    };
+  }
+  return body;
 }
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
@@ -463,10 +516,11 @@ function LoginScreen({ onLogin }) {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [notice, setNotice] = useState(takeSignOutReason);
 
   async function handleLogin(e) {
     e.preventDefault();
-    setLoading(true); setError('');
+    setLoading(true); setError(''); setNotice('');
     const res = await api('/auth/login', { method: 'POST', body: JSON.stringify({ email: email, password: password }) });
     setLoading(false);
     if (res.success) onLogin(res.data);
@@ -476,8 +530,15 @@ function LoginScreen({ onLogin }) {
   async function handleForgot(e) {
     e.preventDefault();
     setLoading(true); setError('');
-    await api('/auth/forgot', { method: 'POST', body: JSON.stringify({ email: email }) });
+    const res = await api('/auth/forgot', { method: 'POST', body: JSON.stringify({ email: email }) });
     setLoading(false);
+    // The endpoint always reports success so account existence cannot be
+    // probed, but a rate-limit or network failure must not be reported as
+    // "check your inbox" — that leaves a locked-out user waiting forever.
+    if (res && res.success === false) {
+      setError(res.error || 'Could not send the reset link. Please try again shortly.');
+      return;
+    }
     setView('sent');
   }
 
@@ -485,8 +546,13 @@ function LoginScreen({ onLogin }) {
     return React.createElement(AuthShell, { subtitle: 'Reset your password' },
       view === 'sent'
         ? React.createElement('div', { className: 'text-center space-y-4' },
-            React.createElement('p', { className: 'text-sm text-gray-600' }, 'If an account exists for ' + email + ', a reset link is on its way. The link is valid for 60 minutes.'),
-            React.createElement('p', { className: 'text-xs text-gray-400' }, 'Nothing arriving? Ask an administrator to re-invite you instead.'),
+            React.createElement('p', { className: 'text-sm text-gray-600' }, 'If an account exists for ' + email + ', a reset link has been sent. The link is valid for 60 minutes.'),
+            React.createElement('div', { className: 'bg-amber-50 border border-amber-200 rounded-lg p-3 text-left' },
+              React.createElement('p', { className: 'text-xs text-amber-800' },
+                React.createElement('strong', null, 'Check your junk folder. '),
+                'University mail filtering often blocks these, and it may never arrive. If it does not show up within a few minutes, ask an administrator to re-invite you from Admin → Users. They can read you a new passcode on the spot.'
+              )
+            ),
             React.createElement('button', {
               onClick: function () { setView('login'); setError(''); },
               className: 'w-full py-3 bg-toledo-gold text-toledo-blue rounded-lg hover:bg-yellow-300 transition-colors font-semibold',
@@ -510,6 +576,9 @@ function LoginScreen({ onLogin }) {
 
   return React.createElement(AuthShell, null,
     React.createElement('form', { onSubmit: handleLogin, className: 'space-y-4' },
+      notice && React.createElement('div', { className: 'bg-amber-50 border border-amber-200 rounded-lg p-3', role: 'status' },
+        React.createElement('p', { className: 'text-xs text-amber-800' }, notice)
+      ),
       React.createElement(AuthInput, { label: 'University Email', type: 'email', value: email, onChange: function (e) { setEmail(e.target.value); }, placeholder: 'your.name@utoledo.edu', autoComplete: 'email' }),
       React.createElement(AuthInput, { label: 'Password', type: 'password', value: password, onChange: function (e) { setPassword(e.target.value); }, placeholder: '••••••••••', autoComplete: 'current-password' }),
       error && React.createElement('p', { className: 'text-red-500 text-sm' }, error),
@@ -524,7 +593,10 @@ function LoginScreen({ onLogin }) {
       }, 'Forgot password?'),
       React.createElement('div', { className: 'bg-blue-50 rounded-lg p-3' },
         React.createElement('p', { className: 'text-xs text-blue-700' },
-          'First time here? Sign in with the one-time passcode from your invite email as your password. Access is by invitation — contact your administrator if you need an account.'
+          'First time here? Sign in with the one-time passcode from your invite as your password.'
+        ),
+        React.createElement('p', { className: 'text-xs text-blue-700 mt-2' },
+          'No passcode, or locked out? Invite emails are often blocked by university mail filtering. Ask the Athletics onboarding administrator to issue you a passcode directly from Admin → Users.'
         )
       )
     )
@@ -568,6 +640,8 @@ function ForceResetScreen({ currentUser, onComplete, onSignOut }) {
         type: 'submit', disabled: loading,
         className: 'w-full py-3 bg-toledo-gold text-toledo-blue rounded-lg hover:bg-yellow-300 transition-colors font-semibold disabled:opacity-50',
       }, loading ? 'Saving...' : 'Set Password & Continue'),
+      React.createElement('p', { className: 'text-xs text-gray-400 text-center' },
+        'Lost your passcode? An administrator can issue a new one from Admin → Users.'),
       onSignOut && React.createElement('button', {
         type: 'button', onClick: onSignOut,
         className: 'w-full text-xs text-gray-400 hover:text-gray-600 text-center',

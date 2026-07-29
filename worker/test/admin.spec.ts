@@ -1,6 +1,7 @@
 import { env } from 'cloudflare:test';
 import { describe, it, expect, beforeAll } from 'vitest';
 import { applySchema, mockResend, createUserAndLogin, apiCall, login } from './helpers';
+import { getRelevantContextWithSources } from '../src/services/content-index';
 
 beforeAll(async () => {
   await applySchema();
@@ -381,6 +382,35 @@ describe('content CMS', () => {
     expect(adminList.json.data.find((a: { id: number }) => a.id === articleId)).toBeTruthy();
   });
 
+  it('keeps soft-deleted articles out of AI chat context', async () => {
+    const admin = await createUserAndLogin({ role: 'admin' });
+
+    const created = await apiCall('/api/admin/content/articles', {
+      method: 'POST',
+      token: admin.token,
+      body: JSON.stringify({
+        category_id: 1,
+        title: 'Retracted Parking Guidance',
+        current_content: 'Zebra permits cost nine hundred dollars.',
+      }),
+    });
+    const articleId = created.json.data.id as number;
+
+    const before = await getRelevantContextWithSources(env.DB, 'zebra permits', 12);
+    expect(before.context).toContain('Zebra permits');
+
+    await apiCall(`/api/admin/content/articles/${articleId}`, {
+      method: 'DELETE',
+      token: admin.token,
+    });
+
+    // The index row is dropped by reindexArticle, but the retrieval layer also
+    // queries live Articles directly. That query had no is_active filter, so
+    // the assistant kept quoting retracted policy content verbatim.
+    const after = await getRelevantContextWithSources(env.DB, 'zebra permits', 12);
+    expect(after.context).not.toContain('Zebra permits');
+  });
+
   it('contacts CRUD roundtrip works', async () => {
     const admin = await createUserAndLogin({ role: 'admin' });
     const create = await apiCall('/api/admin/content/contacts', {
@@ -413,6 +443,89 @@ describe('content CMS', () => {
       token: admin.token,
     });
     expect(del.status).toBe(409);
+  });
+});
+
+describe('page feedback', () => {
+  it('records a report and surfaces it to admins, who can resolve it', async () => {
+    const staff = await createUserAndLogin();
+    const admin = await createUserAndLogin({ role: 'admin' });
+
+    const sent = await apiCall('/api/feedback', {
+      method: 'POST',
+      token: staff.token,
+      body: JSON.stringify({ message: 'The parking article links to a dead page.', page: 'article' }),
+    });
+    expect(sent.status).toBe(201);
+
+    // The old implementation posted to /api/tips/0/feedback, which violated
+    // TipFeedback's foreign key, and nothing ever read the table anyway.
+    const listed = await apiCall('/api/admin/feedback?status=open', { token: admin.token });
+    expect(listed.status).toBe(200);
+    const report = listed.json.data.find(
+      (r: { message: string }) => r.message === 'The parking article links to a dead page.'
+    );
+    expect(report).toBeDefined();
+    expect(report.reporter_email).toBe(staff.email);
+    expect(report.page).toBe('article');
+
+    const resolved = await apiCall(`/api/admin/feedback/${report.id}`, {
+      method: 'PUT',
+      token: admin.token,
+      body: JSON.stringify({ status: 'resolved' }),
+    });
+    expect(resolved.status).toBe(200);
+
+    const stillOpen = await apiCall('/api/admin/feedback?status=open', { token: admin.token });
+    expect(
+      stillOpen.json.data.some((r: { id: number }) => r.id === report.id)
+    ).toBe(false);
+  });
+
+  it('rejects empty feedback and keeps non-admins out of the queue', async () => {
+    const staff = await createUserAndLogin();
+
+    const empty = await apiCall('/api/feedback', {
+      method: 'POST',
+      token: staff.token,
+      body: JSON.stringify({ message: '   ' }),
+    });
+    expect(empty.status).toBe(400);
+
+    const forbidden = await apiCall('/api/admin/feedback', { token: staff.token });
+    expect(forbidden.status).toBe(403);
+  });
+});
+
+describe('who is behind', () => {
+  it('lists active users with outstanding required tasks and drops them once done', async () => {
+    await env.DB.prepare(
+      `INSERT INTO Tasks (slug, phase, title, priority, requires_approval, audience, is_active)
+       VALUES ('behind-check', 'first-day', 'Behind check task', 'required', 0, 'all', 1)`
+    ).run();
+    const taskId = (
+      await env.DB.prepare("SELECT id FROM Tasks WHERE slug = 'behind-check'").first<{ id: number }>()
+    )?.id as number;
+
+    const admin = await createUserAndLogin({ role: 'admin' });
+    const laggard = await createUserAndLogin();
+
+    const res = await apiCall('/api/admin/behind', { token: admin.token });
+    expect(res.status).toBe(200);
+    const row = res.json.data.find((r: { email: string }) => r.email === laggard.email);
+    expect(row).toBeDefined();
+    expect(row.open_tasks).toBeGreaterThan(0);
+
+    // Completing the task removes the user from the list.
+    await apiCall(`/api/tasks/${taskId}/status`, {
+      method: 'PUT',
+      token: laggard.token,
+      body: JSON.stringify({ done: true }),
+    });
+
+    const after = await apiCall('/api/admin/behind', { token: admin.token });
+    const stillListed = after.json.data.find((r: { email: string }) => r.email === laggard.email);
+    expect(stillListed).toBeUndefined();
   });
 });
 

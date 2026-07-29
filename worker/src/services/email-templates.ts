@@ -161,12 +161,49 @@ export function approvalDecisionEmail(opts: {
   };
 }
 
+/**
+ * Weekly digest for admins listing who still has outstanding tasks.
+ *
+ * Per-user reminders to utoledo.edu addresses are filtered by the university's
+ * mail system, so this gives HR one list they can act on. The same data is
+ * available in Admin > Who Is Behind, which works even if this email is
+ * filtered too.
+ */
+export function adminDigestEmail(opts: {
+  name: string | null;
+  email: string;
+  users: { email: string; name: string | null; open_tasks: number }[];
+  baseUrl: string;
+}): EmailContent {
+  const rows = opts.users
+    .map(
+      (u) =>
+        `<tr><td style="padding:6px 12px 6px 0;">${escapeHtml(u.name || u.email)}</td>` +
+        `<td style="padding:6px 0;color:#6b7280;">${escapeHtml(u.email)}</td>` +
+        `<td style="padding:6px 0 6px 12px;text-align:right;font-weight:600;">${u.open_tasks}</td></tr>`
+    )
+    .join('');
+
+  return {
+    subject: subjectSafe(
+      `${opts.users.length} ${opts.users.length === 1 ? 'person has' : 'people have'} outstanding onboarding tasks`
+    ),
+    html: layout(
+      greeting(opts.name, opts.email) +
+        '<p>These active staff members still have incomplete required or assigned onboarding tasks:</p>' +
+        `<table style="border-collapse:collapse;width:100%;font-size:14px;">${rows}</table>` +
+        button(opts.baseUrl + '/admin', 'Open Admin') +
+        '<p style="color:#6b7280;font-size:12px;">Per-user reminder emails are frequently filtered by university mail systems, so following up directly is more reliable. The same list is in Admin, under Who Is Behind.</p>'
+    ),
+  };
+}
+
 export function testEmail(opts: { email: string; fromAddress: string }): EmailContent {
   return {
     subject: 'Test email — Toledo Athletics Onboarding',
     html: layout(
       `<p>This is a test email sent to ${escapeHtml(opts.email)} from <strong>${escapeHtml(opts.fromAddress)}</strong>.</p>` +
-        '<p>If you are reading this, the Resend integration works. Note: while the from-address is the resend.dev sandbox, emails are only delivered to the Resend account owner’s inbox.</p>'
+        '<p>If you are reading this, outbound email works. Note that a send recorded as accepted in the Email Log is not proof of delivery: university mail systems accept a message and filter it afterwards, so mail to utoledo.edu addresses may never reach the inbox.</p>'
     ),
   };
 }

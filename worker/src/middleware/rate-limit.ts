@@ -41,18 +41,35 @@ export function rateLimit(maxRequests: number) {
       // global limit is best-effort — bursts can slightly exceed it. Strict
       // enforcement would require a Durable Object counter. On any KV error we
       // fail open to the in-memory limiter below rather than reject the request.
+      //
+      // `next()` deliberately runs OUTSIDE the try: it used to sit inside, so a
+      // throw from any downstream handler was swallowed here and the request
+      // fell through to the in-memory branch, which called next() a second
+      // time. That double-executed the handler (duplicate session inserts, a
+      // second billed AI.run) and hid the original error.
+      let allowed: boolean | null = null;
       try {
         const windowId = Math.floor(Date.now() / WINDOW_MS);
         const key = `rl:${ip}:${windowId}`;
         const current = parseInt((await kv.get(key)) ?? '0', 10) || 0;
-        if (current >= maxRequests) return limited(c);
-        // expirationTtl minimum is 60s; the bucket self-expires after the window.
-        await kv.put(key, String(current + 1), { expirationTtl: 60 });
-        await next();
-        return;
-      } catch {
-        // fall through to in-memory fallback
+        if (current >= maxRequests) {
+          allowed = false;
+        } else {
+          // expirationTtl minimum is 60s; the bucket self-expires after the window.
+          await kv.put(key, String(current + 1), { expirationTtl: 60 });
+          allowed = true;
+        }
+      } catch (err) {
+        // Degrading to the per-isolate limiter silently would hide the loss of
+        // global rate limiting entirely, so say so.
+        console.error(
+          'RATE_LIMIT KV unavailable, falling back to per-isolate window:',
+          err instanceof Error ? err.message : err
+        );
       }
+
+      if (allowed === false) return limited(c);
+      if (allowed === true) return next();
     }
 
     // In-memory fallback (per isolate).

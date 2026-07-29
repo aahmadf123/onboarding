@@ -164,7 +164,8 @@ export async function getRelevantContextWithSources(
             ], terms, phrase, 'Articles.title')} AS match_score
      FROM Articles
      LEFT JOIN Categories ON Categories.id = Articles.category_id
-     WHERE ${buildWhereClause(['Articles.title', 'Categories.name', 'Articles.current_content'], terms, phrase)}
+     WHERE Articles.is_active = 1
+       AND (${buildWhereClause(['Articles.title', 'Categories.name', 'Articles.current_content'], terms, phrase)})
      ORDER BY match_score DESC, Articles.last_updated DESC
      LIMIT ?`,
     4

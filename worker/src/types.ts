@@ -13,6 +13,14 @@ export type Bindings = {
   // When bound in wrangler.jsonc the rate limiter uses it; otherwise it
   // falls back to a per-isolate in-memory window.
   RATE_LIMIT?: KVNamespace;
+
+  // Optional Microsoft Graph sender. When all four are set, mail is sent from
+  // inside the university tenant instead of through Resend, which is the only
+  // way to reliably reach utoledo.edu mailboxes. See email-providers.ts.
+  MS_TENANT_ID?: string;
+  MS_CLIENT_ID?: string;
+  MS_CLIENT_SECRET?: string;
+  MS_SENDER_ADDRESS?: string;
 };
 
 // Hono environment: bindings + per-request variables set by auth middleware
@@ -230,6 +238,7 @@ export type EmailType =
   | 'password_reset'
   | 'task_assigned'
   | 'weekly_reminder'
+  | 'admin_digest'
   | 'approval_decision'
   | 'test';
 

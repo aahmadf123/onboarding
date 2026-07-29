@@ -31,9 +31,12 @@ npx wrangler d1 execute toledo-onboarding-db-prod --local --file=../db/seed-v3.s
 #  already includes those Submissions columns; it is for older databases only.)
 npx wrangler d1 execute toledo-onboarding-db-prod --local --file=../db/migrations/2026-06-14-directory-refresh.sql
 npx wrangler d1 execute toledo-onboarding-db-prod --local --file=../db/migrations/2026-06-14-content-expansion.sql
+npx wrangler d1 execute toledo-onboarding-db-prod --local --file=../db/migrations/2026-07-29-page-feedback.sql
+npx wrangler d1 execute toledo-onboarding-db-prod --local --file=../db/migrations/2026-07-29-repair-seed-data.sql
 
 npx wrangler dev
-# Then bootstrap the first admin (passcode is in the response):
+# Then issue the super admin's passcode (it is in the response). This targets
+# utdata@utoledo.edu specifically, and only while that account has no password:
 # curl -X POST http://localhost:8787/api/auth/bootstrap -H "x-bootstrap-token: <your BOOTSTRAP_TOKEN>"
 ```
 
@@ -59,21 +62,53 @@ npx wrangler d1 execute toledo-onboarding-db-prod --remote --file=../db/migratio
 npx wrangler d1 execute toledo-onboarding-db-prod --remote --file=../db/seed-v3.sql
 npx wrangler d1 execute toledo-onboarding-db-prod --remote --file=../db/migrations/2026-06-14-directory-refresh.sql
 npx wrangler d1 execute toledo-onboarding-db-prod --remote --file=../db/migrations/2026-06-14-content-expansion.sql
-npx wrangler d1 execute toledo-onboarding-db-prod --remote \
-  --command "UPDATE AppConfig SET value='https://<your-worker-url>' WHERE key='app_base_url'"
+npx wrangler d1 execute toledo-onboarding-db-prod --remote --file=../db/migrations/2026-07-29-page-feedback.sql
+
+# Repairs a database seeded before 2026-07-29. Fixing the seed files does not
+# fix rows already written, so this is required on any existing database. It
+# removes the two placeholder accounts, repoints the sample content at the real
+# super admin, rebuilds the AI index against the articles that actually exist,
+# and moves app_base_url off the old workers.dev host. Idempotent, and a no-op
+# on a database seeded from the corrected files.
+npx wrangler d1 execute toledo-onboarding-db-prod --remote --file=../db/migrations/2026-07-29-repair-seed-data.sql
 
 # Deploy — NOTE: from this moment the site is invite-only; existing users
 # must be invited from Admin → Users before they can sign in again.
 npx wrangler deploy
 
-# Bootstrap the first super admin (one-time; inert afterwards)
+# Issue the super admin's passcode (one-time; inert once that account has a
+# password). It targets utdata@utoledo.edu only — every other admin is invited
+# normally from Admin → Users.
 curl -X POST https://<your-worker-url>/api/auth/bootstrap -H "x-bootstrap-token: <BOOTSTRAP_TOKEN>"
 # → sign in as utdata@utoledo.edu with the returned passcode → set a password → Admin
 ```
 
 ### Email sending
 
-Emails are sent through Resend. The from-address defaults to the `onboarding@resend.dev` sandbox, which **only delivers to the Resend account owner's inbox** — fine for testing; invite passcodes are also shown in the admin UI so onboarding works regardless. For real delivery, verify a domain in the Resend dashboard and change the from-address in **Admin → Settings** (no redeploy needed).
+Emails go through Resend from `mail.utrockets-onboarding.com`.
+
+**Do not assume email reaches anyone at `utoledo.edu`.** Resend reporting a send
+as successful only means the receiving mail server returned a 250 accept at SMTP
+time. The university runs Microsoft 365, which accepts first and quarantines
+afterwards, and mail from a newly registered domain whose name resembles
+`utrockets.com` carrying a passcode and a sign-in link matches the profile
+anti-phishing filters are built to stop. In testing, invites to `utoledo.edu`
+addresses showed as delivered in Resend and never arrived.
+
+The portal is therefore built so nothing critical depends on email:
+
+- Invite passcodes are shown once in the admin UI. Hand them over directly.
+- A locked-out user is recovered with **Admin → Users → Re-invite**, which
+  issues a fresh passcode on screen.
+- Outstanding tasks are shown in the app on sign-in, and an admin-facing digest
+  lists who is behind, so the weekly nudge does not depend on delivery.
+
+The durable fix is to send from inside the university tenant (Microsoft Graph
+`sendMail` via an app registration on a UToledo mailbox), which skips inbound
+filtering entirely. `worker/src/services/email.ts` is structured so that is a
+backend swap rather than a rewrite. Failing that, ask UToledo IT to allowlist
+the sending domain, and have them run a message trace to confirm what is
+happening to the mail.
 
 ## Database Setup (fresh environment)
 
@@ -88,6 +123,8 @@ npx wrangler d1 execute toledo-onboarding-db-prod --file=../db/seed-v3.sql
 #  already includes those Submissions columns; it is for older databases only.)
 npx wrangler d1 execute toledo-onboarding-db-prod --file=../db/migrations/2026-06-14-directory-refresh.sql
 npx wrangler d1 execute toledo-onboarding-db-prod --file=../db/migrations/2026-06-14-content-expansion.sql
+npx wrangler d1 execute toledo-onboarding-db-prod --file=../db/migrations/2026-07-29-page-feedback.sql
+npx wrangler d1 execute toledo-onboarding-db-prod --file=../db/migrations/2026-07-29-repair-seed-data.sql
 ```
 
 ## Maintenance

@@ -113,6 +113,27 @@ describe('Toledo Athletics Onboarding Worker', () => {
     expect(text).not.toContain('mailchannels');
   });
 
+  it('ships search regexes with their escapes intact', async () => {
+    const response = await SELF.fetch('https://example.com/');
+    const text = await response.text();
+    // The SPA is built from template literals, so a single backslash is eaten
+    // before the browser sees it. That turned /\s+/ into /s+/ (splitting terms
+    // on the letter "s") and collapsed escapeRegex's character class, which
+    // made any query containing a regex metacharacter throw during render.
+    expect(text).toContain('q.split(/\\s+/)');
+    expect(text).not.toContain('q.split(/s+/)');
+    expect(text).not.toContain(".replace(/s+/g, ' ')");
+    expect(text).toContain("replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&')");
+  });
+
+  it('wraps the app in an error boundary', async () => {
+    const response = await SELF.fetch('https://example.com/');
+    const text = await response.text();
+    expect(text).toContain('class ErrorBoundary');
+    expect(text).toContain('getDerivedStateFromError');
+    expect(text).toContain('React.createElement(ErrorBoundary');
+  });
+
   it('sets a Content-Security-Policy and security headers on the SPA shell', async () => {
     const response = await SELF.fetch('https://example.com/');
     const csp = response.headers.get('content-security-policy') ?? '';

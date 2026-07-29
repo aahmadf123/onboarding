@@ -19,6 +19,7 @@ import quicklinks from './routes/quicklinks';
 import contacts from './routes/contacts';
 import systems from './routes/systems';
 import policies from './routes/policies';
+import feedback from './routes/feedback';
 
 const app = new Hono<AppEnv>();
 
@@ -122,11 +123,26 @@ app.route('/api/quicklinks', quicklinks);
 app.route('/api/contacts', contacts);
 app.route('/api/systems', systems);
 app.route('/api/policies', policies);
+app.route('/api/feedback', feedback);
 
 // ── Static assets (branding images) ───────────────────────────
 app.get('/branding/*', async (c) => {
   const url = new URL(c.req.url);
   return serveBrandingAsset(c, url.pathname);
+});
+
+// ── API 404 + error handling ──────────────────────────────────
+// Without these, an unmatched /api path fell through to the SPA catch-all and
+// returned HTTP 200 with an HTML document, and a thrown handler returned
+// Hono's plain-text 500. Both made the client's res.json() reject.
+app.all('/api/*', (c) => c.json({ success: false, error: 'Not found' }, 404));
+
+app.onError((err, c) => {
+  console.error('Unhandled error:', err instanceof Error ? err.stack ?? err.message : err);
+  if (new URL(c.req.url).pathname.startsWith('/api/')) {
+    return c.json({ success: false, error: 'Something went wrong. Please try again.' }, 500);
+  }
+  return c.text('Internal Server Error', 500);
 });
 
 // ── SPA fallback ──────────────────────────────────────────────

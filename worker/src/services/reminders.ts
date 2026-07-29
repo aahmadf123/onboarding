@@ -5,7 +5,7 @@
 import { Bindings } from '../types';
 import { getConfig } from './config';
 import { sendEmail } from './email';
-import { weeklyReminderEmail } from './email-templates';
+import { adminDigestEmail, weeklyReminderEmail } from './email-templates';
 
 interface ReminderUser {
   id: number;
@@ -18,6 +18,33 @@ interface OpenTask {
   phase: string;
   priority: string;
 }
+
+export interface BehindUser {
+  id: number;
+  email: string;
+  name: string | null;
+  last_login_at: string | null;
+  open_tasks: number;
+}
+
+/**
+ * Active users with genuinely incomplete required or assigned tasks, with a
+ * count each. Shares its predicate with the per-user reminder query below so
+ * the admin view and the emails can never disagree about who is behind.
+ */
+export const BEHIND_USERS_SQL = `
+  SELECT u.id, u.email, u.name, u.last_login_at, COUNT(t.id) AS open_tasks
+  FROM Users u
+  JOIN Tasks t ON t.is_active = 1
+  LEFT JOIN UserTasks ut ON ut.task_id = t.id AND ut.user_id = u.id
+  WHERE u.status = 'active'
+    AND (t.audience = 'all' OR ut.assigned_by IS NOT NULL)
+    AND COALESCE(ut.status, 'open') IN ('open', 'rejected')
+    AND (t.priority = 'required' OR ut.assigned_by IS NOT NULL)
+  GROUP BY u.id, u.email, u.name, u.last_login_at
+  HAVING COUNT(t.id) > 0
+  ORDER BY COUNT(t.id) DESC, u.email
+`;
 
 /** Purges expired sessions and password-reset tokens. */
 export async function cleanupExpired(env: Pick<Bindings, 'DB'>): Promise<void> {
@@ -44,9 +71,25 @@ export async function runWeeklyReminders(
     "SELECT id, email, name FROM Users WHERE status = 'active'"
   ).all<ReminderUser>();
 
+  // Cloudflare retries a failed cron invocation, and the loop restarts from the
+  // first user. Without this check a retry re-sends to everyone already
+  // emailed. EmailLog is the record of what actually went out.
+  const { results: alreadySent } = await env.DB.prepare(
+    `SELECT DISTINCT user_id FROM EmailLog
+     WHERE email_type = 'weekly_reminder'
+       AND status = 'sent'
+       AND user_id IS NOT NULL
+       AND created_at >= datetime('now', '-6 days')`
+  ).all<{ user_id: number }>();
+  const emailedThisWeek = new Set((alreadySent ?? []).map((row) => row.user_id));
+
   let sent = 0;
   let skipped = 0;
   for (const user of users ?? []) {
+    if (emailedThisWeek.has(user.id)) {
+      skipped++;
+      continue;
+    }
     try {
       const { results: openTasks } = await env.DB.prepare(
         `SELECT t.title, t.phase, t.priority
@@ -89,4 +132,59 @@ export async function runWeeklyReminders(
     }
   }
   return { sent, skipped };
+}
+
+/**
+ * Emails every admin one list of who still has outstanding tasks.
+ *
+ * Per-user reminders to utoledo.edu addresses are filtered, so this is the
+ * fallback that lets HR follow up by other means. One message to one mailbox
+ * has a better chance than one per staff member, and Admin > Who Is Behind
+ * carries the same list if this is filtered too.
+ */
+export async function runAdminDigest(
+  env: Pick<Bindings, 'DB' | 'RESEND_API_KEY'>
+): Promise<{ sent: number; behind: number }> {
+  // Gated separately from weekly_reminder_enabled: an admin may reasonably
+  // turn off the per-user reminders, which are usually filtered anyway, and
+  // still want the digest, which is the channel that actually reaches them.
+  const enabled = await getConfig(env.DB, 'admin_digest_enabled');
+  if (enabled !== '1') return { sent: 0, behind: 0 };
+
+  const { results: behind } = await env.DB.prepare(BEHIND_USERS_SQL).all<BehindUser>();
+  if (!behind || behind.length === 0) return { sent: 0, behind: 0 };
+
+  const { results: admins } = await env.DB.prepare(
+    "SELECT id, email, name FROM Users WHERE role = 'admin' AND status = 'active'"
+  ).all<{ id: number; email: string; name: string | null }>();
+  if (!admins || admins.length === 0) return { sent: 0, behind: behind.length };
+
+  const baseUrl = await getConfig(env.DB, 'app_base_url');
+  let sent = 0;
+
+  for (const admin of admins) {
+    try {
+      const content = adminDigestEmail({
+        name: admin.name,
+        email: admin.email,
+        users: behind,
+        baseUrl,
+      });
+      const result = await sendEmail(env, {
+        to: admin.email,
+        subject: content.subject,
+        html: content.html,
+        type: 'admin_digest',
+        userId: admin.id,
+      });
+      if (result.ok) sent++;
+    } catch (err) {
+      console.error(
+        `Admin digest for ${admin.email} failed:`,
+        err instanceof Error ? err.message : err
+      );
+    }
+  }
+
+  return { sent, behind: behind.length };
 }

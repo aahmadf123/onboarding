@@ -9,6 +9,7 @@ import {
   apiCall,
 } from './helpers';
 import { hashPassword, verifyPassword, generateToken, sha256Hex } from '../src/services/passwords';
+import { PRIMARY_SUPERADMIN_EMAIL } from '../src/constants';
 
 beforeAll(async () => {
   await applySchema();
@@ -47,6 +48,27 @@ describe('global auth gate', () => {
     const res = await apiCall('/api/categories', { token: user.token });
     expect(res.status).toBe(200);
     expect(res.json.success).toBe(true);
+  });
+
+  it('returns JSON 404 for an unmatched API path instead of the SPA shell', async () => {
+    const user = await createUserAndLogin();
+    const res = await apiCall('/api/does-not-exist', { token: user.token });
+    // This used to fall through to the SPA catch-all and return 200 + HTML,
+    // which made the client's res.json() reject and froze the caller.
+    expect(res.status).toBe(404);
+    expect(res.json.success).toBe(false);
+  });
+
+  it('tags the disabled-account rejection with a machine-readable code', async () => {
+    const user = await createUserAndLogin();
+    await env.DB.prepare("UPDATE Users SET status = 'disabled' WHERE email = ?")
+      .bind(user.email)
+      .run();
+    const res = await apiCall('/api/categories', { token: user.token });
+    expect(res.status).toBe(403);
+    // The client keys on the code to sign the user out with an explanation,
+    // rather than sitting on a loading state forever.
+    expect(res.json.code).toBe('ACCOUNT_DISABLED');
   });
 });
 
@@ -242,10 +264,12 @@ describe('forgot / reset password', () => {
 });
 
 describe('bootstrap', () => {
-  it('issues the first admin passcode exactly once, guarded by the secret', async () => {
+  it('issues the super admin passcode exactly once, guarded by the secret', async () => {
     await env.DB.prepare(
-      "INSERT INTO Users (email, role, status) VALUES ('boot.admin@utoledo.edu', 'admin', 'invited')"
-    ).run();
+      "INSERT INTO Users (email, role, status) VALUES (?, 'admin', 'invited')"
+    )
+      .bind(PRIMARY_SUPERADMIN_EMAIL)
+      .run();
 
     const noToken = await apiCall('/api/auth/bootstrap', { method: 'POST' });
     expect(noToken.status).toBe(403);
@@ -261,12 +285,12 @@ describe('bootstrap', () => {
       headers: { 'x-bootstrap-token': 'test-bootstrap-token' },
     });
     expect(ok.status).toBe(200);
-    expect(ok.json.data.email).toBe('boot.admin@utoledo.edu');
+    expect(ok.json.data.email).toBe(PRIMARY_SUPERADMIN_EMAIL);
     const passcode = ok.json.data.passcode as string;
     expect(passcode).toMatch(/^[A-Z2-9]{4}-[A-Z2-9]{4}-[A-Z2-9]{4}$/);
 
     // The passcode logs in and lands in the forced-reset state.
-    const token = await login('boot.admin@utoledo.edu', passcode);
+    const token = await login(PRIMARY_SUPERADMIN_EMAIL, passcode);
     const me = await apiCall('/api/auth/me', { token });
     expect(me.json.data.must_reset).toBe(true);
 
@@ -276,6 +300,29 @@ describe('bootstrap', () => {
       headers: { 'x-bootstrap-token': 'test-bootstrap-token' },
     });
     expect(again.status).toBe(409);
+  });
+
+  it('ignores other credential-less admins and targets the super admin only', async () => {
+    // A seeded placeholder admin used to win on `ORDER BY id LIMIT 1`, so the
+    // passcode was issued for an account nobody owns while the documented
+    // super admin stayed locked out.
+    await env.DB.prepare(
+      "INSERT INTO Users (email, role, status) VALUES ('placeholder.admin@utoledo.edu', 'admin', 'invited')"
+    ).run();
+
+    const res = await apiCall('/api/auth/bootstrap', {
+      method: 'POST',
+      headers: { 'x-bootstrap-token': 'test-bootstrap-token' },
+    });
+
+    // The super admin already has credentials from the test above, so this is
+    // a 409 rather than a passcode for the placeholder.
+    expect(res.status).toBe(409);
+
+    const placeholder = await env.DB.prepare(
+      "SELECT password_hash FROM Users WHERE email = 'placeholder.admin@utoledo.edu'"
+    ).first<{ password_hash: string | null }>();
+    expect(placeholder?.password_hash).toBeNull();
   });
 });
 

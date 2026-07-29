@@ -207,6 +207,17 @@ provider_id TEXT,
 error_text TEXT,
 created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 )`,
+
+  `CREATE TABLE IF NOT EXISTS PageFeedback (
+id INTEGER PRIMARY KEY AUTOINCREMENT,
+user_id INTEGER,
+page TEXT,
+message TEXT NOT NULL,
+status TEXT NOT NULL DEFAULT 'open',
+created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+resolved_at DATETIME,
+resolved_by INTEGER
+)`,
 ];
 
 export async function applySchema(): Promise<void> {

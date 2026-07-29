@@ -68,7 +68,7 @@ function PasscodeReveal({ data, onClose }) {
       React.createElement('button', { onClick: copy, className: adminBtnSecondary }, copied ? '✓ Copied' : 'Copy')
     ),
     React.createElement('div', { className: 'bg-amber-50 rounded-lg p-3 text-xs text-amber-700 mb-4' },
-      'An invite email was also sent — but while the from-address is the resend.dev sandbox, emails are only delivered to the Resend account owner. Hand the passcode over directly until a custom domain is verified in Settings.'),
+      'An invite email was also sent, but do not count on it arriving. Mail to utoledo.edu addresses is accepted by the university\'s servers and then filtered, so it can show as accepted in the Email Log and never reach the inbox. Hand this passcode over directly.'),
     React.createElement('button', { onClick: onClose, className: adminBtnPrimary + ' w-full' }, 'Done')
   );
 }
@@ -878,9 +878,15 @@ function AdminEmailLog() {
     });
   }, [type, status]);
 
-  var typeOptions = ['', 'invite', 'password_reset', 'task_assigned', 'weekly_reminder', 'approval_decision', 'test'];
+  var typeOptions = ['', 'invite', 'password_reset', 'task_assigned', 'weekly_reminder', 'admin_digest', 'approval_decision', 'test'];
 
   return React.createElement('div', null,
+    React.createElement('div', { className: 'mb-4 bg-amber-50 border border-amber-200 rounded-lg p-3' },
+      React.createElement('p', { className: 'text-xs text-amber-800' },
+        React.createElement('strong', null, '"Accepted" is not "delivered". '),
+        'It means the recipient\'s mail server took the message. University mail systems accept first and filter afterwards, so mail to utoledo.edu addresses can show as accepted here and never reach the inbox. Hand invite passcodes over directly, and use Who Is Behind rather than relying on reminder emails.'
+      )
+    ),
     React.createElement('div', { className: 'flex gap-2 mb-4' },
       React.createElement('select', { value: type, onChange: function (e) { setType(e.target.value); }, className: 'text-sm border border-gray-200 rounded-lg px-2 py-1.5' },
         typeOptions.map(function (t) { return React.createElement('option', { key: t, value: t }, t || 'All types'); })
@@ -913,7 +919,7 @@ function AdminEmailLog() {
                       React.createElement('td', { className: 'px-4 py-2.5 text-xs text-gray-800' }, row.to_email),
                       React.createElement('td', { className: 'px-4 py-2.5 text-xs text-gray-500' }, row.email_type),
                       React.createElement('td', { className: 'px-4 py-2.5' },
-                        React.createElement('span', { className: 'px-2 py-0.5 rounded-full text-xs font-medium ' + (row.status === 'sent' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700') }, row.status)
+                        React.createElement('span', { className: 'px-2 py-0.5 rounded-full text-xs font-medium ' + (row.status === 'sent' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700') }, row.status === 'sent' ? 'accepted' : row.status)
                       ),
                       React.createElement('td', { className: 'px-4 py-2.5 text-xs text-gray-500 truncate max-w-[220px]' }, row.subject || '')
                     ),
@@ -989,12 +995,166 @@ function AdminSettings() {
       }),
       'Send weekly reminder emails (Mondays) to users with open required or assigned tasks'
     ),
+    React.createElement('label', { className: 'flex items-start gap-2 text-sm text-gray-700 cursor-pointer mb-1' },
+      React.createElement('input', {
+        type: 'checkbox',
+        className: 'mt-1',
+        checked: cfg.admin_digest_enabled === '1',
+        onChange: function (e) { set('admin_digest_enabled', e.target.checked ? '1' : '0'); },
+      }),
+      'Send admins a weekly digest of who is behind'
+    ),
+    React.createElement('p', { className: 'text-xs text-gray-500 mb-4 ml-6' },
+      'Separate from the toggle above. Per-user reminders are often filtered by university mail, so the digest is usually the one worth keeping. The same list is always available under Who Is Behind.'),
     notice && React.createElement('p', { className: 'text-green-600 text-sm mb-3' }, notice),
     error && React.createElement('p', { className: 'text-red-500 text-sm mb-3' }, error),
     React.createElement('div', { className: 'flex gap-2' },
       React.createElement('button', { type: 'submit', disabled: saving, className: adminBtnPrimary }, saving ? 'Saving…' : 'Save Settings'),
       React.createElement('button', { type: 'button', onClick: sendTest, className: adminBtnSecondary }, 'Send me a test email')
     )
+  );
+}
+
+// ── AdminFeedback ─────────────────────────────────────────────────────────────
+// "Report an Issue" submissions. These previously went into a table with no
+// read path at all, so nobody ever saw them.
+function AdminFeedback({ onCountChange }) {
+  var _rows = useState(null);
+  var rows = _rows[0];
+  var setRows = _rows[1];
+  var _status = useState('open');
+  var status = _status[0];
+  var setStatus = _status[1];
+  var _error = useState('');
+  var error = _error[0];
+  var setError = _error[1];
+  var _busy = useState(null);
+  var busy = _busy[0];
+  var setBusy = _busy[1];
+
+  var load = useCallback(function () {
+    setRows(null);
+    api('/admin/feedback?status=' + status).then(function (r) {
+      if (!r.success) { setRows([]); setError(r.error || 'Could not load reported issues.'); return; }
+      setRows(r.data || []);
+      if (onCountChange) onCountChange(r.open_count || 0);
+    });
+  }, [status]);
+
+  useEffect(function () { load(); }, [load]);
+
+  function setItemStatus(id, next) {
+    setBusy(id);
+    setError('');
+    api('/admin/feedback/' + id, { method: 'PUT', body: JSON.stringify({ status: next }) }).then(function (r) {
+      setBusy(null);
+      if (!r.success) { setError(r.error || 'Could not update that report.'); return; }
+      load();
+    });
+  }
+
+  return React.createElement('div', null,
+    React.createElement('div', { className: 'flex gap-2 mb-4' },
+      ['open', 'resolved', 'all'].map(function (s) {
+        return React.createElement('button', {
+          key: s,
+          onClick: function () { setStatus(s); setError(''); },
+          className: 'px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ' +
+            (status === s ? 'bg-toledo-blue text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'),
+        }, s.charAt(0).toUpperCase() + s.slice(1));
+      })
+    ),
+    error && React.createElement('div', { className: 'mb-4 bg-red-50 border border-red-200 rounded-lg p-3', role: 'alert' },
+      React.createElement('p', { className: 'text-sm text-red-700' }, error)
+    ),
+    rows === null
+      ? React.createElement('p', { className: 'text-gray-400 py-8 text-center' }, 'Loading…')
+      : rows.length === 0
+        ? React.createElement('p', { className: 'text-gray-400 py-8 text-center' }, 'No ' + (status === 'all' ? '' : status + ' ') + 'reports.')
+        : React.createElement('div', { className: 'space-y-3' },
+            rows.map(function (row) {
+              return React.createElement('div', { key: row.id, className: 'bg-white rounded-xl border border-gray-200 p-4' },
+                React.createElement('div', { className: 'flex items-start justify-between gap-3 mb-2' },
+                  React.createElement('div', { className: 'min-w-0' },
+                    React.createElement('p', { className: 'text-xs text-gray-500' },
+                      new Date(row.created_at + 'Z').toLocaleString() +
+                      (row.reporter_email ? ' · ' + row.reporter_email : ' · (deleted user)') +
+                      (row.page ? ' · on ' + row.page : '')
+                    )
+                  ),
+                  React.createElement('span', {
+                    className: 'flex-shrink-0 px-2 py-0.5 rounded-full text-xs font-medium ' +
+                      (row.status === 'open' ? 'bg-orange-100 text-orange-700' : 'bg-green-100 text-green-700'),
+                  }, row.status)
+                ),
+                React.createElement('p', { className: 'text-sm text-gray-800 whitespace-pre-wrap mb-3' }, row.message),
+                React.createElement('button', {
+                  onClick: function () { setItemStatus(row.id, row.status === 'open' ? 'resolved' : 'open'); },
+                  disabled: busy === row.id,
+                  className: 'text-xs font-semibold text-toledo-blue hover:text-toledo-dark border border-toledo-blue/30 hover:border-toledo-blue px-3 py-1.5 rounded-lg disabled:opacity-50',
+                }, busy === row.id ? 'Saving…' : row.status === 'open' ? 'Mark resolved' : 'Reopen')
+              );
+            })
+          )
+  );
+}
+
+// ── AdminBehind ───────────────────────────────────────────────────────────────
+// Who has outstanding required tasks. Email to utoledo.edu addresses is
+// filtered, so the weekly per-user reminder cannot be relied on; this gives
+// HR a list they can work from directly.
+function AdminBehind() {
+  var _rows = useState(null);
+  var rows = _rows[0];
+  var setRows = _rows[1];
+  var _error = useState('');
+  var error = _error[0];
+  var setError = _error[1];
+
+  useEffect(function () {
+    api('/admin/behind').then(function (r) {
+      if (!r.success) { setRows([]); setError(r.error || 'Could not load the list.'); return; }
+      setRows(r.data || []);
+    });
+  }, []);
+
+  return React.createElement('div', null,
+    React.createElement('p', { className: 'text-sm text-toledo-slate mb-4' },
+      'Active users with incomplete required or assigned tasks. Weekly reminder emails are often filtered by university mail, so use this list to follow up directly.'),
+    error && React.createElement('div', { className: 'mb-4 bg-red-50 border border-red-200 rounded-lg p-3', role: 'alert' },
+      React.createElement('p', { className: 'text-sm text-red-700' }, error)
+    ),
+    rows === null
+      ? React.createElement('p', { className: 'text-gray-400 py-8 text-center' }, 'Loading…')
+      : rows.length === 0
+        ? React.createElement('p', { className: 'text-gray-400 py-8 text-center' }, 'Everyone is up to date.')
+        : React.createElement('div', { className: 'bg-white rounded-xl border border-gray-200 overflow-x-auto' },
+            React.createElement('table', { className: 'w-full min-w-[560px]' },
+              React.createElement('thead', null,
+                React.createElement('tr', { className: 'bg-gray-50 border-b border-gray-200' },
+                  ['Person', 'Outstanding', 'Last sign-in'].map(function (h) {
+                    return React.createElement('th', { key: h, className: 'px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase' }, h);
+                  })
+                )
+              ),
+              React.createElement('tbody', null,
+                rows.map(function (row) {
+                  return React.createElement('tr', { key: row.id, className: 'border-b border-gray-100 last:border-0' },
+                    React.createElement('td', { className: 'px-4 py-2.5' },
+                      React.createElement('p', { className: 'text-sm text-gray-900' }, row.name || row.email),
+                      row.name && React.createElement('p', { className: 'text-xs text-gray-500' }, row.email)
+                    ),
+                    React.createElement('td', { className: 'px-4 py-2.5' },
+                      React.createElement('span', { className: 'px-2 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-700' },
+                        row.open_tasks + (row.open_tasks === 1 ? ' task' : ' tasks'))
+                    ),
+                    React.createElement('td', { className: 'px-4 py-2.5 text-xs text-gray-500 whitespace-nowrap' },
+                      row.last_login_at ? new Date(row.last_login_at + 'Z').toLocaleDateString() : 'Never signed in')
+                  );
+                })
+              )
+            )
+          )
   );
 }
 
@@ -1006,15 +1166,21 @@ function AdminDashboard({ currentUser, onNavigate }) {
   var _pending = useState(0);
   var pendingCount = _pending[0];
   var setPendingCount = _pending[1];
+  var _openFeedback = useState(0);
+  var openFeedback = _openFeedback[0];
+  var setOpenFeedback = _openFeedback[1];
 
   useEffect(function () {
     api('/admin/approvals').then(function (r) { if (r.success) setPendingCount((r.data || []).length); });
+    api('/admin/feedback?status=open').then(function (r) { if (r.success) setOpenFeedback(r.open_count || 0); });
   }, []);
 
   var sections = [
     { id: 'users', label: 'Users', icon: IconUsers },
     { id: 'tasks', label: 'Tasks', icon: IconClipboardCheck },
     { id: 'approvals', label: 'Approvals' + (pendingCount > 0 ? ' (' + pendingCount + ')' : ''), icon: IconCheckCircle },
+    { id: 'behind', label: 'Who Is Behind', icon: IconBell },
+    { id: 'feedback', label: 'Reported Issues' + (openFeedback > 0 ? ' (' + openFeedback + ')' : ''), icon: IconFlag },
     { id: 'content', label: 'Content', icon: IconDocument },
     { id: 'email', label: 'Email Log', icon: IconSend },
     { id: 'settings', label: 'Settings', icon: IconServer },
@@ -1024,6 +1190,8 @@ function AdminDashboard({ currentUser, onNavigate }) {
   if (section === 'users') body = React.createElement(AdminUsers, { currentUser: currentUser });
   else if (section === 'tasks') body = React.createElement(AdminTasks);
   else if (section === 'approvals') body = React.createElement(AdminApprovals, { onCountChange: setPendingCount });
+  else if (section === 'behind') body = React.createElement(AdminBehind);
+  else if (section === 'feedback') body = React.createElement(AdminFeedback, { onCountChange: setOpenFeedback });
   else if (section === 'content') body = React.createElement(AdminContent);
   else if (section === 'email') body = React.createElement(AdminEmailLog);
   else body = React.createElement(AdminSettings);

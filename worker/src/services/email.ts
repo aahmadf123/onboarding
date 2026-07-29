@@ -7,8 +7,7 @@
 
 import { Bindings, EmailType } from '../types';
 import { getConfigs } from './config';
-
-const RESEND_ENDPOINT = 'https://api.resend.com/emails';
+import { resolveProvider } from './email-providers';
 
 export interface SendEmailOptions {
   to: string;
@@ -25,42 +24,30 @@ export interface SendEmailResult {
 }
 
 export async function sendEmail(
-  env: Pick<Bindings, 'DB' | 'RESEND_API_KEY'>,
+  env: Pick<Bindings, 'DB' | 'RESEND_API_KEY'> & Partial<Bindings>,
   opts: SendEmailOptions
 ): Promise<SendEmailResult> {
   let result: SendEmailResult;
   try {
-    if (!env.RESEND_API_KEY) {
-      result = { ok: false, error: 'RESEND_API_KEY is not configured' };
-    } else if (env.RESEND_API_KEY === 'test-resend-key') {
+    if (env.RESEND_API_KEY === 'test-resend-key') {
       // Tests inject this sentinel secret to avoid outbound network calls.
       result = { ok: true, providerId: 'email_mock' };
     } else {
-      const cfg = await getConfigs(env.DB, ['email_from_address', 'email_from_name']);
-      const from = cfg.email_from_name
-        ? `${cfg.email_from_name} <${cfg.email_from_address}>`
-        : cfg.email_from_address;
+      const provider = resolveProvider(env as Bindings);
+      if (!provider) {
+        result = { ok: false, error: 'No email provider is configured' };
+      } else {
+        const cfg = await getConfigs(env.DB, ['email_from_address', 'email_from_name']);
+        const from = cfg.email_from_name
+          ? `${cfg.email_from_name} <${cfg.email_from_address}>`
+          : cfg.email_from_address;
 
-      const res = await fetch(RESEND_ENDPOINT, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${env.RESEND_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+        result = await provider.send({
           from,
-          to: [opts.to],
+          to: opts.to,
           subject: opts.subject,
           html: opts.html,
-        }),
-      });
-
-      if (res.ok) {
-        const data = (await res.json()) as { id?: string };
-        result = { ok: true, providerId: data.id };
-      } else {
-        const body = await res.text();
-        result = { ok: false, error: `Resend ${res.status}: ${body.slice(0, 500)}` };
+        });
       }
     }
   } catch (err) {

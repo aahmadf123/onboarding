@@ -7,6 +7,8 @@ import approvals from './approvals';
 import content from './content';
 import settings from './settings';
 import emailLog from './email-log';
+import feedback from './feedback';
+import behind from './behind';
 
 // Everything under /api/admin/* is super-admin only.
 const admin = new Hono<AppEnv>();
@@ -18,5 +20,7 @@ admin.route('/approvals', approvals);
 admin.route('/content', content);
 admin.route('/settings', settings);
 admin.route('/email-log', emailLog);
+admin.route('/feedback', feedback);
+admin.route('/behind', behind);
 
 export default admin;

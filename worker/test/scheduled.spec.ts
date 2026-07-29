@@ -52,6 +52,32 @@ describe('weekly reminder cron', () => {
     void behind;
   });
 
+  it('does not re-send to the same user when the cron is retried', async () => {
+    // Cloudflare retries a failed invocation and the loop restarts from the
+    // first user, so without an EmailLog check everyone already emailed gets a
+    // duplicate.
+    const before = (await reminderRows()).filter((r) => r.to_email === 'behind@utoledo.edu').length;
+    expect(before).toBe(1);
+
+    await runScheduled();
+
+    const after = (await reminderRows()).filter((r) => r.to_email === 'behind@utoledo.edu').length;
+    expect(after).toBe(1);
+  });
+
+  it('emails admins a digest of who is behind', async () => {
+    await createUser({ email: 'digest.admin@utoledo.edu', role: 'admin' });
+
+    await runScheduled();
+
+    const { results } = await env.DB.prepare(
+      "SELECT to_email, subject FROM EmailLog WHERE email_type = 'admin_digest'"
+    ).all<{ to_email: string; subject: string }>();
+
+    expect(results.map((r) => r.to_email)).toContain('digest.admin@utoledo.edu');
+    expect(results[0].subject).toMatch(/outstanding onboarding tasks/);
+  });
+
   it('sends nothing when the weekly reminder is disabled', async () => {
     const before = (await reminderRows()).length;
     await createUser({ email: 'behind2@utoledo.edu' });
@@ -61,6 +87,29 @@ describe('weekly reminder cron', () => {
 
     await runScheduled();
     expect((await reminderRows()).length).toBe(before);
+  });
+
+  it('keeps the two toggles independent', async () => {
+    async function digestCount(): Promise<number> {
+      const row = await env.DB.prepare(
+        "SELECT COUNT(*) AS count FROM EmailLog WHERE email_type = 'admin_digest'"
+      ).first<{ count: number }>();
+      return row?.count ?? 0;
+    }
+
+    // weekly_reminder_enabled is still '0' from the test above. The digest is
+    // the channel that actually reaches admins, so it must keep working.
+    const beforeDigest = await digestCount();
+    await runScheduled();
+    expect(await digestCount()).toBeGreaterThan(beforeDigest);
+
+    // Turning the digest off stops it, without needing the other toggle.
+    await env.DB.prepare(
+      "INSERT INTO AppConfig (key, value) VALUES ('admin_digest_enabled', '0') ON CONFLICT(key) DO UPDATE SET value = '0'"
+    ).run();
+    const afterDisable = await digestCount();
+    await runScheduled();
+    expect(await digestCount()).toBe(afterDisable);
   });
 
   it('purges expired sessions and reset tokens', async () => {

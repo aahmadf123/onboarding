@@ -12,6 +12,7 @@ import {
 import { sendEmail } from '../services/email';
 import { inviteEmail, passwordResetEmail } from '../services/email-templates';
 import { getConfig } from '../services/config';
+import { PRIMARY_SUPERADMIN_EMAIL } from '../constants';
 
 const SESSION_DAYS = 30;
 const RESET_TOKEN_MINUTES = 60;
@@ -263,12 +264,34 @@ auth.post('/bootstrap', async (c) => {
     return c.json({ success: false, error: 'Invalid bootstrap token' }, 403);
   }
 
-  const admin = await c.env.DB.prepare(
-    "SELECT * FROM Users WHERE role = 'admin' AND password_hash IS NULL ORDER BY id LIMIT 1"
-  ).first<UserRow>();
+  // Target the designated super admin explicitly. This used to select the
+  // lowest-id admin without a password, which picked up a seeded placeholder
+  // account and issued the passcode for a mailbox nobody owns.
+  const admin = await c.env.DB.prepare('SELECT * FROM Users WHERE email = ? COLLATE NOCASE')
+    .bind(PRIMARY_SUPERADMIN_EMAIL)
+    .first<UserRow>();
+
   if (!admin) {
     return c.json(
-      { success: false, error: 'Bootstrap already completed — all admins have credentials.' },
+      {
+        success: false,
+        error: `Super admin ${PRIMARY_SUPERADMIN_EMAIL} does not exist. Apply the database migrations first.`,
+      },
+      409
+    );
+  }
+  if (admin.role !== 'admin') {
+    return c.json(
+      { success: false, error: `${PRIMARY_SUPERADMIN_EMAIL} exists but is not an admin.` },
+      409
+    );
+  }
+  if (admin.password_hash) {
+    return c.json(
+      {
+        success: false,
+        error: 'Bootstrap already completed — the super admin has credentials.',
+      },
       409
     );
   }

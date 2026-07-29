@@ -7,6 +7,7 @@
 		"dev": "wrangler dev",
 		"start": "wrangler dev",
 		"test": "vitest",
+		"check:escapes": "node scripts/check-frontend-escapes.mjs",
 		"cf-typegen": "wrangler types"
 	},
 	"devDependencies": {
