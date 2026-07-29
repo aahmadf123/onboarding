@@ -32,6 +32,7 @@ npx wrangler d1 execute toledo-onboarding-db-prod --local --file=../db/seed-v3.s
 npx wrangler d1 execute toledo-onboarding-db-prod --local --file=../db/migrations/2026-06-14-directory-refresh.sql
 npx wrangler d1 execute toledo-onboarding-db-prod --local --file=../db/migrations/2026-06-14-content-expansion.sql
 npx wrangler d1 execute toledo-onboarding-db-prod --local --file=../db/migrations/2026-07-29-page-feedback.sql
+npx wrangler d1 execute toledo-onboarding-db-prod --local --file=../db/migrations/2026-07-29-repair-seed-data.sql
 
 npx wrangler dev
 # Then bootstrap the first admin (passcode is in the response):
@@ -61,14 +62,14 @@ npx wrangler d1 execute toledo-onboarding-db-prod --remote --file=../db/seed-v3.
 npx wrangler d1 execute toledo-onboarding-db-prod --remote --file=../db/migrations/2026-06-14-directory-refresh.sql
 npx wrangler d1 execute toledo-onboarding-db-prod --remote --file=../db/migrations/2026-06-14-content-expansion.sql
 npx wrangler d1 execute toledo-onboarding-db-prod --remote --file=../db/migrations/2026-07-29-page-feedback.sql
-# app_base_url is embedded in every invite and password-reset link. The
-# migrations use INSERT OR IGNORE, so an existing database keeps its old value
-# and must be updated explicitly. A stale value sends live reset tokens to
-# whatever answers at the old host.
-npx wrangler d1 execute toledo-onboarding-db-prod --remote \
-  --command "UPDATE AppConfig SET value='https://utrockets-onboarding.com' WHERE key='app_base_url'"
-npx wrangler d1 execute toledo-onboarding-db-prod --remote \
-  --command "UPDATE AppConfig SET value='onboarding@mail.utrockets-onboarding.com' WHERE key='email_from_address'"
+
+# Repairs a database seeded before 2026-07-29. Fixing the seed files does not
+# fix rows already written, so this is required on any existing database. It
+# removes the two placeholder accounts, repoints the sample content at the real
+# super admin, rebuilds the AI index against the articles that actually exist,
+# and moves app_base_url off the old workers.dev host. Idempotent, and a no-op
+# on a database seeded from the corrected files.
+npx wrangler d1 execute toledo-onboarding-db-prod --remote --file=../db/migrations/2026-07-29-repair-seed-data.sql
 
 # Deploy — NOTE: from this moment the site is invite-only; existing users
 # must be invited from Admin → Users before they can sign in again.
@@ -120,6 +121,7 @@ npx wrangler d1 execute toledo-onboarding-db-prod --file=../db/seed-v3.sql
 npx wrangler d1 execute toledo-onboarding-db-prod --file=../db/migrations/2026-06-14-directory-refresh.sql
 npx wrangler d1 execute toledo-onboarding-db-prod --file=../db/migrations/2026-06-14-content-expansion.sql
 npx wrangler d1 execute toledo-onboarding-db-prod --file=../db/migrations/2026-07-29-page-feedback.sql
+npx wrangler d1 execute toledo-onboarding-db-prod --file=../db/migrations/2026-07-29-repair-seed-data.sql
 ```
 
 ## Maintenance
