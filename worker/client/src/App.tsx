@@ -11,6 +11,9 @@ import { BrowseTopicsPage } from './pages/BrowseTopicsPage';
 import { CategoryView } from './pages/CategoryView';
 import { ArticleView } from './pages/ArticleView';
 import { SearchResults } from './pages/SearchResults';
+import { ResourcesPage } from './pages/ResourcesPage';
+import { ContactsPage } from './pages/ContactsPage';
+import { PoliciesPage } from './pages/PoliciesPage';
 import type { User } from './lib/types';
 
 const TOUR_KEY = 'toledo_tour_done_v1';
@@ -309,6 +312,15 @@ export function App() {
       break;
     case 'search':
       content = React.createElement(SearchResults, { query: viewParam, onNavigate: navigate });
+      break;
+    case 'resources':
+      content = React.createElement(ResourcesPage, { onNavigate: navigate });
+      break;
+    case 'contacts':
+      content = React.createElement(ContactsPage, { onNavigate: navigate });
+      break;
+    case 'policies':
+      content = React.createElement(PoliciesPage, { onNavigate: navigate });
       break;
     default:
       content = notPortedYet();
