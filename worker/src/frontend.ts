@@ -343,28 +343,46 @@ function OnboardingGuidePage({ currentUser, onNavigate }) {
   var _busyState = useState(null);
   var busy = _busyState[0];
   var setBusy = _busyState[1];
+  var _taskError = useState('');
+  var taskError = _taskError[0];
+  var setTaskError = _taskError[1];
+  var _loadError = useState('');
+  var loadError = _loadError[0];
+  var setLoadError = _loadError[1];
 
   useEffect(function () {
-    api('/tasks').then(function (r) { if (r.success) setTasks(r.data || []); });
+    api('/tasks').then(function (r) {
+      if (r.success) { setTasks(r.data || []); return; }
+      // Without this the page sat on "Loading..." forever on any failure.
+      setTasks([]);
+      setLoadError(r.error || 'Could not load your onboarding tasks.');
+    });
   }, []);
 
   function toggle(task) {
     if (task.my_status === 'approved' || busy) return;
     var done = !taskIsChecked(task.my_status);
     setBusy(task.id);
+    setTaskError('');
     api('/tasks/' + task.id + '/status', { method: 'PUT', body: JSON.stringify({ done: done }) })
       .then(function (r) {
         setBusy(null);
-        if (r.success) {
-          setTasks(function (prev) {
-            return (prev || []).map(function (t) {
-              if (t.id !== task.id) return t;
-              return Object.assign({}, t, { my_status: r.data.status, review_notes: done ? t.review_notes : null });
-            });
-          });
+        if (!r.success) {
+          // A task already signed off returns 409, and an assigned task that
+          // is not yours returns 404. Both used to just spring the checkbox
+          // back with no explanation.
+          setTaskError(r.error || 'Could not update that task. Please try again.');
+          return;
         }
-      })
-      .catch(function () { setBusy(null); });
+        setTasks(function (prev) {
+          return (prev || []).map(function (t) {
+            if (t.id !== task.id) return t;
+            return Object.assign({}, t, { my_status: r.data.status, review_notes: done ? t.review_notes : null });
+          });
+        });
+        // Keeps the outstanding-tasks banner in sync.
+        window.dispatchEvent(new CustomEvent('toledo:tasks-changed'));
+      });
   }
 
   var priorityStyles = {
@@ -463,6 +481,10 @@ function OnboardingGuidePage({ currentUser, onNavigate }) {
   return React.createElement('div', { className: 'max-w-3xl mx-auto px-4 py-8 fade-in' },
     React.createElement('h1', { className: 'display-title text-2xl text-toledo-blue mb-1' }, 'My Onboarding'),
     React.createElement('p', { className: 'text-toledo-slate text-sm mb-6' }, 'Work through each phase at your own pace. Expand any task to learn how to complete it, then check it off. Your progress is saved to your account.'),
+
+    (loadError || taskError) && React.createElement('div', { className: 'mb-4 bg-red-50 border border-red-200 rounded-lg p-3', role: 'alert' },
+      React.createElement('p', { className: 'text-sm text-red-700' }, loadError || taskError)
+    ),
 
     // Next recommended task
     nextTask && React.createElement('div', { className: 'bg-white rounded-2xl border border-toledo-border shadow-sm p-5 mb-4 gold-trail' },
@@ -1010,7 +1032,7 @@ function PoliciesPage({ onNavigate }) {
 // (legacy super-admin view replaced by AdminDashboard in frontend/admin.ts)
 
 // ── FeedbackButton ────────────────────────────────────────────────────────────
-function FeedbackButton({ currentUser }) {
+function FeedbackButton({ currentUser, currentView }) {
   var _useState = useState(false);
   var showModal = _useState[0];
   var setShowModal = _useState[1];
@@ -1020,13 +1042,29 @@ function FeedbackButton({ currentUser }) {
   var _useState3 = useState(false);
   var sent = _useState3[0];
   var setSent = _useState3[1];
+  var _useState4 = useState(false);
+  var submitting = _useState4[0];
+  var setSubmitting = _useState4[1];
+  var _useState5 = useState('');
+  var error = _useState5[0];
+  var setError = _useState5[1];
 
+  // Posts to /api/feedback. This used to post to /api/tips/0/feedback, which
+  // violated TipFeedback's foreign key, so every report failed silently while
+  // the user was told it had been sent.
   function handleSubmit() {
-    if (!feedback.trim()) return;
-    api('/tips/0/feedback', {
+    if (!feedback.trim() || submitting) return;
+    setSubmitting(true);
+    setError('');
+    api('/feedback', {
       method: 'POST',
-      body: JSON.stringify({ feedback: feedback, user_id: currentUser ? currentUser.id : null, type: 'page_issue' }),
-    }).then(function () {
+      body: JSON.stringify({ message: feedback, page: currentView || null }),
+    }).then(function (res) {
+      setSubmitting(false);
+      if (!res.success) {
+        setError(res.error || 'Could not send that. Please try again.');
+        return;
+      }
       setSent(true);
       setTimeout(function () { setShowModal(false); setSent(false); setFeedback(''); }, 2000);
     });
@@ -1058,10 +1096,12 @@ function FeedbackButton({ currentUser }) {
                 rows: 4,
                 className: 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-toledo-blue mb-3',
               }),
+              error && React.createElement('p', { className: 'text-red-600 text-sm mb-3', role: 'alert' }, error),
               React.createElement('button', {
                 onClick: handleSubmit,
-                className: 'w-full py-2 bg-toledo-blue text-white rounded-lg hover:bg-toledo-dark text-sm font-medium',
-              }, 'Submit Feedback')
+                disabled: submitting || !feedback.trim(),
+                className: 'w-full py-2 bg-toledo-blue text-white rounded-lg hover:bg-toledo-dark text-sm font-medium disabled:opacity-50',
+              }, submitting ? 'Sending…' : 'Submit Feedback')
             )
       )
     )
@@ -1102,6 +1142,27 @@ function LoadingSplash() {
   );
 }
 
+// Views that can be addressed by URL. navigate() pushes real paths like
+// /article/23, so the app has to be able to read them back on load — otherwise
+// a refresh or a shared link silently lands on the Dashboard.
+var ROUTABLE_VIEWS = [
+  'home', 'guide', 'categories', 'category', 'article', 'checklist',
+  'resources', 'contacts', 'policies', 'search', 'submit', 'moderate', 'admin',
+];
+
+function routeFromPath(pathname) {
+  var fallback = { view: 'home', param: null };
+  try {
+    var parts = (pathname || '/').split('/').filter(Boolean);
+    if (parts.length === 0) return fallback;
+    var view = decodeURIComponent(parts[0]);
+    if (ROUTABLE_VIEWS.indexOf(view) === -1) return fallback;
+    return { view: view, param: parts.length > 1 ? decodeURIComponent(parts[1]) : null };
+  } catch (e) {
+    return fallback;
+  }
+}
+
 function App() {
   // Pre-auth landing for password-reset links: /reset-password?token=…
   var resetToken = null;
@@ -1111,13 +1172,15 @@ function App() {
     }
   } catch (e) {}
 
+  var initialRoute = routeFromPath(typeof window !== 'undefined' ? window.location.pathname : '/');
+
   var _authState = useState({ loading: true, user: null, mustReset: false });
   var authState = _authState[0];
   var setAuthState = _authState[1];
-  var _useState2 = useState('home');
+  var _useState2 = useState(initialRoute.view);
   var view = _useState2[0];
   var setView = _useState2[1];
-  var _useState3 = useState(null);
+  var _useState3 = useState(initialRoute.param);
   var viewParam = _useState3[0];
   var setViewParam = _useState3[1];
   var _useState4 = useState([]);
@@ -1150,11 +1213,21 @@ function App() {
     });
   }, []);
 
+  var refreshStats = useCallback(function () {
+    api('/stats').then(function (r) { if (r.success) setStats(r.data); });
+  }, []);
+
   useEffect(function () {
     if (!authState.user || authState.mustReset) return;
     api('/categories').then(function (r) { if (r.success) setCategories(r.data); });
-    api('/stats').then(function (r) { if (r.success) setStats(r.data); });
-  }, [authState.user, authState.mustReset]);
+    refreshStats();
+  }, [authState.user, authState.mustReset, refreshStats]);
+
+  // Keeps the outstanding-tasks banner accurate after a task is checked off.
+  useEffect(function () {
+    window.addEventListener('toledo:tasks-changed', refreshStats);
+    return function () { window.removeEventListener('toledo:tasks-changed', refreshStats); };
+  }, [refreshStats]);
 
   // The API gate rejects a must_reset account with 403 on every route. Without
   // this the whole UI just sat on "Loading…" with no way forward.
@@ -1184,7 +1257,13 @@ function App() {
   function afterAuthed(data, fromLoginForm) {
     if (!data.localstorage_migrated) migrateLocalChecklist(data.user);
     if (fromLoginForm) {
-      if (data.user.role === 'admin') { navigate('admin'); return; }
+      // Only send admins straight to Admin when they arrived at the root.
+      // Someone who followed a link to a specific article should still land
+      // on that article after signing in.
+      if (data.user.role === 'admin' && initialRoute.view === 'home' && !initialRoute.param) {
+        navigate('admin');
+        return;
+      }
       try { if (!localStorage.getItem(tourKey)) setShowTour(true); } catch (e) {}
     }
   }
@@ -1227,12 +1306,20 @@ function App() {
   }
 
   useEffect(function () {
-    window.history.replaceState({ view: 'home', param: null }, '', window.location.pathname);
+    // Seed history with the route we actually rendered. This used to hardcode
+    // {view:'home'}, which pinned every deep link to the Dashboard.
+    var current = routeFromPath(window.location.pathname);
+    window.history.replaceState(
+      { view: current.view, param: current.param },
+      '',
+      window.location.pathname + window.location.search
+    );
     function handlePopState(e) {
       if (e.state && e.state.view) {
         navigate(e.state.view, e.state.param, false);
       } else {
-        navigate('home', null, false);
+        var route = routeFromPath(window.location.pathname);
+        navigate(route.view, route.param, false);
       }
     }
     window.addEventListener('popstate', handlePopState);
@@ -1315,15 +1402,35 @@ function App() {
       content = React.createElement(HomePage, { categories: categories, stats: stats, onNavigate: navigate, onSearch: handleSearch, currentUser: currentUser });
   }
 
+  // Reminder emails to utoledo.edu addresses are filtered by the university's
+  // mail system, so the weekly cron cannot be relied on to reach anyone. This
+  // banner is the channel that actually works.
+  var openRequired = stats && stats.my_open_required ? stats.my_open_required : 0;
+  var taskReminder = openRequired > 0 && view !== 'guide' && view !== 'checklist' &&
+    React.createElement('div', { className: 'bg-toledo-gold/15 border-b border-toledo-gold/40' },
+      React.createElement('div', { className: 'max-w-7xl mx-auto px-4 py-2.5 flex flex-wrap items-center justify-between gap-2' },
+        React.createElement('p', { className: 'text-sm text-toledo-blue' },
+          React.createElement('span', { className: 'font-semibold' },
+            openRequired + (openRequired === 1 ? ' onboarding task' : ' onboarding tasks')),
+          ' still needs your attention.'
+        ),
+        React.createElement('button', {
+          onClick: function () { navigate('guide'); },
+          className: 'text-xs font-semibold text-toledo-blue underline hover:text-toledo-dark',
+        }, 'View my onboarding')
+      )
+    );
+
   return React.createElement(AppShell, {
     currentUser: currentUser, currentView: view, onNavigate: navigate,
     onSearch: handleSearch, onSignOut: handleSignOut,
     onStartTour: function () { setShowTour(true); },
   },
     showTour && React.createElement(QuickTour, { onDone: dismissTour, onNavigate: navigate }),
+    taskReminder,
     content,
     React.createElement(AIChatWidget, { currentUser: currentUser }),
-    React.createElement(FeedbackButton, { currentUser: currentUser })
+    React.createElement(FeedbackButton, { currentUser: currentUser, currentView: view })
   );
 }
 

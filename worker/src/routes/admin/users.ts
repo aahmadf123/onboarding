@@ -202,6 +202,15 @@ users.delete('/:id', async (c) => {
     c.env.DB.prepare('DELETE FROM PasswordResets WHERE user_id = ?').bind(id),
     c.env.DB.prepare('DELETE FROM EmailLog WHERE user_id = ?').bind(id),
 
+    // Tasks.created_by has a foreign key to Users(id). Leaving it set aborted
+    // the whole batch with a constraint error when deleting any admin who had
+    // ever created a task, which surfaced as an unhandled 500.
+    c.env.DB.prepare('UPDATE Tasks SET created_by = NULL WHERE created_by = ?').bind(id),
+
+    // Keep the report, drop the link to the deleted account.
+    c.env.DB.prepare('UPDATE PageFeedback SET user_id = NULL WHERE user_id = ?').bind(id),
+    c.env.DB.prepare('UPDATE PageFeedback SET resolved_by = NULL WHERE resolved_by = ?').bind(id),
+
     c.env.DB.prepare('UPDATE UserTasks SET assigned_by = NULL WHERE assigned_by = ?').bind(id),
     c.env.DB.prepare('UPDATE UserTasks SET reviewed_by = NULL WHERE reviewed_by = ?').bind(id),
     c.env.DB.prepare('DELETE FROM UserTasks WHERE user_id = ?').bind(id),

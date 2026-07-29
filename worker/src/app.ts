@@ -19,6 +19,7 @@ import quicklinks from './routes/quicklinks';
 import contacts from './routes/contacts';
 import systems from './routes/systems';
 import policies from './routes/policies';
+import feedback from './routes/feedback';
 
 const app = new Hono<AppEnv>();
 
@@ -122,6 +123,7 @@ app.route('/api/quicklinks', quicklinks);
 app.route('/api/contacts', contacts);
 app.route('/api/systems', systems);
 app.route('/api/policies', policies);
+app.route('/api/feedback', feedback);
 
 // ── Static assets (branding images) ───────────────────────────
 app.get('/branding/*', async (c) => {

@@ -19,6 +19,33 @@ interface OpenTask {
   priority: string;
 }
 
+export interface BehindUser {
+  id: number;
+  email: string;
+  name: string | null;
+  last_login_at: string | null;
+  open_tasks: number;
+}
+
+/**
+ * Active users with genuinely incomplete required or assigned tasks, with a
+ * count each. Shares its predicate with the per-user reminder query below so
+ * the admin view and the emails can never disagree about who is behind.
+ */
+export const BEHIND_USERS_SQL = `
+  SELECT u.id, u.email, u.name, u.last_login_at, COUNT(t.id) AS open_tasks
+  FROM Users u
+  JOIN Tasks t ON t.is_active = 1
+  LEFT JOIN UserTasks ut ON ut.task_id = t.id AND ut.user_id = u.id
+  WHERE u.status = 'active'
+    AND (t.audience = 'all' OR ut.assigned_by IS NOT NULL)
+    AND COALESCE(ut.status, 'open') IN ('open', 'rejected')
+    AND (t.priority = 'required' OR ut.assigned_by IS NOT NULL)
+  GROUP BY u.id, u.email, u.name, u.last_login_at
+  HAVING COUNT(t.id) > 0
+  ORDER BY COUNT(t.id) DESC, u.email
+`;
+
 /** Purges expired sessions and password-reset tokens. */
 export async function cleanupExpired(env: Pick<Bindings, 'DB'>): Promise<void> {
   const now = new Date().toISOString();
