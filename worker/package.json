@@ -12,7 +12,10 @@
 		"test:ci": "vite build && vitest run",
 		"typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p client/tsconfig.json",
 		"smoke": "node scripts/browser-smoke.mjs",
-		"db:fresh": "node scripts/apply-schema.mjs",
+		"db:migrate": "wrangler d1 migrations apply toledo-onboarding-db-prod --local",
+		"db:migrate:remote": "wrangler d1 migrations apply toledo-onboarding-db-prod --remote",
+		"db:status": "wrangler d1 migrations list toledo-onboarding-db-prod --local",
+		"db:status:remote": "wrangler d1 migrations list toledo-onboarding-db-prod --remote",
 		"cf-typegen": "wrangler types"
 	},
 	"devDependencies": {

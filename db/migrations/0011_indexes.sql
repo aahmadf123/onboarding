@@ -20,12 +20,11 @@ CREATE INDEX IF NOT EXISTS idx_users_status ON Users(status);
 
 -- ORDER BY columns on the list endpoints.
 CREATE INDEX IF NOT EXISTS idx_submissions_submitted_at ON Submissions(submitted_at DESC);
-CREATE INDEX IF NOT EXISTS idx_tips_approved_at ON Tips(approved_at DESC);
 CREATE INDEX IF NOT EXISTS idx_articles_last_updated ON Articles(last_updated DESC);
 
--- Submissions and tips are almost always filtered by status first.
+-- Submissions are almost always filtered by status first. (An equivalent index
+-- on Tips.approved_at and Tips.status went with the table, retired in 0014.)
 CREATE INDEX IF NOT EXISTS idx_submissions_status ON Submissions(status);
-CREATE INDEX IF NOT EXISTS idx_tips_status ON Tips(status);
 
 -- UserTasks is joined per user on every checklist load and every reminder.
 CREATE INDEX IF NOT EXISTS idx_usertasks_user ON UserTasks(user_id);

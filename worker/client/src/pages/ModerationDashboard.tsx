@@ -14,7 +14,6 @@ interface ModerationDashboardProps {
 }
 
 export function ModerationDashboard(_props: ModerationDashboardProps) {
-  const [activeTab, setActiveTab] = useState('submissions');
   const [items, setItems] = useState<any[]>([]);
   const [filter, setFilter] = useState('pending');
   // busyId tracks the in-flight request; reviewNotes is keyed per item. These
@@ -27,28 +26,21 @@ export function ModerationDashboard(_props: ModerationDashboardProps) {
   const [assignmentReason, setAssignmentReason] = useState<Record<string, string>>({});
 
   const loadData = useCallback(() => {
-    if (activeTab === 'submissions') {
-      api('/submissions?status=' + filter).then((r) => r.success && setItems(r.data));
-    } else {
-      api('/tips/queue?status=' + filter).then((r) => r.success && setItems(r.data));
-    }
-  }, [activeTab, filter]);
+    api('/submissions?status=' + filter).then((r) => r.success && setItems(r.data));
+  }, [filter]);
 
   useEffect(() => {
     loadData();
   }, [loadData]);
 
   useEffect(() => {
-    if (activeTab === 'submissions') {
-      api('/contacts').then((r) => r.success && setContacts(r.data || []));
-    }
-  }, [activeTab]);
+    api('/contacts').then((r) => r.success && setContacts(r.data || []));
+  }, []);
 
   async function handleAction(id: number, action: string) {
     setBusyId(id);
     setError('');
-    const base = activeTab === 'submissions' ? '/submissions/' : '/tips/';
-    const res = await api(base + id + '/' + action, {
+    const res = await api('/submissions/' + id + '/' + action, {
       method: 'PUT',
       body: JSON.stringify({ review_notes: reviewNotes[id] || '' }),
     });
@@ -98,30 +90,8 @@ export function ModerationDashboard(_props: ModerationDashboardProps) {
       { className: 'text-toledo-slate text-sm mb-5' },
       'Review and manage community submissions'
     ),
-    React.createElement(
-      'div',
-      { className: 'flex gap-1 mb-4 bg-gray-100 p-1 rounded-lg w-fit' },
-      ['submissions', 'tips'].map((t) =>
-        React.createElement(
-          'button',
-          {
-            key: t,
-            onClick: () => {
-              setActiveTab(t);
-              setFilter('pending');
-              setItems([]);
-              setError('');
-            },
-            className:
-              'px-4 py-1.5 rounded-md text-sm font-medium transition-colors ' +
-              (activeTab === t
-                ? 'bg-white text-gray-900 shadow-xs'
-                : 'text-gray-600 hover:text-gray-900'),
-          },
-          t === 'submissions' ? 'Submissions' : 'Tips'
-        )
-      )
-    ),
+    // A Submissions / Tips tab strip stood here. Tips is gone, and a tab strip
+    // with one tab in it is just a decorated heading.
     error &&
       React.createElement(
         'div',
@@ -158,7 +128,7 @@ export function ModerationDashboard(_props: ModerationDashboardProps) {
       ? React.createElement(
           'div',
           { className: 'text-center py-12 text-toledo-slate' },
-          'No ' + filter + ' ' + activeTab + '.'
+          'No ' + filter + ' submissions.'
         )
       : React.createElement(
           'div',

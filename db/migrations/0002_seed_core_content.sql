@@ -1,5 +1,16 @@
 -- ============================================================
 -- Toledo Athletics Onboarding Platform - Database Seed File
+--
+-- Formerly db/seed.sql. It is a migration now, not a file to run by hand.
+--
+-- The DELETE block below is why. Re-running this against a live database wipes
+-- Categories and Articles and re-inserts them, which renumbers every article
+-- id while SiteContentIndex.source_id keeps pointing at the old ones — the AI
+-- assistant then cites the wrong article for every question, with nothing
+-- visibly broken. Under the tracked chain it runs exactly once per database
+-- and can never be re-applied by accident.
+--
+-- Content changes after bootstrap belong in Admin -> Content, not here.
 -- ============================================================
 
 -- ============================================================

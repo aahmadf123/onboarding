@@ -47,12 +47,6 @@ describe('Toledo Athletics Onboarding Worker', () => {
     expect(res.json.success).toBe(true);
   });
 
-  it('returns JSON from /api/tips (authenticated)', async () => {
-    const res = await apiCall('/api/tips', { token: staff.token });
-    expect(res.status).toBe(200);
-    expect(Array.isArray(res.json.data)).toBe(true);
-  });
-
   it('returns JSON from /api/quicklinks (authenticated)', async () => {
     const res = await apiCall('/api/quicklinks', { token: staff.token });
     expect(res.status).toBe(200);
@@ -75,6 +69,19 @@ describe('Toledo Athletics Onboarding Worker', () => {
     const res = await apiCall('/api/policies', { token: staff.token });
     expect(res.status).toBe(200);
     expect(Array.isArray(res.json.data)).toBe(true);
+  });
+
+  it('returns a JSON 404 for the retired endpoints', async () => {
+    // Tips had no browse or submit UI, so its routes were reachable only by
+    // typing a URL; orgchart was a complete router app.ts never mounted, which
+    // meant an authenticated GET /api/orgchart returned 200 and the SPA shell.
+    // The point of asserting it here is that unmounting them leaves a JSON 404
+    // rather than putting either back on the asset-router path.
+    for (const path of ['/api/tips', '/api/tips/1', '/api/orgchart', '/api/ai/chat']) {
+      const res = await apiCall(path, { token: staff.token });
+      expect(res.status).toBe(404);
+      expect(res.json.success).toBe(false);
+    }
   });
 
   it('sets a locked-down CSP on API responses', async () => {

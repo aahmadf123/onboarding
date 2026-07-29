@@ -4,7 +4,7 @@ A staff onboarding tool for the University of Toledo Athletics Department. Built
 
 ## Stack
 - **Backend:** Cloudflare Workers + Hono
-- **Frontend:** React (inline, no build step)
+- **Frontend:** React + TypeScript, built with Vite (`worker/client`)
 - **Database:** Cloudflare D1 (SQLite)
 - **AI Chat:** Cloudflare Workers AI (native)
 - **Email:** Resend (invites, reminders, approval notifications)
@@ -20,22 +20,8 @@ cd worker
 npm install
 cp .dev.vars.example .dev.vars   # fill in RESEND_API_KEY and BOOTSTRAP_TOKEN
 
-# Local database (once)
-npx wrangler d1 execute toledo-onboarding-db-prod --local --file=../db/schema.sql
-npx wrangler d1 execute toledo-onboarding-db-prod --local --file=../db/schema-v2.sql
-npx wrangler d1 execute toledo-onboarding-db-prod --local --file=../db/seed.sql
-npx wrangler d1 execute toledo-onboarding-db-prod --local --file=../db/seed-v2.sql
-npx wrangler d1 execute toledo-onboarding-db-prod --local --file=../db/migrations/0003_auth_tasks_email.sql
-npx wrangler d1 execute toledo-onboarding-db-prod --local --file=../db/seed-v3.sql
-# (skip 2026-06-12-submissions-ticket-upgrade.sql on a fresh DB — schema.sql
-#  already includes those Submissions columns; it is for older databases only.)
-npx wrangler d1 execute toledo-onboarding-db-prod --local --file=../db/migrations/2026-06-14-directory-refresh.sql
-npx wrangler d1 execute toledo-onboarding-db-prod --local --file=../db/migrations/2026-06-14-content-expansion.sql
-npx wrangler d1 execute toledo-onboarding-db-prod --local --file=../db/migrations/2026-07-29-page-feedback.sql
-npx wrangler d1 execute toledo-onboarding-db-prod --local --file=../db/migrations/2026-07-29-repair-seed-data.sql
-npx wrangler d1 execute toledo-onboarding-db-prod --local --file=../db/migrations/2026-07-29-login-lockout.sql
-npx wrangler d1 execute toledo-onboarding-db-prod --local --file=../db/migrations/2026-07-29-indexes.sql
-npx wrangler d1 execute toledo-onboarding-db-prod --local --file=../db/migrations/2026-07-29-content-placeholders.sql
+# Local database — structure and seeded content, in one command
+npm run db:migrate
 
 npx wrangler dev
 # Then issue the super admin's passcode (it is in the response). This targets
@@ -61,29 +47,8 @@ npx wrangler secret put RESEND_API_KEY
 npx wrangler secret put BOOTSTRAP_TOKEN     # e.g. openssl rand -hex 32
 
 # Migrate the production DB first (additive; safe for the running worker)
-npx wrangler d1 execute toledo-onboarding-db-prod --remote --file=../db/migrations/0003_auth_tasks_email.sql
-npx wrangler d1 execute toledo-onboarding-db-prod --remote --file=../db/seed-v3.sql
-npx wrangler d1 execute toledo-onboarding-db-prod --remote --file=../db/migrations/2026-06-14-directory-refresh.sql
-npx wrangler d1 execute toledo-onboarding-db-prod --remote --file=../db/migrations/2026-06-14-content-expansion.sql
-npx wrangler d1 execute toledo-onboarding-db-prod --remote --file=../db/migrations/2026-07-29-page-feedback.sql
-
-# Adds per-account login throttling columns (P1-2). Required before the login
-# lockout does anything: without them every sign-in attempt errors.
-npx wrangler d1 execute toledo-onboarding-db-prod --remote --file=../db/migrations/2026-07-29-login-lockout.sql
-
-# Indexes only — safe to re-run, and safe to apply before the code that uses them.
-npx wrangler d1 execute toledo-onboarding-db-prod --remote --file=../db/migrations/2026-07-29-indexes.sql
-
-# Clears placeholder contact details that shipped as real data. Safe to re-run.
-npx wrangler d1 execute toledo-onboarding-db-prod --remote --file=../db/migrations/2026-07-29-content-placeholders.sql
-
-# Repairs a database seeded before 2026-07-29. Fixing the seed files does not
-# fix rows already written, so this is required on any existing database. It
-# removes the two placeholder accounts, repoints the sample content at the real
-# super admin, rebuilds the AI index against the articles that actually exist,
-# and moves app_base_url off the old workers.dev host. Idempotent, and a no-op
-# on a database seeded from the corrected files.
-npx wrangler d1 execute toledo-onboarding-db-prod --remote --file=../db/migrations/2026-07-29-repair-seed-data.sql
+npm run db:status:remote     # what is pending
+npm run db:migrate:remote    # apply it
 
 # Deploy — NOTE: from this moment the site is invite-only; existing users
 # must be invited from Admin → Users before they can sign in again.
@@ -123,22 +88,59 @@ backend swap rather than a rewrite. Failing that, ask UToledo IT to allowlist
 the sending domain, and have them run a message trace to confirm what is
 happening to the mail.
 
-## Database Setup (fresh environment)
+## Database
+
+`db/migrations` is the whole story of the database, numbered in the order it is
+applied. Wrangler records each applied file in a `d1_migrations` table, so a
+migration runs exactly once per database and the same two commands work whether
+the target is empty or years old:
 
 ```bash
-npx wrangler d1 execute toledo-onboarding-db-prod --file=../db/schema.sql
-npx wrangler d1 execute toledo-onboarding-db-prod --file=../db/schema-v2.sql
-npx wrangler d1 execute toledo-onboarding-db-prod --file=../db/seed.sql
-npx wrangler d1 execute toledo-onboarding-db-prod --file=../db/seed-v2.sql
-npx wrangler d1 execute toledo-onboarding-db-prod --file=../db/migrations/0003_auth_tasks_email.sql
-npx wrangler d1 execute toledo-onboarding-db-prod --file=../db/seed-v3.sql
-# (skip 2026-06-12-submissions-ticket-upgrade.sql on a fresh DB — schema.sql
-#  already includes those Submissions columns; it is for older databases only.)
-npx wrangler d1 execute toledo-onboarding-db-prod --file=../db/migrations/2026-06-14-directory-refresh.sql
-npx wrangler d1 execute toledo-onboarding-db-prod --file=../db/migrations/2026-06-14-content-expansion.sql
-npx wrangler d1 execute toledo-onboarding-db-prod --file=../db/migrations/2026-07-29-page-feedback.sql
-npx wrangler d1 execute toledo-onboarding-db-prod --file=../db/migrations/2026-07-29-repair-seed-data.sql
+cd worker
+npm run db:status            # what is pending (add :remote for production)
+npm run db:migrate           # apply it     (add :remote for production)
 ```
+
+The chain covers structure and the seeded baseline content both, so
+`npm run db:migrate` against an empty database produces a working portal in one
+step. This replaces a fifteen-line sequence that existed only as prose here,
+and which nothing verified — `db/schema.sql` created four of the twenty-three
+tables, so following the first line alone gave "no such table: Sessions" on the
+first authenticated request.
+
+Rules that keep it working:
+
+- **Add, never edit.** Once a migration has been applied anywhere, its file is
+  history. Change the schema with a new numbered file.
+- **Never run a migration by hand.** `wrangler d1 execute --file=` bypasses the
+  tracking, which is how production ended up in the state the backfill below
+  describes. `0002_seed_core_content.sql` in particular deletes and re-inserts
+  every article, which renumbers ids that `SiteContentIndex` still points at.
+- **No explicit transaction control.** D1 wraps each file in a transaction
+  itself and rejects files that open their own. Wrangler's check scans the raw
+  text, so the keywords cannot appear in comments either.
+- **Content changes go in Admin → Content,** not into a migration. See
+  [MAINTENANCE.md](./MAINTENANCE.md).
+
+The test suite loads these same files rather than declaring tables of its own,
+so the schema CI validates cannot drift from the schema that ships. New
+migrations are picked up automatically.
+
+### Backfilling a database migrated by hand
+
+Production predates the tracking: it has every table the chain creates but no
+`d1_migrations`, so a first `db:migrate:remote` would treat all twelve
+historical migrations as pending and re-run them against live data.
+`db/backfill-d1-migrations.sql` records them as applied without executing them.
+Run it once, before the first migrate:
+
+```bash
+npx wrangler d1 execute toledo-onboarding-db-prod --remote \
+  --file=../db/backfill-d1-migrations.sql
+```
+
+It guards on markers from the existing schema, so on a fresh database it writes
+nothing and the migrations themselves run normally.
 
 ## Maintenance
 

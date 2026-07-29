@@ -33,17 +33,8 @@ VALUES ('utdata@utoledo.edu', 'Super Admin', 'admin', 'invited');
 -- ------------------------------------------------------------
 -- 2. Repoint content owned by the placeholder accounts.
 -- ------------------------------------------------------------
-UPDATE Tips
-SET author_id = (SELECT id FROM Users WHERE email = 'utdata@utoledo.edu')
-WHERE author_id IN (
-  SELECT id FROM Users WHERE email IN ('staff.example@utoledo.edu', 'admin@utoledo.edu')
-);
-
-UPDATE Tips
-SET reviewed_by = (SELECT id FROM Users WHERE email = 'utdata@utoledo.edu')
-WHERE reviewed_by IN (
-  SELECT id FROM Users WHERE email IN ('staff.example@utoledo.edu', 'admin@utoledo.edu')
-);
+-- The two UPDATE Tips statements that stood here are gone with the table
+-- (retired in 0014). Production ran them under this file's old name.
 
 UPDATE Submissions
 SET author_id = (SELECT id FROM Users WHERE email = 'utdata@utoledo.edu')
@@ -62,9 +53,6 @@ WHERE reviewed_by IN (
 --    accounts themselves. These are seeded rows nobody ever signed in to,
 --    so there is no real user data to preserve.
 -- ------------------------------------------------------------
-DELETE FROM TipFeedback WHERE reporter_id IN (
-  SELECT id FROM Users WHERE email IN ('staff.example@utoledo.edu', 'admin@utoledo.edu')
-);
 DELETE FROM Sessions WHERE user_id IN (
   SELECT id FROM Users WHERE email IN ('staff.example@utoledo.edu', 'admin@utoledo.edu')
 );
@@ -83,18 +71,20 @@ UPDATE UserTasks SET reviewed_by = NULL WHERE reviewed_by IN (
 UPDATE Tasks SET created_by = NULL WHERE created_by IN (
   SELECT id FROM Users WHERE email IN ('staff.example@utoledo.edu', 'admin@utoledo.edu')
 );
-UPDATE ApprovedYouTubeSources SET added_by = NULL WHERE added_by IN (
-  SELECT id FROM Users WHERE email IN ('staff.example@utoledo.edu', 'admin@utoledo.edu')
-);
 DELETE FROM EmailLog WHERE user_id IN (
   SELECT id FROM Users WHERE email IN ('staff.example@utoledo.edu', 'admin@utoledo.edu')
 );
-DELETE FROM AIAssessmentResults WHERE user_id IN (
-  SELECT id FROM Users WHERE email IN ('staff.example@utoledo.edu', 'admin@utoledo.edu')
-);
-DELETE FROM UserLearningPlan WHERE user_id IN (
-  SELECT id FROM Users WHERE email IN ('staff.example@utoledo.edu', 'admin@utoledo.edu')
-);
+
+-- Removed on 2026-07-29, when this file joined the tracked chain: statements
+-- clearing ApprovedYouTubeSources.added_by, AIAssessmentResults and
+-- UserLearningPlan for the placeholder accounts.
+--
+-- Those three tables exist in the production database but are created by
+-- nothing in this repository — they are left over from an earlier iteration,
+-- and no application code reads or writes them. Keeping the statements would
+-- have made a fresh database fail here with "no such table". The production
+-- database already ran them under this migration's old filename, so dropping
+-- them changes nothing there and only affects databases built from scratch.
 
 DELETE FROM Users WHERE email IN ('staff.example@utoledo.edu', 'admin@utoledo.edu');
 
