@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { AppEnv } from '../../types';
+import { rateLimit } from '../../middleware/rate-limit';
 import { EDITABLE_CONFIG_KEYS, getConfigs, setConfig } from '../../services/config';
 import { sendEmail } from '../../services/email';
 import { testEmail } from '../../services/email-templates';
@@ -80,7 +81,8 @@ settings.put('/', async (c) => {
 });
 
 // POST /api/admin/settings/test-email — send a test message to the caller
-settings.post('/test-email', async (c) => {
+// Triggers an outbound send, so it is worth bounding even for admins.
+settings.post('/test-email', rateLimit(5), async (c) => {
   const me = c.get('currentUser');
   const cfg = await getConfigs(c.env.DB, ['email_from_address']);
   const content = testEmail({ email: me.email, fromAddress: cfg.email_from_address });

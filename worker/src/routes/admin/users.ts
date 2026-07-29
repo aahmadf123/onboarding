@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import { asTrimmedString } from '../../services/http';
 import { AppEnv, Role, UserRow } from '../../types';
 import { generatePasscode, hashPassword } from '../../services/passwords';
 import { sendEmail } from '../../services/email';
@@ -70,8 +71,8 @@ users.post('/', async (c) => {
   const body = await c.req
     .json<{ email?: string; name?: string; role?: string }>()
     .catch(() => ({}) as { email?: string; name?: string; role?: string });
-  const email = (body.email ?? '').trim().toLowerCase();
-  const name = (body.name ?? '').trim() || null;
+  const email = asTrimmedString(body.email).toLowerCase();
+  const name = asTrimmedString(body.name) || null;
   const role = (body.role ?? 'staff') as Role;
 
   if (!EMAIL_RE.test(email)) {
@@ -142,7 +143,7 @@ users.put('/:id', async (c) => {
 
   if (body.name !== undefined) {
     sets.push('name = ?');
-    binds.push(body.name.trim() || null);
+    binds.push(asTrimmedString(body.name) || null);
   }
   if (body.role !== undefined) {
     if (!VALID_ROLES.includes(body.role as Role)) {

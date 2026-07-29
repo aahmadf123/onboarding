@@ -35,6 +35,17 @@ describe('test database matches the deployed schema', () => {
     ).rejects.toThrow();
   });
 
+  it('treats email addresses as case-insensitive for uniqueness', async () => {
+    // Users.email is UNIQUE with binary collation while every lookup uses
+    // COLLATE NOCASE. That meant the index could not serve the query AND both
+    // A@x.com and a@x.com could be stored — one person, two accounts, and an
+    // ambiguous answer to "which one did the admin disable?".
+    await env.DB.prepare("INSERT INTO Users (email, role) VALUES ('Case.Test@utoledo.edu', 'staff')").run();
+    await expect(
+      env.DB.prepare("INSERT INTO Users (email, role) VALUES ('case.test@utoledo.edu', 'staff')").run()
+    ).rejects.toThrow();
+  });
+
   it('seeds the super admin and the baseline checklist', async () => {
     const admin = await env.DB.prepare(
       "SELECT role FROM Users WHERE email = 'utdata@utoledo.edu'"

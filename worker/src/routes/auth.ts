@@ -198,7 +198,7 @@ auth.post('/logout', requireAuth, async (c) => {
 
 // ── POST /api/auth/change-password ────────────────────────────────────────────
 // Also completes the forced first-login reset (passcode = current password).
-auth.post('/change-password', requireAuth, async (c) => {
+auth.post('/change-password', rateLimit(10), requireAuth, async (c) => {
   const user = c.get('currentUser');
   const body = await c.req
     .json<{ current_password?: string; new_password?: string }>()
@@ -339,7 +339,7 @@ auth.post('/reset', rateLimit(10), async (c) => {
 // the initial passcode for the seeded admin and returns it in the response —
 // deliberate, because in Resend sandbox mode the email may only reach the
 // Resend account owner. Inert once every admin has a password.
-auth.post('/bootstrap', async (c) => {
+auth.post('/bootstrap', rateLimit(5), async (c) => {
   if (!c.env.BOOTSTRAP_TOKEN) {
     return c.json({ success: false, error: 'Not found' }, 404);
   }

@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import { rateLimit } from '../middleware/rate-limit';
 import { AppEnv } from '../types';
 import {
   escapeSqlLiteral,
@@ -60,7 +61,7 @@ function buildWhereClause(fields: string[], terms: string[], phrase: string): st
   return checks.length > 0 ? checks.join(' OR ') : '1 = 0';
 }
 
-search.get('/', async (c) => {
+search.get('/', rateLimit(60), async (c) => {
   const q = c.req.query('q');
   if (!q)
     return c.json({ success: false, error: 'Query parameter q is required' }, 400);

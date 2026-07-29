@@ -1,6 +1,8 @@
 import { Hono } from 'hono';
 import { AppEnv } from '../types';
 import { requireRole } from '../middleware/auth';
+import { rateLimit } from '../middleware/rate-limit';
+import { readJson, badBody } from '../services/http';
 
 const tips = new Hono<AppEnv>();
 
@@ -105,14 +107,15 @@ tips.get('/:id', async (c) => {
 });
 
 // POST submit a new tip (author = the signed-in user)
-tips.post('/', async (c) => {
+tips.post('/', rateLimit(10), async (c) => {
   const author = c.get('currentUser');
-  const body = await c.req.json<{
+  const body = await readJson<{
     category_id?: number;
-    title: string;
-    content: string;
+    title?: string;
+    content?: string;
     tags?: string;
-  }>();
+  }>(c);
+  if (!body) return badBody(c);
 
   if (!body.title || !body.content) {
     return c.json(
@@ -197,11 +200,12 @@ tips.put('/:id/reject', requireRole('moderator', 'admin'), async (c) => {
 tips.post('/:id/feedback', async (c) => {
   const reporter = c.get('currentUser');
   const tipId = c.req.param('id');
-  const body = await c.req.json<{
+  const body = await readJson<{
     reason?: string;
     details?: string;
     feedback?: string;
-  }>();
+  }>(c);
+  if (!body) return badBody(c);
 
   // The site-wide FeedbackButton posts { feedback } against tip id 0.
   const reason = body.reason ?? (body.feedback ? 'page_issue' : '');

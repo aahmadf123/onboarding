@@ -20,6 +20,7 @@ import schemaV2Sql from '../../db/schema-v2.sql?raw';
 import authTasksEmailSql from '../../db/migrations/0003_auth_tasks_email.sql?raw';
 import pageFeedbackSql from '../../db/migrations/2026-07-29-page-feedback.sql?raw';
 import loginLockoutSql from '../../db/migrations/2026-07-29-login-lockout.sql?raw';
+import indexesSql from '../../db/migrations/2026-07-29-indexes.sql?raw';
 
 const SCHEMA_FILES = [
   schemaSql,
@@ -27,6 +28,7 @@ const SCHEMA_FILES = [
   authTasksEmailSql,
   pageFeedbackSql,
   loginLockoutSql,
+  indexesSql,
 ];
 
 /**
