@@ -125,3 +125,45 @@ describe('search input limits', () => {
     expect(res.status).toBe(400);
   });
 });
+
+describe('list pagination', () => {
+  // The schema chain is DDL only — no seed files — so this suite provides its
+  // own rows rather than assuming content exists.
+  beforeAll(async () => {
+    for (let i = 0; i < 3; i++) {
+      await env.DB.prepare(
+        "INSERT INTO Articles (title, current_content, is_active) VALUES (?, ?, 1)"
+      )
+        .bind(`Pagination article ${i}`, 'A body long enough to notice if it ships.')
+        .run();
+    }
+  });
+
+  it('caps page size even when a client asks for more', async () => {
+    const user = await createUserAndLogin();
+    const res = await apiCall('/api/articles?limit=99999', { token: user.token });
+    expect(res.status).toBe(200);
+    expect(res.json.data.length).toBeLessThanOrEqual(500);
+  });
+
+  it('honours limit and offset', async () => {
+    const user = await createUserAndLogin();
+    const first = await apiCall('/api/articles?limit=1', { token: user.token });
+    const second = await apiCall('/api/articles?limit=1&offset=1', { token: user.token });
+    expect(first.json.data).toHaveLength(1);
+    expect(second.json.data).toHaveLength(1);
+    expect(second.json.data[0].id).not.toBe(first.json.data[0].id);
+  });
+
+  it('does not ship article bodies in the list', async () => {
+    // /api/articles returned Articles.*, so every article's full markdown went
+    // out on every dashboard load — to render three titles.
+    const user = await createUserAndLogin();
+    const res = await apiCall('/api/articles', { token: user.token });
+    expect(res.json.data.length).toBeGreaterThan(0);
+    for (const article of res.json.data) {
+      expect(article.current_content).toBeUndefined();
+      expect(article.title).toBeTruthy();
+    }
+  });
+});

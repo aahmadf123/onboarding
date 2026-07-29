@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import { pageBounds } from '../services/http';
 import { AppEnv } from '../types';
 import { requireRole } from '../middleware/auth';
 import { rateLimit } from '../middleware/rate-limit';
@@ -250,11 +251,11 @@ submissions.get('/', requireRole('moderator', 'admin'), async (c) => {
     bindings.push(status);
   }
 
-  query += ' ORDER BY Submissions.submitted_at DESC';
+  const { limit, offset } = pageBounds(c);
+  query += ' ORDER BY Submissions.submitted_at DESC LIMIT ? OFFSET ?';
+  bindings.push(limit, offset);
 
-  const stmt = c.env.DB.prepare(query);
-  const { results } =
-    bindings.length > 0 ? await stmt.bind(...bindings).all() : await stmt.all();
+  const { results } = await c.env.DB.prepare(query).bind(...bindings).all();
   return c.json({ success: true, data: results });
 });
 

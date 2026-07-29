@@ -34,3 +34,25 @@ export function badBody(c: Context<AppEnv>) {
 export function asTrimmedString(value: unknown): string {
   return typeof value === 'string' ? value.trim() : '';
 }
+
+/**
+ * Page bounds from ?limit / ?offset, with a hard ceiling.
+ *
+ * Every list endpoint was unbounded, so response size grew with the database
+ * and a single request could pull the whole table. The ceiling applies even
+ * when a caller asks for more, so the cap is not something a client can opt out
+ * of.
+ */
+export const DEFAULT_PAGE_SIZE = 100;
+export const MAX_PAGE_SIZE = 500;
+
+export function pageBounds(c: Context<AppEnv>): { limit: number; offset: number } {
+  const rawLimit = Number(c.req.query('limit'));
+  const rawOffset = Number(c.req.query('offset'));
+  const limit =
+    Number.isFinite(rawLimit) && rawLimit > 0
+      ? Math.min(Math.floor(rawLimit), MAX_PAGE_SIZE)
+      : DEFAULT_PAGE_SIZE;
+  const offset = Number.isFinite(rawOffset) && rawOffset > 0 ? Math.floor(rawOffset) : 0;
+  return { limit, offset };
+}

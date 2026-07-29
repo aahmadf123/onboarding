@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { AppEnv } from '../types';
+import { pageBounds } from '../services/http';
 
 const articles = new Hono<AppEnv>();
 
@@ -8,8 +9,14 @@ articles.get('/', async (c) => {
   const categoryId = c.req.query('category_id');
   const search = c.req.query('search');
 
+  // Deliberately not Articles.* — that carried every article's full markdown.
+  // The dashboard calls this to show three titles and the contribute form to
+  // fill a dropdown, so the whole corpus was being shipped to render a list.
+  // Article bodies come from /api/articles/:id, and the snippets on the
+  // category page from /api/categories/:id/articles.
   let query = `
-    SELECT Articles.*, Categories.name as category_name
+    SELECT Articles.id, Articles.title, Articles.category_id, Articles.last_updated,
+           Articles.is_active, Categories.name as category_name
     FROM Articles
     LEFT JOIN Categories ON Articles.category_id = Categories.id
   `;
@@ -31,11 +38,13 @@ articles.get('/', async (c) => {
     query += ' WHERE ' + conditions.join(' AND ');
   }
 
-  query += ' ORDER BY Articles.category_id, Articles.id';
+  const { limit, offset } = pageBounds(c);
+  query += ' ORDER BY Articles.category_id, Articles.id LIMIT ? OFFSET ?';
+  bindings.push(limit, offset);
 
-  const stmt = c.env.DB.prepare(query);
-  const { results } =
-    bindings.length > 0 ? await stmt.bind(...bindings).all() : await stmt.all();
+  const { results } = await c.env.DB.prepare(query)
+    .bind(...bindings)
+    .all();
   return c.json({ success: true, data: results });
 });
 

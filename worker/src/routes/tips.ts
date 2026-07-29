@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import { pageBounds } from '../services/http';
 import { AppEnv } from '../types';
 import { requireRole } from '../middleware/auth';
 import { rateLimit } from '../middleware/rate-limit';
@@ -30,6 +31,7 @@ function isModerator(role: string): boolean {
 // GET moderation queue (moderator/admin only) — must be before /:id
 tips.get('/queue', requireRole('moderator', 'admin'), async (c) => {
   const status = c.req.query('status') || 'pending';
+  const queuePage = pageBounds(c);
   const { results } = await c.env.DB.prepare(`
     SELECT Tips.*, Users.email as author_email, Categories.name as category_name
     FROM Tips
@@ -37,7 +39,8 @@ tips.get('/queue', requireRole('moderator', 'admin'), async (c) => {
     LEFT JOIN Categories ON Tips.category_id = Categories.id
     WHERE Tips.status = ?
     ORDER BY Tips.submitted_at DESC
-  `).bind(status).all();
+    LIMIT ? OFFSET ?
+  `).bind(status, queuePage.limit, queuePage.offset).all();
   return c.json({ success: true, data: results });
 });
 
@@ -71,11 +74,11 @@ tips.get('/', async (c) => {
     bindings.push(`%${tag}%`);
   }
 
-  query += ' ORDER BY Tips.approved_at DESC';
+  const { limit, offset } = pageBounds(c);
+  query += ' ORDER BY Tips.approved_at DESC LIMIT ? OFFSET ?';
+  bindings.push(limit, offset);
 
-  const stmt = c.env.DB.prepare(query);
-  const { results } =
-    bindings.length > 0 ? await stmt.bind(...bindings).all() : await stmt.all();
+  const { results } = await c.env.DB.prepare(query).bind(...bindings).all();
   return c.json({ success: true, data: results });
 });
 

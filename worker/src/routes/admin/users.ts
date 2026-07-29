@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { asTrimmedString } from '../../services/http';
+import { asTrimmedString, pageBounds } from '../../services/http';
 import { AppEnv, Role, UserRow } from '../../types';
 import { generatePasscode, hashPassword } from '../../services/passwords';
 import { sendEmail } from '../../services/email';
@@ -58,9 +58,12 @@ async function issuePasscodeAndInvite(
 
 // GET /api/admin/users
 users.get('/', async (c) => {
+  const { limit, offset } = pageBounds(c);
   const { results } = await c.env.DB.prepare(
-    `SELECT ${LIST_FIELDS} FROM Users ORDER BY created_at DESC`
-  ).all();
+    `SELECT ${LIST_FIELDS} FROM Users ORDER BY created_at DESC LIMIT ? OFFSET ?`
+  )
+    .bind(limit, offset)
+    .all();
   return c.json({ success: true, data: results });
 });
 
