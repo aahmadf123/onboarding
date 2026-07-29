@@ -8,6 +8,7 @@ import { LoginScreen } from './auth/LoginScreen';
 import { ForceResetScreen } from './auth/ForceResetScreen';
 import { ResetWithTokenScreen } from './auth/ResetWithTokenScreen';
 import { HomePage } from './pages/HomePage';
+import { OnboardingGuidePage } from './pages/OnboardingGuidePage';
 import { BrowseTopicsPage } from './pages/BrowseTopicsPage';
 import { CategoryView } from './pages/CategoryView';
 import { ArticleView } from './pages/ArticleView';
@@ -306,6 +307,14 @@ export function App() {
         onNavigate: navigate,
         onSearch: handleSearch,
         currentUser: currentUser,
+      });
+      break;
+    // 'checklist' is the legacy path for the same page; both are routable.
+    case 'guide':
+    case 'checklist':
+      content = React.createElement(OnboardingGuidePage, {
+        currentUser: currentUser,
+        onNavigate: navigate,
       });
       break;
     case 'categories':
