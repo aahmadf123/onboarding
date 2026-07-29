@@ -878,7 +878,7 @@ function AdminEmailLog() {
     });
   }, [type, status]);
 
-  var typeOptions = ['', 'invite', 'password_reset', 'task_assigned', 'weekly_reminder', 'approval_decision', 'test'];
+  var typeOptions = ['', 'invite', 'password_reset', 'task_assigned', 'weekly_reminder', 'admin_digest', 'approval_decision', 'test'];
 
   return React.createElement('div', null,
     React.createElement('div', { className: 'mb-4 bg-amber-50 border border-amber-200 rounded-lg p-3' },
@@ -903,7 +903,7 @@ function AdminEmailLog() {
             React.createElement('table', { className: 'w-full min-w-[640px]' },
               React.createElement('thead', null,
                 React.createElement('tr', { className: 'bg-gray-50 border-b border-gray-200' },
-                  ['When', 'To', 'Type', 'Provider', 'Subject'].map(function (h) {
+                  ['When', 'To', 'Type', 'Status', 'Subject'].map(function (h) {
                     return React.createElement('th', { key: h, className: 'px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase' }, h);
                   })
                 )
@@ -995,6 +995,17 @@ function AdminSettings() {
       }),
       'Send weekly reminder emails (Mondays) to users with open required or assigned tasks'
     ),
+    React.createElement('label', { className: 'flex items-start gap-2 text-sm text-gray-700 cursor-pointer mb-1' },
+      React.createElement('input', {
+        type: 'checkbox',
+        className: 'mt-1',
+        checked: cfg.admin_digest_enabled === '1',
+        onChange: function (e) { set('admin_digest_enabled', e.target.checked ? '1' : '0'); },
+      }),
+      'Send admins a weekly digest of who is behind'
+    ),
+    React.createElement('p', { className: 'text-xs text-gray-500 mb-4 ml-6' },
+      'Separate from the toggle above. Per-user reminders are often filtered by university mail, so the digest is usually the one worth keeping. The same list is always available under Who Is Behind.'),
     notice && React.createElement('p', { className: 'text-green-600 text-sm mb-3' }, notice),
     error && React.createElement('p', { className: 'text-red-500 text-sm mb-3' }, error),
     React.createElement('div', { className: 'flex gap-2' },

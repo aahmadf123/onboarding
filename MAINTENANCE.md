@@ -41,7 +41,7 @@ Only `https://www.google.com/maps…` / `maps.google.com` URLs render (anything 
 
 - The site is **invite-only**: admins create accounts in Admin → Users. The invitee gets a one-time passcode (emailed via Resend AND shown once to the admin), signs in with it, and must set their own password (min 10 characters).
 - **Forgot password:** users click "Forgot password?" on the sign-in screen for an emailed 60-minute reset link. Because that email frequently does not arrive (see Email below), **Re-invite** in Admin → Users is the reliable recovery path: it issues a fresh passcode on screen and signs the user out everywhere.
-- **First admin on a fresh deployment:** `POST /api/auth/bootstrap` with the `x-bootstrap-token: <BOOTSTRAP_TOKEN>` header issues the seeded admin's passcode. It stops working once every admin has credentials.
+- **First admin on a fresh deployment:** `POST /api/auth/bootstrap` with the `x-bootstrap-token: <BOOTSTRAP_TOKEN>` header issues a passcode for the designated super admin, `utdata@utoledo.edu`, and only that account. It stops working once that account has a password. Other admins are never targeted: they are invited normally from Admin → Users.
 
 ## Email
 
@@ -60,7 +60,8 @@ Only `https://www.google.com/maps…` / `maps.google.com` URLs render (anything 
 >   see their own outstanding count in-app on every page.
 
 - Secrets: `npx wrangler secret put RESEND_API_KEY` and `npx wrangler secret put BOOTSTRAP_TOKEN` (local dev uses `worker/.dev.vars`, see `.dev.vars.example`).
-- Weekly reminders run Mondays 13:00 UTC, roughly 9am in Toledo (cron in `worker/wrangler.jsonc`). They email each **active** user their outstanding required/assigned tasks, then send every admin a digest of who is behind. Toggle in Admin → Settings. A retried cron will not re-send to anyone already emailed in the last six days.
+- Weekly reminders run Mondays 13:00 UTC, roughly 9am in Toledo (cron in `worker/wrangler.jsonc`). They email each **active** user their outstanding required/assigned tasks, then send every admin a digest of who is behind. A retried cron will not re-send to anyone already emailed in the last six days.
+- Admin → Settings has **two independent toggles**: per-user reminders and the admin digest. They are deliberately separate, because per-user mail is usually filtered while the digest is the channel that reaches you. Turning off the noisy one does not disable the useful one.
 - Every send is recorded in Admin → Email Log. **"Accepted" there means the receiving server took the message, not that anyone read it.**
 
 ### Sending from inside the university tenant

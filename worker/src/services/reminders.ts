@@ -145,6 +145,12 @@ export async function runWeeklyReminders(
 export async function runAdminDigest(
   env: Pick<Bindings, 'DB' | 'RESEND_API_KEY'>
 ): Promise<{ sent: number; behind: number }> {
+  // Gated separately from weekly_reminder_enabled: an admin may reasonably
+  // turn off the per-user reminders, which are usually filtered anyway, and
+  // still want the digest, which is the channel that actually reaches them.
+  const enabled = await getConfig(env.DB, 'admin_digest_enabled');
+  if (enabled !== '1') return { sent: 0, behind: 0 };
+
   const { results: behind } = await env.DB.prepare(BEHIND_USERS_SQL).all<BehindUser>();
   if (!behind || behind.length === 0) return { sent: 0, behind: 0 };
 

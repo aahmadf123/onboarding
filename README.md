@@ -35,7 +35,8 @@ npx wrangler d1 execute toledo-onboarding-db-prod --local --file=../db/migration
 npx wrangler d1 execute toledo-onboarding-db-prod --local --file=../db/migrations/2026-07-29-repair-seed-data.sql
 
 npx wrangler dev
-# Then bootstrap the first admin (passcode is in the response):
+# Then issue the super admin's passcode (it is in the response). This targets
+# utdata@utoledo.edu specifically, and only while that account has no password:
 # curl -X POST http://localhost:8787/api/auth/bootstrap -H "x-bootstrap-token: <your BOOTSTRAP_TOKEN>"
 ```
 
@@ -75,7 +76,9 @@ npx wrangler d1 execute toledo-onboarding-db-prod --remote --file=../db/migratio
 # must be invited from Admin → Users before they can sign in again.
 npx wrangler deploy
 
-# Bootstrap the first super admin (one-time; inert afterwards)
+# Issue the super admin's passcode (one-time; inert once that account has a
+# password). It targets utdata@utoledo.edu only — every other admin is invited
+# normally from Admin → Users.
 curl -X POST https://<your-worker-url>/api/auth/bootstrap -H "x-bootstrap-token: <BOOTSTRAP_TOKEN>"
 # → sign in as utdata@utoledo.edu with the returned passcode → set a password → Admin
 ```

@@ -121,6 +121,7 @@ CREATE INDEX IF NOT EXISTS idx_emaillog_type ON EmailLog(email_type, created_at)
 INSERT OR IGNORE INTO AppConfig (key, value) VALUES ('email_from_address', 'onboarding@mail.utrockets-onboarding.com');
 INSERT OR IGNORE INTO AppConfig (key, value) VALUES ('email_from_name', 'Toledo Athletics Onboarding');
 INSERT OR IGNORE INTO AppConfig (key, value) VALUES ('weekly_reminder_enabled', '1');
+INSERT OR IGNORE INTO AppConfig (key, value) VALUES ('admin_digest_enabled', '1');
 INSERT OR IGNORE INTO AppConfig (key, value) VALUES ('app_base_url', 'https://utrockets-onboarding.com');
 
 -- ============ Bootstrap super admin ============

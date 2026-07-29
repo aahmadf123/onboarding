@@ -89,6 +89,29 @@ describe('weekly reminder cron', () => {
     expect((await reminderRows()).length).toBe(before);
   });
 
+  it('keeps the two toggles independent', async () => {
+    async function digestCount(): Promise<number> {
+      const row = await env.DB.prepare(
+        "SELECT COUNT(*) AS count FROM EmailLog WHERE email_type = 'admin_digest'"
+      ).first<{ count: number }>();
+      return row?.count ?? 0;
+    }
+
+    // weekly_reminder_enabled is still '0' from the test above. The digest is
+    // the channel that actually reaches admins, so it must keep working.
+    const beforeDigest = await digestCount();
+    await runScheduled();
+    expect(await digestCount()).toBeGreaterThan(beforeDigest);
+
+    // Turning the digest off stops it, without needing the other toggle.
+    await env.DB.prepare(
+      "INSERT INTO AppConfig (key, value) VALUES ('admin_digest_enabled', '0') ON CONFLICT(key) DO UPDATE SET value = '0'"
+    ).run();
+    const afterDisable = await digestCount();
+    await runScheduled();
+    expect(await digestCount()).toBe(afterDisable);
+  });
+
   it('purges expired sessions and reset tokens', async () => {
     const user = await createUser();
     await env.DB.prepare(
