@@ -36,11 +36,23 @@ export function escapeSqlLiteral(value: string): string {
   return value.replace(/'/g, "''");
 }
 
+/**
+ * Longest search input that reaches SQL construction.
+ *
+ * The returned phrase is interpolated five to eight times into each of six
+ * queries, so an uncapped input multiplies before it ever reaches D1 — a large
+ * chat message became megabytes of SQL per request. Capping here covers every
+ * caller, including buildContextQuery, rather than each route separately.
+ */
+export const MAX_SEARCH_INPUT_CHARS = 200;
+export const MAX_SEARCH_PHRASE_CHARS = 120;
+
 export function expandSearchTerms(
   query: string,
   maxTerms = 18
 ): { phrase: string; terms: string[] } {
   const rawTokens = query
+    .slice(0, MAX_SEARCH_INPUT_CHARS)
     .split(/\s+/)
     .map(normalizeToken)
     .flatMap((token) => token.split(/\s+/))
@@ -66,7 +78,7 @@ export function expandSearchTerms(
   const baseTerms = rawTokens.filter((token, index) => rawTokens.indexOf(token) === index);
 
   return {
-    phrase: baseTerms.join(' ').trim(),
+    phrase: baseTerms.join(' ').trim().slice(0, MAX_SEARCH_PHRASE_CHARS),
     terms: orderedTerms.slice(0, maxTerms),
   };
 }

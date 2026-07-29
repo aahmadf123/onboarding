@@ -1,6 +1,10 @@
 import { Hono } from 'hono';
 import { AppEnv } from '../types';
-import { escapeSqlLiteral, expandSearchTerms } from '../services/query-utils';
+import {
+  escapeSqlLiteral,
+  expandSearchTerms,
+  MAX_SEARCH_INPUT_CHARS,
+} from '../services/query-utils';
 
 const search = new Hono<AppEnv>();
 
@@ -60,6 +64,14 @@ search.get('/', async (c) => {
   const q = c.req.query('q');
   if (!q)
     return c.json({ success: false, error: 'Query parameter q is required' }, 400);
+  // expandSearchTerms truncates anyway, but rejecting outright tells the caller
+  // their query was not run in full rather than silently searching a prefix.
+  if (q.length > MAX_SEARCH_INPUT_CHARS) {
+    return c.json(
+      { success: false, error: `Query parameter q must be ${MAX_SEARCH_INPUT_CHARS} characters or fewer` },
+      400
+    );
+  }
 
   const { phrase, terms } = expandSearchTerms(q);
   if (!phrase && terms.length === 0) {
