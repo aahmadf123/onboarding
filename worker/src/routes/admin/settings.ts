@@ -6,6 +6,54 @@ import { testEmail } from '../../services/email-templates';
 
 const settings = new Hono<AppEnv>();
 
+/**
+ * Two of these values end up inside emails, so "is a string" is not enough.
+ *
+ * app_base_url is interpolated into every password-reset link. Left
+ * unvalidated, an admin (or anyone who reaches an admin session) could point it
+ * at a host they control and every subsequent reset would deliver a live token
+ * there. A `javascript:` value would land straight in an email href, and
+ * escapeHtml does not filter schemes.
+ */
+function validateSetting(key: string, value: string): string | null {
+  if (key === 'app_base_url') {
+    let url: URL;
+    try {
+      url = new URL(value);
+    } catch {
+      return 'Portal base URL must be an absolute URL, e.g. https://utrockets-onboarding.com';
+    }
+    if (url.protocol !== 'https:') {
+      return 'Portal base URL must use https.';
+    }
+    if (url.search || url.hash) {
+      return 'Portal base URL must not contain a query string or fragment.';
+    }
+    return null;
+  }
+
+  if (key === 'email_from_address') {
+    // Deliberately loose: the goal is to reject obvious breakage (a bare word,
+    // a display name, an embedded newline that could inject a header), not to
+    // out-clever RFC 5322.
+    if (!/^[^\s@<>,;:"]+@[^\s@<>,;:"]+\.[^\s@<>,;:"]+$/.test(value)) {
+      return 'Sender must be a bare email address, e.g. noreply@mail.example.com';
+    }
+    return null;
+  }
+
+  if (/[\r\n]/.test(value)) {
+    return `${key} must not contain line breaks.`;
+  }
+  return null;
+}
+
+/** Trailing slashes would produce links like https://host//reset-password. */
+function normalizeSetting(key: string, value: string): string {
+  if (key === 'app_base_url') return value.replace(/\/+$/, '');
+  return value;
+}
+
 // GET /api/admin/settings — the whitelisted AppConfig keys
 settings.get('/', async (c) => {
   const values = await getConfigs(c.env.DB, EDITABLE_CONFIG_KEYS);
@@ -23,7 +71,9 @@ settings.put('/', async (c) => {
     if (typeof value !== 'string') {
       return c.json({ success: false, error: `${key} must be a string` }, 400);
     }
-    await setConfig(c.env.DB, key, value.trim());
+    const problem = validateSetting(key, value.trim());
+    if (problem) return c.json({ success: false, error: problem }, 400);
+    await setConfig(c.env.DB, key, normalizeSetting(key, value.trim()));
   }
   const values = await getConfigs(c.env.DB, EDITABLE_CONFIG_KEYS);
   return c.json({ success: true, data: values });

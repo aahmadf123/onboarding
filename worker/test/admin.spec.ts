@@ -534,6 +534,54 @@ describe('who is behind', () => {
 });
 
 describe('settings & email log', () => {
+  it('rejects a base URL that could redirect live reset tokens', async () => {
+    // app_base_url is interpolated into every password-reset link. With only a
+    // typeof check, an admin session could point it at a host they control and
+    // every subsequent reset would deliver a working token there. A javascript:
+    // value would land straight in an email href, and escapeHtml does not
+    // filter schemes.
+    const admin = await createUserAndLogin({ role: 'admin' });
+    const rejected = [
+      'javascript:alert(1)',
+      'http://evil.example',
+      'evil.example',
+      'https://evil.example/?next=x',
+      '',
+    ];
+    for (const value of rejected) {
+      const res = await apiCall('/api/admin/settings', {
+        method: 'PUT',
+        token: admin.token,
+        body: JSON.stringify({ app_base_url: value }),
+      });
+      expect(res.status, `should have rejected ${JSON.stringify(value)}`).toBe(400);
+    }
+  });
+
+  it('accepts a valid base URL and strips trailing slashes', async () => {
+    const admin = await createUserAndLogin({ role: 'admin' });
+    const res = await apiCall('/api/admin/settings', {
+      method: 'PUT',
+      token: admin.token,
+      body: JSON.stringify({ app_base_url: 'https://utrockets-onboarding.com/' }),
+    });
+    expect(res.status).toBe(200);
+    // Without stripping, links come out as https://host//reset-password.
+    expect(res.json.data.app_base_url).toBe('https://utrockets-onboarding.com');
+  });
+
+  it('rejects a sender that is not a bare email address', async () => {
+    const admin = await createUserAndLogin({ role: 'admin' });
+    for (const value of ['noreply', 'Onboarding <a@b.com>', 'a@b', 'a@b.com\nBcc: x@y.com']) {
+      const res = await apiCall('/api/admin/settings', {
+        method: 'PUT',
+        token: admin.token,
+        body: JSON.stringify({ email_from_address: value }),
+      });
+      expect(res.status, `should have rejected ${JSON.stringify(value)}`).toBe(400);
+    }
+  });
+
   it('whitelists settings keys and round-trips values', async () => {
     const admin = await createUserAndLogin({ role: 'admin' });
     const bad = await apiCall('/api/admin/settings', {

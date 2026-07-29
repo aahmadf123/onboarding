@@ -31,6 +31,16 @@ async function issuePasscodeAndInvite(
        WHERE id = ?`
     ).bind(await hashPassword(passcode), passcodeExpiry(), user.id),
     c.env.DB.prepare('DELETE FROM Sessions WHERE user_id = ?').bind(user.id),
+    // A re-invite replaces the credential, so any reset link already in flight
+    // must stop working with it. Otherwise an emailed link issued minutes ago
+    // still sets a password on an account the admin has just re-secured.
+    c.env.DB.prepare(
+      'UPDATE PasswordResets SET used_at = CURRENT_TIMESTAMP WHERE user_id = ? AND used_at IS NULL'
+    ).bind(user.id),
+    // Fresh credential, fresh throttle state.
+    c.env.DB.prepare(
+      'UPDATE Users SET failed_login_attempts = 0, locked_until = NULL WHERE id = ?'
+    ).bind(user.id),
   ]);
 
   const baseUrl = await getConfig(c.env.DB, 'app_base_url');

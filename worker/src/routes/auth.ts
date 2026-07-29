@@ -224,6 +224,13 @@ auth.post('/change-password', requireAuth, async (c) => {
       user.id,
       c.get('sessionId')
     ),
+    // Burn any outstanding reset tokens. Requesting a reset, remembering the
+    // password, then changing it normally used to leave the emailed link live
+    // for the rest of its hour — so anyone reaching that mailbox could reset
+    // the password again and kill every session.
+    c.env.DB.prepare(
+      'UPDATE PasswordResets SET used_at = CURRENT_TIMESTAMP WHERE user_id = ? AND used_at IS NULL'
+    ).bind(user.id),
   ]);
 
   const updated = await c.env.DB.prepare('SELECT * FROM Users WHERE id = ?')
@@ -311,10 +318,17 @@ auth.post('/reset', rateLimit(10), async (c) => {
       `UPDATE Users SET password_hash = ?, must_reset = 0, status = 'active',
        password_set_at = CURRENT_TIMESTAMP, passcode_expires_at = NULL WHERE id = ?`
     ).bind(newHash, user.id),
-    c.env.DB.prepare('UPDATE PasswordResets SET used_at = CURRENT_TIMESTAMP WHERE id = ?').bind(
-      reset.id
-    ),
+    // Burns every outstanding token for this user, not only the one just used.
+    // Requesting a reset twice left the earlier link live, so the older email
+    // could still change the password after the newer one already had.
+    c.env.DB.prepare(
+      'UPDATE PasswordResets SET used_at = CURRENT_TIMESTAMP WHERE user_id = ? AND used_at IS NULL'
+    ).bind(user.id),
     c.env.DB.prepare('DELETE FROM Sessions WHERE user_id = ?').bind(user.id),
+    // A completed reset means the owner is back in; drop any lockout.
+    c.env.DB.prepare(
+      'UPDATE Users SET failed_login_attempts = 0, locked_until = NULL WHERE id = ?'
+    ).bind(user.id),
   ]);
 
   return c.json({ success: true, message: 'Password updated. You can sign in now.' });

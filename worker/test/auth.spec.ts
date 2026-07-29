@@ -243,6 +243,87 @@ describe('login', () => {
   });
 });
 
+describe('password reset token lifecycle', () => {
+  async function issueResetToken(email: string): Promise<string> {
+    await apiCall('/api/auth/forgot', { method: 'POST', body: JSON.stringify({ email }) });
+    const row = await env.DB.prepare(
+      `SELECT pr.id FROM PasswordResets pr JOIN Users u ON u.id = pr.user_id
+       WHERE u.email = ? AND pr.used_at IS NULL ORDER BY pr.id DESC LIMIT 1`
+    )
+      .bind(email)
+      .first<{ id: number }>();
+    expect(row).toBeTruthy();
+    // The raw token is only ever in the email, so drive the DB directly: swap in
+    // a token we know the hash of, which is equivalent for lifecycle purposes.
+    const token = generateToken();
+    await env.DB.prepare('UPDATE PasswordResets SET token_hash = ? WHERE id = ?')
+      .bind(await sha256Hex(token), row!.id)
+      .run();
+    return token;
+  }
+
+  it('invalidates an outstanding token when the password is changed normally', async () => {
+    // Request a reset, remember the password, change it the normal way — the
+    // emailed link used to stay live for the rest of its hour, so anyone
+    // reaching that mailbox could reset the password again and kill every
+    // session.
+    const user = await createUserAndLogin();
+    const token = await issueResetToken(user.email);
+
+    const changed = await apiCall('/api/auth/change-password', {
+      method: 'POST',
+      token: user.token,
+      body: JSON.stringify({
+        current_password: user.password,
+        new_password: 'a-brand-new-password-1',
+      }),
+    });
+    expect(changed.status).toBe(200);
+
+    const used = await apiCall('/api/auth/reset', {
+      method: 'POST',
+      body: JSON.stringify({ token, new_password: 'attacker-chosen-password-1' }),
+    });
+    expect(used.status).toBe(400);
+  });
+
+  it('invalidates outstanding tokens on re-invite', async () => {
+    const admin = await createUserAndLogin({ role: 'admin' });
+    const victim = await createUser();
+    const token = await issueResetToken(victim.email);
+
+    const reinvited = await apiCall(`/api/admin/users/${victim.id}/reinvite`, {
+      method: 'POST',
+      token: admin.token,
+    });
+    expect(reinvited.status).toBe(200);
+
+    const used = await apiCall('/api/auth/reset', {
+      method: 'POST',
+      body: JSON.stringify({ token, new_password: 'attacker-chosen-password-1' }),
+    });
+    expect(used.status).toBe(400);
+  });
+
+  it('invalidates an earlier token when a later one is redeemed', async () => {
+    const user = await createUser();
+    const first = await issueResetToken(user.email);
+    const second = await issueResetToken(user.email);
+
+    const ok = await apiCall('/api/auth/reset', {
+      method: 'POST',
+      body: JSON.stringify({ token: second, new_password: 'chosen-by-the-owner-1' }),
+    });
+    expect(ok.status).toBe(200);
+
+    const stale = await apiCall('/api/auth/reset', {
+      method: 'POST',
+      body: JSON.stringify({ token: first, new_password: 'chosen-by-someone-else-1' }),
+    });
+    expect(stale.status).toBe(400);
+  });
+});
+
 describe('forced password reset (invite flow)', () => {
   it('blocks the API until the password is changed, then unblocks', async () => {
     const user = await createUser({
