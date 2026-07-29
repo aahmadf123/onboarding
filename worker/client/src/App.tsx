@@ -7,6 +7,7 @@ import { LoadingSplash } from './components/LoadingSplash';
 import { LoginScreen } from './auth/LoginScreen';
 import { ForceResetScreen } from './auth/ForceResetScreen';
 import { ResetWithTokenScreen } from './auth/ResetWithTokenScreen';
+import { HomePage } from './pages/HomePage';
 import { BrowseTopicsPage } from './pages/BrowseTopicsPage';
 import { CategoryView } from './pages/CategoryView';
 import { ArticleView } from './pages/ArticleView';
@@ -298,6 +299,15 @@ export function App() {
 
   let content;
   switch (view) {
+    case 'home':
+      content = React.createElement(HomePage, {
+        categories: categories,
+        stats: stats,
+        onNavigate: navigate,
+        onSearch: handleSearch,
+        currentUser: currentUser,
+      });
+      break;
     case 'categories':
       content = React.createElement(BrowseTopicsPage, {
         categories: categories,
