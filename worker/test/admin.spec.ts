@@ -1,6 +1,7 @@
 import { env } from 'cloudflare:test';
 import { describe, it, expect, beforeAll } from 'vitest';
 import { applySchema, mockResend, createUserAndLogin, apiCall, login } from './helpers';
+import { getRelevantContextWithSources } from '../src/services/content-index';
 
 beforeAll(async () => {
   await applySchema();
@@ -379,6 +380,35 @@ describe('content CMS', () => {
     // Admin list still shows it (for restore).
     const adminList = await apiCall('/api/admin/content/articles', { token: admin.token });
     expect(adminList.json.data.find((a: { id: number }) => a.id === articleId)).toBeTruthy();
+  });
+
+  it('keeps soft-deleted articles out of AI chat context', async () => {
+    const admin = await createUserAndLogin({ role: 'admin' });
+
+    const created = await apiCall('/api/admin/content/articles', {
+      method: 'POST',
+      token: admin.token,
+      body: JSON.stringify({
+        category_id: 1,
+        title: 'Retracted Parking Guidance',
+        current_content: 'Zebra permits cost nine hundred dollars.',
+      }),
+    });
+    const articleId = created.json.data.id as number;
+
+    const before = await getRelevantContextWithSources(env.DB, 'zebra permits', 12);
+    expect(before.context).toContain('Zebra permits');
+
+    await apiCall(`/api/admin/content/articles/${articleId}`, {
+      method: 'DELETE',
+      token: admin.token,
+    });
+
+    // The index row is dropped by reindexArticle, but the retrieval layer also
+    // queries live Articles directly. That query had no is_active filter, so
+    // the assistant kept quoting retracted policy content verbatim.
+    const after = await getRelevantContextWithSources(env.DB, 'zebra permits', 12);
+    expect(after.context).not.toContain('Zebra permits');
   });
 
   it('contacts CRUD roundtrip works', async () => {

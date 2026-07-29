@@ -113,17 +113,23 @@ CREATE INDEX IF NOT EXISTS idx_emaillog_user ON EmailLog(user_id);
 CREATE INDEX IF NOT EXISTS idx_emaillog_type ON EmailLog(email_type, created_at);
 
 -- ============ App config defaults ============
--- Swapping to a verified Resend domain later is a Settings change only.
-INSERT OR IGNORE INTO AppConfig (key, value) VALUES ('email_from_address', 'onboarding@resend.dev');
+-- Changing the sender or base URL later is a Settings change only.
+-- NOTE: these are INSERT OR IGNORE, so an existing database keeps whatever it
+-- already has. On a database created before these defaults changed, update
+-- app_base_url explicitly — see the deploy steps in README.md. A stale
+-- app_base_url sends live password-reset tokens to the wrong host.
+INSERT OR IGNORE INTO AppConfig (key, value) VALUES ('email_from_address', 'onboarding@mail.utrockets-onboarding.com');
 INSERT OR IGNORE INTO AppConfig (key, value) VALUES ('email_from_name', 'Toledo Athletics Onboarding');
 INSERT OR IGNORE INTO AppConfig (key, value) VALUES ('weekly_reminder_enabled', '1');
-INSERT OR IGNORE INTO AppConfig (key, value) VALUES ('app_base_url', 'https://onboarding.utdata.workers.dev');
+INSERT OR IGNORE INTO AppConfig (key, value) VALUES ('app_base_url', 'https://utrockets-onboarding.com');
 
 -- ============ Bootstrap super admin ============
 -- Seeded without a password; the first passcode is issued via
 -- POST /api/auth/bootstrap (guarded by the BOOTSTRAP_TOKEN secret).
+-- seed-v2.sql may have created this row already, before name/status existed.
 INSERT OR IGNORE INTO Users (email, name, role) VALUES ('utdata@utoledo.edu', 'Super Admin', 'admin');
-UPDATE Users SET role = 'admin', status = COALESCE(status, 'invited') WHERE email = 'utdata@utoledo.edu';
+UPDATE Users SET role = 'admin', name = COALESCE(name, 'Super Admin'),
+  status = COALESCE(status, 'invited') WHERE email = 'utdata@utoledo.edu';
 
 -- ============ Baseline checklist tasks ============
 -- Slugs MUST equal the legacy localStorage ids so client-side progress

@@ -6,12 +6,14 @@ const stats = new Hono<AppEnv>();
 stats.get('/', async (c) => {
   const [articles, categories, pendingSubmissions, totalUsers] =
     await c.env.DB.batch([
-      c.env.DB.prepare('SELECT COUNT(*) as count FROM Articles'),
+      // is_active = 1 matches every other article surface. Without it the
+      // dashboard counted soft-deleted articles and disagreed with the list.
+      c.env.DB.prepare('SELECT COUNT(*) as count FROM Articles WHERE is_active = 1'),
       c.env.DB.prepare('SELECT COUNT(*) as count FROM Categories'),
       c.env.DB.prepare(
         "SELECT COUNT(*) as count FROM Submissions WHERE status = 'pending'"
       ),
-      c.env.DB.prepare('SELECT COUNT(*) as count FROM Users'),
+      c.env.DB.prepare("SELECT COUNT(*) as count FROM Users WHERE status != 'disabled'"),
     ]);
 
   return c.json({

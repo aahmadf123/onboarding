@@ -5,12 +5,12 @@ import { sendEmail } from '../../services/email';
 import { inviteEmail } from '../../services/email-templates';
 import { getConfig } from '../../services/config';
 import { PASSCODE_DAYS } from '../auth';
+import { PRIMARY_SUPERADMIN_EMAIL } from '../../constants';
 
 const users = new Hono<AppEnv>();
 
 const VALID_ROLES: Role[] = ['staff', 'moderator', 'admin'];
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const PRIMARY_SUPERADMIN_EMAIL = 'utdata@utoledo.edu';
 
 const LIST_FIELDS = `id, email, name, role, status, must_reset, created_at,
   invited_at, last_login_at, passcode_expires_at`;

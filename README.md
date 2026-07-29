@@ -59,8 +59,14 @@ npx wrangler d1 execute toledo-onboarding-db-prod --remote --file=../db/migratio
 npx wrangler d1 execute toledo-onboarding-db-prod --remote --file=../db/seed-v3.sql
 npx wrangler d1 execute toledo-onboarding-db-prod --remote --file=../db/migrations/2026-06-14-directory-refresh.sql
 npx wrangler d1 execute toledo-onboarding-db-prod --remote --file=../db/migrations/2026-06-14-content-expansion.sql
+# app_base_url is embedded in every invite and password-reset link. The
+# migrations use INSERT OR IGNORE, so an existing database keeps its old value
+# and must be updated explicitly. A stale value sends live reset tokens to
+# whatever answers at the old host.
 npx wrangler d1 execute toledo-onboarding-db-prod --remote \
-  --command "UPDATE AppConfig SET value='https://<your-worker-url>' WHERE key='app_base_url'"
+  --command "UPDATE AppConfig SET value='https://utrockets-onboarding.com' WHERE key='app_base_url'"
+npx wrangler d1 execute toledo-onboarding-db-prod --remote \
+  --command "UPDATE AppConfig SET value='onboarding@mail.utrockets-onboarding.com' WHERE key='email_from_address'"
 
 # Deploy — NOTE: from this moment the site is invite-only; existing users
 # must be invited from Admin → Users before they can sign in again.
@@ -73,7 +79,30 @@ curl -X POST https://<your-worker-url>/api/auth/bootstrap -H "x-bootstrap-token:
 
 ### Email sending
 
-Emails are sent through Resend. The from-address defaults to the `onboarding@resend.dev` sandbox, which **only delivers to the Resend account owner's inbox** — fine for testing; invite passcodes are also shown in the admin UI so onboarding works regardless. For real delivery, verify a domain in the Resend dashboard and change the from-address in **Admin → Settings** (no redeploy needed).
+Emails go through Resend from `mail.utrockets-onboarding.com`.
+
+**Do not assume email reaches anyone at `utoledo.edu`.** Resend reporting a send
+as successful only means the receiving mail server returned a 250 accept at SMTP
+time. The university runs Microsoft 365, which accepts first and quarantines
+afterwards, and mail from a newly registered domain whose name resembles
+`utrockets.com` carrying a passcode and a sign-in link matches the profile
+anti-phishing filters are built to stop. In testing, invites to `utoledo.edu`
+addresses showed as delivered in Resend and never arrived.
+
+The portal is therefore built so nothing critical depends on email:
+
+- Invite passcodes are shown once in the admin UI. Hand them over directly.
+- A locked-out user is recovered with **Admin → Users → Re-invite**, which
+  issues a fresh passcode on screen.
+- Outstanding tasks are shown in the app on sign-in, and an admin-facing digest
+  lists who is behind, so the weekly nudge does not depend on delivery.
+
+The durable fix is to send from inside the university tenant (Microsoft Graph
+`sendMail` via an app registration on a UToledo mailbox), which skips inbound
+filtering entirely. `worker/src/services/email.ts` is structured so that is a
+backend swap rather than a rewrite. Failing that, ask UToledo IT to allowlist
+the sending domain, and have them run a message trace to confirm what is
+happening to the mail.
 
 ## Database Setup (fresh environment)
 

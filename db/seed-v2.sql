@@ -7,10 +7,19 @@
 PRAGMA foreign_keys = ON;
 
 -- ------------------------------------------------------------
--- Seed users needed for moderated / admin-owned content
+-- Seed user that owns the sample content below.
+--
+-- This is the real super admin, not a placeholder. Two fake accounts
+-- (staff.example@utoledo.edu, admin@utoledo.edu) used to be seeded here and
+-- shipped to production: they showed up in Admin > Users, were counted in
+-- /api/stats, and the admin one broke POST /api/auth/bootstrap by sorting
+-- ahead of the real super admin.
+--
+-- Migration 0003 also creates this row (INSERT OR IGNORE on the UNIQUE email)
+-- and fills in name/status, which only exist after its ALTER TABLEs run.
+-- Seeding it here just pins the id so the sample content can reference it.
 -- ------------------------------------------------------------
-INSERT OR IGNORE INTO Users (id, email, role) VALUES (100, 'staff.example@utoledo.edu', 'staff');
-INSERT OR IGNORE INTO Users (id, email, role) VALUES (101, 'admin@utoledo.edu', 'admin');
+INSERT OR IGNORE INTO Users (id, email, role) VALUES (100, 'utdata@utoledo.edu', 'admin');
 
 -- ============================================================
 -- ORG CHART (expanded starter hierarchy)
@@ -62,14 +71,14 @@ INSERT INTO OrgChart (id, name, title, department, email, phone, parent_id, disp
 DELETE FROM Tips;
 
 INSERT INTO Tips (id, author_id, category_id, title, content, tags, status, reviewed_by, approved_at) VALUES
-(1, 100, 7, 'Parking Pro Tip: First Day Arrival', 'Arrive at least 30 minutes early on your first day. The lots near Savage Arena fill up fast before 9am. If you do not have your A permit yet, use the C permit daily option through ParkUToledo.', 'parking,first-day,savage-arena', 'approved', 101, CURRENT_TIMESTAMP),
-(2, 100, 6, 'UTAD First, MFA Second, Everything Else Third', 'The fastest path is Rocket ID to UTAD activation to Microsoft Authenticator to MyUT. Skipping MFA setup early tends to create access friction across payroll and employee systems.', 'utad,mfa,it,myut', 'approved', 101, CURRENT_TIMESTAMP),
-(3, 100, 5, 'Benefits Deadline Is Not Soft', 'You have 30 days to elect or waive benefits. Declining coverage still requires action in MyUT; silence is not a waiver.', 'benefits,hr,deadline,30-day', 'approved', 101, CURRENT_TIMESTAMP),
-(4, 100, 2, 'When Compliance Is Unclear, Call Before You Act', 'If a recruiting, NIL, booster, or eligibility action feels even slightly uncertain, call Compliance before you do anything. Prevention is easier than remediation.', 'compliance,ncaa,booster,nil', 'approved', 101, CURRENT_TIMESTAMP),
-(5, 100, 9, 'Best Quick Lunch Circuit Near Campus', 'For a fast lunch, Gateway Plaza is the easiest campus-adjacent option. For off-campus options, Old Orchard and Secor corridor spots are practical on a workday.', 'food,lunch,campus,toledo', 'approved', 101, CURRENT_TIMESTAMP),
-(6, 100, 6, 'Direct Deposit and Tax Setup Belong on Day One', 'Once UTAD and MFA are working, go straight into MyUT to verify direct deposit and tax setup. That closes one of the most common onboarding gaps.', 'payroll,direct-deposit,myut,taxes', 'approved', 101, CURRENT_TIMESTAMP),
-(7, 100, 4, 'Use Official Work Email Only for Athletics Business', 'Do not route onboarding or student-related work through personal email. Use official @utoledo.edu accounts for business records, security, and compliance.', 'email,security,ferpa,workflows', 'approved', 101, CURRENT_TIMESTAMP),
-(8, 100, 3, 'Branding Has Two Blue Standards', 'Athletics branding and University marketing materials do not always use the same blue hex value. Check whether the asset is Athletics-facing or University-wide before publishing.', 'branding,design,athletics,marketing', 'approved', 101, CURRENT_TIMESTAMP);
+(1, 100, 7, 'Parking Pro Tip: First Day Arrival', 'Arrive at least 30 minutes early on your first day. The lots near Savage Arena fill up fast before 9am. If you do not have your A permit yet, use the C permit daily option through ParkUToledo.', 'parking,first-day,savage-arena', 'approved', 100, CURRENT_TIMESTAMP),
+(2, 100, 6, 'UTAD First, MFA Second, Everything Else Third', 'The fastest path is Rocket ID to UTAD activation to Microsoft Authenticator to MyUT. Skipping MFA setup early tends to create access friction across payroll and employee systems.', 'utad,mfa,it,myut', 'approved', 100, CURRENT_TIMESTAMP),
+(3, 100, 5, 'Benefits Deadline Is Not Soft', 'You have 30 days to elect or waive benefits. Declining coverage still requires action in MyUT; silence is not a waiver.', 'benefits,hr,deadline,30-day', 'approved', 100, CURRENT_TIMESTAMP),
+(4, 100, 2, 'When Compliance Is Unclear, Call Before You Act', 'If a recruiting, NIL, booster, or eligibility action feels even slightly uncertain, call Compliance before you do anything. Prevention is easier than remediation.', 'compliance,ncaa,booster,nil', 'approved', 100, CURRENT_TIMESTAMP),
+(5, 100, 9, 'Best Quick Lunch Circuit Near Campus', 'For a fast lunch, Gateway Plaza is the easiest campus-adjacent option. For off-campus options, Old Orchard and Secor corridor spots are practical on a workday.', 'food,lunch,campus,toledo', 'approved', 100, CURRENT_TIMESTAMP),
+(6, 100, 6, 'Direct Deposit and Tax Setup Belong on Day One', 'Once UTAD and MFA are working, go straight into MyUT to verify direct deposit and tax setup. That closes one of the most common onboarding gaps.', 'payroll,direct-deposit,myut,taxes', 'approved', 100, CURRENT_TIMESTAMP),
+(7, 100, 4, 'Use Official Work Email Only for Athletics Business', 'Do not route onboarding or student-related work through personal email. Use official @utoledo.edu accounts for business records, security, and compliance.', 'email,security,ferpa,workflows', 'approved', 100, CURRENT_TIMESTAMP),
+(8, 100, 3, 'Branding Has Two Blue Standards', 'Athletics branding and University marketing materials do not always use the same blue hex value. Check whether the asset is Athletics-facing or University-wide before publishing.', 'branding,design,athletics,marketing', 'approved', 100, CURRENT_TIMESTAMP);
 
 -- ============================================================
 -- BRANDING TOKENS
@@ -177,19 +186,24 @@ INSERT INTO PolicyResources (id, policy_code, title, category, applies_to, url, 
 -- ============================================================
 DELETE FROM SiteContentIndex;
 
+-- Article entries are derived from the Articles table so source_id always
+-- matches a real row. They used to be hardcoded as ids 1-12 against titles
+-- that mostly did not exist in seed.sql: only ids 1 and 2 matched. The
+-- assistant therefore cited eight invented articles, and reindexArticle
+-- deleted the wrong index row on every CMS edit.
+--
+-- Shape matches reindexArticle() in worker/src/services/content-index.ts so
+-- seeded and CMS-written rows stay identical.
+INSERT INTO SiteContentIndex (source_type, source_id, source_title, content_text, section_path)
+SELECT 'article',
+       a.id,
+       a.title,
+       a.title || char(10) || substr(COALESCE(a.current_content, ''), 1, 8000),
+       CASE WHEN c.name IS NULL THEN a.title ELSE c.name || ' > ' || a.title END
+FROM Articles a
+LEFT JOIN Categories c ON c.id = a.category_id;
+
 INSERT INTO SiteContentIndex (source_type, source_id, source_title, content_text, section_path) VALUES
-('article', 1, 'Executive Leadership and Organizational Structure', 'Bryan B. Blair leads Toledo Athletics as Vice President and Director of Athletics. Key executive leaders include Nicole Harris, Connor Whelan, Melissa DeAngelo, Brian Lutz, Josh Dittman, Paul Helgren, Tim Warga, Jillian Lehman, Brian Jones, and Michelle McDevitt.', 'Department Overview > Leadership'),
-('article', 2, 'Rise Together Strategic Plan', 'The Rise Together strategic vision emphasizes recruiting and retaining teammates, student-athlete success, elevating the brand, enhancing Team Toledo engagement, growing resources, and investing in infrastructure.', 'Department Overview > Strategic Plan'),
-('article', 3, 'Brand Standards and Naming Rules', 'Poppins is the official typeface. Athletics and University branding use different midnight blue values depending on context. Approved identifiers include The University of Toledo, Toledo Rockets, Toledo Athletics, Toledo, Rockets, and UToledo. Avoid UT, UT Rockets, Toledo Rockets Football, and Lady Rockets.', 'Branding > Identity Standards'),
-('article', 4, 'Athletics Logo Rules', 'The primary athletic logo is the default mark. Secondary marks are only for assets where the primary mark has already established identity. Clear-space rules differ between the athletic logo and the rocket mark.', 'Branding > Logos'),
-('article', 5, 'Pre-Arrival Onboarding Sequence', 'The onboarding path is Rocket ID to UTAD setup to MFA to MyUT access, followed by Rocket Card, parking, payroll, direct deposit, and tax setup.', 'Onboarding > Pre-Arrival'),
-('article', 6, 'First 60 Days Checklist', 'Supervisors are expected to guide facility tours, team introductions, systems training, benefits completion, required training, and follow-up reviews during the first 60 days.', 'Onboarding > First 60 Days'),
-('article', 7, 'Benefits and Retirement Deadlines', 'Employees generally have 30 days for benefits elections and eligible full-time employees have a 120-day window to elect an alternative retirement plan.', 'HR and Benefits > Deadlines'),
-('article', 8, 'Core Systems and Access', 'Primary systems include MyUT, Employee Self-Service, Microsoft 365, Blackboard, TimeClock Plus, Teamworks, Teamworks Compliance / ARMS, Teamworks GM, and the Toledo Rockets Exchange.', 'Systems > Overview'),
-('article', 9, 'Compliance and Booster Guidance', 'Athletics personnel must understand NCAA rules, booster restrictions, NIL boundaries, sports-wagering prohibitions, and the importance of routing unclear situations through compliance before acting.', 'Compliance > Core Rules'),
-('article', 10, 'Privacy and Sensitive Information', 'Onboarding resources should not include SSNs, salary details, medical data, passwords, API keys, or private personal email addresses. FERPA and information-security rules govern the handling of protected student and employee data.', 'Privacy > Sensitive Information'),
-('article', 11, 'Social Media and Brand Conduct', 'Athletics-facing communications should align with official brand standards. Social posts must avoid discriminatory, harassing, threatening, false, or security-compromising content.', 'Communications > Social Media'),
-('article', 12, 'Mental Health and Student Support', 'Student-athlete support includes SASS, mental-health referral awareness, and career programming such as networking and NIL-related development events.', 'Student-Athlete Development > Support'),
 ('contact', 4, 'Athletics Compliance Contact', 'Brian Lutz is the primary athletics compliance contact and should be consulted before uncertain recruiting, NIL, or booster-related actions.', 'Contacts > Compliance'),
 ('contact', 5, 'Athletics Communications Contact', 'Paul Helgren leads athletics communications and is the key routing contact for media and communications matters.', 'Contacts > Communications'),
 ('system', 1, 'MyUT Portal', 'The MyUT Portal is the primary authenticated gateway for employee systems and self-service workflows.', 'Systems > Portal'),
