@@ -91,7 +91,7 @@ export function FeedbackButton({ currentView }: FeedbackButtonProps) {
                       onClick: function () {
                         setShowModal(false);
                       },
-                      className: 'text-gray-400 hover:text-gray-600',
+                      className: 'text-toledo-slate hover:text-gray-600',
                     },
                     React.createElement(IconX)
                   )

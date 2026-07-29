@@ -91,7 +91,7 @@ export function CategoryView({ categoryId, onNavigate }: CategoryViewProps) {
               ),
               React.createElement(
                 'p',
-                { className: 'text-xs text-gray-400 mt-2' },
+                { className: 'text-xs text-toledo-slate mt-2' },
                 'Last updated: ' + formatDate(article.last_updated)
               )
             )

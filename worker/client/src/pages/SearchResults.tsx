@@ -187,7 +187,7 @@ export function SearchResults({ query, onNavigate }: SearchResultsProps) {
                     item.category_name &&
                     React.createElement(
                       'span',
-                      { className: 'text-xs text-gray-400' },
+                      { className: 'text-xs text-toledo-slate' },
                       item.category_name
                     )
                 ),
@@ -203,7 +203,7 @@ export function SearchResults({ query, onNavigate }: SearchResultsProps) {
                 type === 'contact' &&
                   React.createElement(
                     'div',
-                    { className: 'mt-2 flex flex-wrap gap-3 text-xs text-gray-400' },
+                    { className: 'mt-2 flex flex-wrap gap-3 text-xs text-toledo-slate' },
                     item.email && React.createElement('span', null, item.email),
                     item.phone && React.createElement('span', null, item.phone)
                   )

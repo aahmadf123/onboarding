@@ -261,7 +261,7 @@ export function AIChatWidget(_props: { currentUser?: User | null }) {
           { className: 'py-2' },
           React.createElement(
             'p',
-            { className: 'text-center text-xs text-gray-400 mb-3' },
+            { className: 'text-center text-xs text-toledo-slate mb-3' },
             'Try asking:'
           ),
           React.createElement(
@@ -312,7 +312,7 @@ export function AIChatWidget(_props: { currentUser?: User | null }) {
                 msg.sources.map(function (src, j) {
                   return React.createElement(
                     'p',
-                    { key: j, className: 'text-xs text-gray-400' },
+                    { key: j, className: 'text-xs text-toledo-slate' },
                     '• ' + src
                   );
                 })

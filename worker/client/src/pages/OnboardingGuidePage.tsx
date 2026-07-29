@@ -150,7 +150,7 @@ export function OnboardingGuidePage({ onNavigate }: OnboardingGuidePageProps) {
               className:
                 'text-sm font-medium ' +
                 (task.my_status === 'approved'
-                  ? 'line-through text-gray-400'
+                  ? 'line-through text-toledo-slate'
                   : isChecked
                     ? 'text-gray-500'
                     : 'text-gray-900 group-hover:text-toledo-blue'),
@@ -199,7 +199,7 @@ export function OnboardingGuidePage({ onNavigate }: OnboardingGuidePageProps) {
               'span',
               {
                 className:
-                  'text-gray-400 text-sm transition-transform ' +
+                  'text-toledo-slate text-sm transition-transform ' +
                   (isExpanded ? 'rotate-180 inline-block' : 'inline-block'),
               },
               '▾'
@@ -247,7 +247,7 @@ export function OnboardingGuidePage({ onNavigate }: OnboardingGuidePageProps) {
           task.assigned_by_email &&
             React.createElement(
               'p',
-              { className: 'mt-2 text-xs text-gray-400' },
+              { className: 'mt-2 text-xs text-toledo-slate' },
               '📌 Assigned to you by ' + task.assigned_by_email
             ),
           task.link_view &&

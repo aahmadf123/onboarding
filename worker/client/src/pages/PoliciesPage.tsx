@@ -50,7 +50,7 @@ export function PoliciesPage(_props: { onNavigate: NavigateFn }) {
     policies.length === 0
       ? React.createElement(
           'p',
-          { className: 'text-center text-gray-400 py-8' },
+          { className: 'text-center text-toledo-slate py-8' },
           'No policies available.'
         )
       : React.createElement(

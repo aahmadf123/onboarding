@@ -37,11 +37,11 @@ export function AdminBehind() {
         React.createElement('p', { className: 'text-sm text-red-700' }, error)
       ),
     rows === null
-      ? React.createElement('p', { className: 'text-gray-400 py-8 text-center' }, 'Loading…')
+      ? React.createElement('p', { className: 'text-toledo-slate py-8 text-center' }, 'Loading…')
       : rows.length === 0
         ? React.createElement(
             'p',
-            { className: 'text-gray-400 py-8 text-center' },
+            { className: 'text-toledo-slate py-8 text-center' },
             'Everyone is up to date.'
           )
         : React.createElement(

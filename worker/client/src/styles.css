@@ -157,3 +157,22 @@ mark {
   border-radius: 2px;
   padding: 0 2px;
 }
+
+/* ---------------------------------------------------------------------------
+ * Reduced motion.
+ *
+ * The spotlight transition, drawer slide, fade-ins and staggered list
+ * entrances all animated unconditionally. Anyone who has asked their OS for
+ * less motion — a real accessibility need, not a preference — got the full set.
+ * Content still appears; it just stops moving.
+ * ------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

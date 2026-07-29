@@ -109,7 +109,7 @@ function TourCard({ current, step, isLast, advance, goAndDone, onDone, setStep }
         ),
         React.createElement(
           'span',
-          { className: 'text-xs text-gray-400 font-medium' },
+          { className: 'text-xs text-toledo-slate font-medium' },
           step + 1 + ' / ' + TOUR_STEPS.length
         )
       ),
@@ -181,7 +181,7 @@ function TourCard({ current, step, isLast, advance, goAndDone, onDone, setStep }
           {
             onClick: onDone,
             className:
-              'w-full mt-3 text-xs text-gray-400 hover:text-gray-600 transition-colors py-1',
+              'w-full mt-3 text-xs text-toledo-slate hover:text-gray-600 transition-colors py-1',
           },
           'Skip tour'
         )
@@ -202,11 +202,6 @@ export function QuickTour({ onDone, onNavigate }: QuickTourProps) {
   const isLast = step === TOUR_STEPS.length - 1;
 
   // Find and measure the target element for the spotlight.
-  //
-  // Four of the six targets live in the desktop sidebar, which is hidden below
-  // the lg breakpoint. getBoundingClientRect on a hidden element returns zeros,
-  // so on a phone those steps spotlight a dot in the top-left corner. That is
-  // the existing behaviour and is fixed in the P3 mobile pass.
   useEffect(
     function () {
       if (!current.target) {
@@ -214,18 +209,25 @@ export function QuickTour({ onDone, onNavigate }: QuickTourProps) {
         return;
       }
       const el = document.querySelector(current.target);
-      if (el) {
-        const rect = el.getBoundingClientRect();
-        setSpotlightRect({
-          top: rect.top + window.scrollY - 6,
-          left: rect.left - 6,
-          width: rect.width + 12,
-          height: rect.height + 12,
-        });
-        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      } else {
+      const rect = el?.getBoundingClientRect();
+
+      // A hidden element measures zero. Four of the six targets live in the
+      // desktop sidebar, which is display:none below lg, so on a phone the
+      // spotlight framed a 12px dot in the top-left corner and the tour — the
+      // first thing a new hire sees — looked broken. Falling back to the
+      // centred card gives them the same copy without the false pointer.
+      if (!rect || (rect.width === 0 && rect.height === 0)) {
         setSpotlightRect(null);
+        return;
       }
+
+      setSpotlightRect({
+        top: rect.top + window.scrollY - 6,
+        left: rect.left - 6,
+        width: rect.width + 12,
+        height: rect.height + 12,
+      });
+      el!.scrollIntoView({ behavior: 'smooth', block: 'center' });
     },
     [step]
   );

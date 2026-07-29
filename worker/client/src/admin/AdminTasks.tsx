@@ -304,7 +304,7 @@ function AssignTaskModal({ task, onClose, onAssigned }: AssignTaskModalProps) {
       'Each selected person gets this task in their checklist and an email notification.'
     ),
     users === null
-      ? React.createElement('p', { className: 'text-gray-400 text-sm' }, 'Loading…')
+      ? React.createElement('p', { className: 'text-toledo-slate text-sm' }, 'Loading…')
       : React.createElement(
           'div',
           {
@@ -368,7 +368,7 @@ export function AdminTasks() {
   }
 
   if (tasks === null)
-    return React.createElement('p', { className: 'text-gray-400 py-8 text-center' }, 'Loading…');
+    return React.createElement('p', { className: 'text-toledo-slate py-8 text-center' }, 'Loading…');
 
   function taskRow(t: any) {
     return React.createElement(

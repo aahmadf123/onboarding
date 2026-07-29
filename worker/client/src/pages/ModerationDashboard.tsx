@@ -157,7 +157,7 @@ export function ModerationDashboard(_props: ModerationDashboardProps) {
     items.length === 0
       ? React.createElement(
           'div',
-          { className: 'text-center py-12 text-gray-400' },
+          { className: 'text-center py-12 text-toledo-slate' },
           'No ' + filter + ' ' + activeTab + '.'
         )
       : React.createElement(

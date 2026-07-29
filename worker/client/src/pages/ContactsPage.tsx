@@ -101,7 +101,7 @@ export function ContactsPage(_props: { onNavigate: NavigateFn }) {
     shown.length === 0
       ? React.createElement(
           'p',
-          { className: 'text-center text-gray-400 py-8' },
+          { className: 'text-center text-toledo-slate py-8' },
           q || area !== 'all' ? 'No contacts match your search.' : 'No contacts available.'
         )
       : React.createElement(
@@ -144,7 +144,7 @@ export function ContactsPage(_props: { onNavigate: NavigateFn }) {
                   contact.department &&
                     React.createElement(
                       'p',
-                      { className: 'text-xs text-gray-400' },
+                      { className: 'text-xs text-toledo-slate' },
                       contact.department
                     )
                 ),

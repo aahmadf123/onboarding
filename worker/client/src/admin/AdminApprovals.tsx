@@ -102,11 +102,11 @@ export function AdminApprovals({ onCountChange }: { onCountChange?: (n: number) 
       })
     ),
     items === null
-      ? React.createElement('p', { className: 'text-gray-400 py-8 text-center' }, 'Loading…')
+      ? React.createElement('p', { className: 'text-toledo-slate py-8 text-center' }, 'Loading…')
       : items.length === 0
         ? React.createElement(
             'p',
-            { className: 'text-gray-400 py-8 text-center' },
+            { className: 'text-toledo-slate py-8 text-center' },
             'Nothing waiting for review. 🎉'
           )
         : React.createElement(

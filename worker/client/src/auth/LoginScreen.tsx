@@ -114,7 +114,7 @@ export function LoginScreen({ onLogin }: { onLogin: (data: any) => void }) {
                   setView('login');
                   setError('');
                 },
-                className: 'w-full text-xs text-gray-400 hover:text-gray-600 text-center',
+                className: 'w-full text-xs text-toledo-slate hover:text-gray-600 text-center',
               },
               '← Back to sign in'
             )

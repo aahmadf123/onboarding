@@ -170,7 +170,7 @@ export function AdminUsers({ currentUser }: { currentUser: User | null }) {
   }
 
   if (users === null)
-    return React.createElement('p', { className: 'text-gray-400 py-8 text-center' }, 'Loading…');
+    return React.createElement('p', { className: 'text-toledo-slate py-8 text-center' }, 'Loading…');
 
   return React.createElement(
     'div',
@@ -227,7 +227,7 @@ export function AdminUsers({ currentUser }: { currentUser: User | null }) {
                 'td',
                 { className: 'px-4 py-3' },
                 React.createElement('p', { className: 'text-sm text-gray-900' }, u.name || u.email),
-                u.name && React.createElement('p', { className: 'text-xs text-gray-400' }, u.email)
+                u.name && React.createElement('p', { className: 'text-xs text-toledo-slate' }, u.email)
               ),
               React.createElement(
                 'td',

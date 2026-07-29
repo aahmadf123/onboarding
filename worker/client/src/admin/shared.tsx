@@ -69,7 +69,7 @@ export function AdminModal({ title, onClose, children, wide }: AdminModalProps) 
         React.createElement('h3', { id: titleId, className: 'font-semibold text-gray-900' }, title),
         React.createElement(
           'button',
-          { onClick: onClose, className: 'text-gray-400 hover:text-gray-600' },
+          { onClick: onClose, className: 'text-toledo-slate hover:text-gray-600' },
           React.createElement(IconX)
         )
       ),

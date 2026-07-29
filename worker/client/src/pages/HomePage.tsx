@@ -371,7 +371,7 @@ export function HomePage({ categories, onNavigate }: HomePageProps) {
                   ? 'bg-toledo-gold text-toledo-blue'
                   : isCurrent
                     ? 'bg-toledo-blue text-white ring-2 ring-toledo-gold ring-offset-2'
-                    : 'bg-white text-gray-400 border-2 border-gray-200';
+                    : 'bg-white text-toledo-slate border-2 border-gray-200';
                 return React.createElement(
                   'button',
                   {
