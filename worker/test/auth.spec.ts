@@ -109,6 +109,36 @@ describe('login', () => {
     expect(res.status).toBe(403);
   });
 
+  it('does not reveal that a disabled account exists without the password', async () => {
+    // The status check used to run before password verification, so posting any
+    // password at a disabled account returned a distinct 403 with the message
+    // "This account has been disabled". That enumerates terminated staff with
+    // no credential at all. The 403 is only correct once the password proves
+    // the caller owns the account.
+    const disabled = await createUser({ status: 'disabled' });
+
+    const wrongPassword = await apiCall('/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email: disabled.email, password: 'not-the-password' }),
+    });
+    const unknownAccount = await apiCall('/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email: 'no.such.person@utoledo.edu', password: 'not-the-password' }),
+    });
+
+    expect(wrongPassword.status).toBe(401);
+    expect(wrongPassword.status).toBe(unknownAccount.status);
+    expect(wrongPassword.json.error).toBe(unknownAccount.json.error);
+    expect(wrongPassword.json.error).not.toMatch(/disabled/i);
+  });
+
+  // There is deliberately no timing test for the second half of this fix (an
+  // unknown email now verifies against DUMMY_PASSWORD_HASH so it pays the same
+  // 100k PBKDF2 iterations). Every bound loose enough to be stable in CI also
+  // passed against the old early-return, so it would assert nothing. The
+  // constant's docstring carries that reasoning instead.
+
+
   it('rejects an expired invite passcode', async () => {
     const user = await createUser({
       mustReset: true,

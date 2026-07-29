@@ -8,6 +8,7 @@ import {
   hashPassword,
   sha256Hex,
   verifyPassword,
+  DUMMY_PASSWORD_HASH,
 } from '../services/passwords';
 import { sendEmail } from '../services/email';
 import { inviteEmail, passwordResetEmail } from '../services/email-templates';
@@ -74,11 +75,19 @@ auth.post('/login', rateLimit(10), async (c) => {
     .first<UserRow>();
 
   const invalid = () => c.json({ success: false, error: 'Invalid email or password' }, 401);
-  if (!user || !user.password_hash) return invalid();
+
+  // Always verify, even when there is no account, so an unknown address costs
+  // the same 100,000 PBKDF2 iterations as a known one. Returning early here
+  // made the two answer ~1ms apart, which enumerates the staff list.
+  const passwordOk = await verifyPassword(password, user?.password_hash || DUMMY_PASSWORD_HASH);
+  if (!user || !user.password_hash || !passwordOk) return invalid();
+
+  // Status is checked only after the password is proven. This used to run
+  // first, so posting any password at a disabled account returned a distinct
+  // 403 — enumerating terminated staff with no credential at all.
   if (user.status === 'disabled') {
     return c.json({ success: false, error: 'This account has been disabled. Contact an administrator.' }, 403);
   }
-  if (!(await verifyPassword(password, user.password_hash))) return invalid();
 
   // Correct passcode but past its expiry: require a fresh invite.
   if (
