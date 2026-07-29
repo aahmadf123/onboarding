@@ -15,6 +15,7 @@ export function AdminApprovals({ onCountChange }: { onCountChange?: (n: number) 
   const [items, setItems] = useState<any[] | null>(null);
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState<number | null>(null);
+  const [error, setError] = useState('');
 
   const load = useCallback(function () {
     setItems(null);
@@ -61,8 +62,12 @@ export function AdminApprovals({ onCountChange }: { onCountChange?: (n: number) 
     api('/admin/approvals/' + item.id + '/' + (approve ? 'approve' : 'reject'), {
       method: 'PUT',
       body: JSON.stringify({ note: note }),
-    }).then(function () {
+    }).then(function (r) {
       setBusy(null);
+      if (!r.success) {
+        setError(r.error || 'Could not record that decision.');
+        return;
+      }
       load();
     });
   }
@@ -73,7 +78,12 @@ export function AdminApprovals({ onCountChange }: { onCountChange?: (n: number) 
     api(base + item.id + '/' + action, {
       method: 'PUT',
       body: JSON.stringify({ review_notes: notes[item.id] || '' }),
-    }).then(function () {
+    }).then(function (r) {
+      if (!r.success) {
+        setBusy(null);
+        setError(r.error || 'Could not record that decision.');
+        return;
+      }
       setBusy(null);
       load();
     });
@@ -101,6 +111,12 @@ export function AdminApprovals({ onCountChange }: { onCountChange?: (n: number) 
         );
       })
     ),
+    error &&
+      React.createElement(
+        'div',
+        { className: 'mb-4 bg-red-50 border border-red-200 rounded-lg p-3', role: 'alert' },
+        React.createElement('p', { className: 'text-sm text-red-700' }, error)
+      ),
     items === null
       ? React.createElement('p', { className: 'text-toledo-slate py-8 text-center' }, 'Loading…')
       : items.length === 0

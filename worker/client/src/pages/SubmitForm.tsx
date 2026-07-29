@@ -50,6 +50,7 @@ export function SubmitForm({ currentUser, categories, onNavigate }: SubmitFormPr
   const [articles, setArticles] = useState<any[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [submittedTicket, setSubmittedTicket] = useState<any>(null);
+  const [submitError, setSubmitError] = useState('');
   const [assignmentPreview, setAssignmentPreview] = useState<any>(null);
 
   useEffect(() => {
@@ -86,6 +87,7 @@ export function SubmitForm({ currentUser, categories, onNavigate }: SubmitFormPr
     e.preventDefault();
     if (!currentUser) return;
     setSubmitting(true);
+    setSubmitError('');
     const payload = {
       proposed_content: content,
       proposed_title: requestType === 'content_update' ? undefined : title,
@@ -98,16 +100,20 @@ export function SubmitForm({ currentUser, categories, onNavigate }: SubmitFormPr
     };
     const res = await api('/submissions', { method: 'POST', body: JSON.stringify(payload) });
     setSubmitting(false);
-    if (res.success) {
-      setSubmittedTicket(res.data || { id: res.id, assignment: assignmentPreview });
-      setTitle('');
-      setContent('');
-      setArticleId('');
-      setSourceContext('');
-      setPriority('normal');
-      setTopicArea('');
-      setAssignmentPreview(null);
+    if (!res.success) {
+      // There was no failure branch here at all: the spinner stopped, the form
+      // stayed full, and nothing said the ticket had not been filed.
+      setSubmitError(res.error || 'Could not file that ticket. Please try again.');
+      return;
     }
+    setSubmittedTicket(res.data || { id: res.id, assignment: assignmentPreview });
+    setTitle('');
+    setContent('');
+    setArticleId('');
+    setSourceContext('');
+    setPriority('normal');
+    setTopicArea('');
+    setAssignmentPreview(null);
   }
 
   const isEditFlow = requestType === 'content_update';
@@ -426,6 +432,12 @@ export function SubmitForm({ currentUser, categories, onNavigate }: SubmitFormPr
             className: TEXTAREA_CLS,
           })
         ),
+        submitError &&
+          React.createElement(
+            'div',
+            { className: 'bg-red-50 border border-red-200 rounded-lg p-3', role: 'alert' },
+            React.createElement('p', { className: 'text-sm text-red-700' }, submitError)
+          ),
         React.createElement(
           'div',
           { className: 'flex items-center justify-between gap-4 pt-2' },

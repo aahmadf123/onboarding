@@ -260,7 +260,7 @@ export function AdminUsers({ currentUser }: { currentUser: User | null }) {
                 { className: 'px-4 py-3' },
                 React.createElement(
                   'div',
-                  { className: 'flex gap-2' },
+                  { className: 'flex flex-wrap items-center gap-1' },
                   u.status !== 'disabled' &&
                     React.createElement(
                       'button',
@@ -269,7 +269,8 @@ export function AdminUsers({ currentUser }: { currentUser: User | null }) {
                           reinvite(u);
                         },
                         disabled: busy === u.id,
-                        className: 'text-xs text-toledo-blue hover:underline disabled:opacity-50',
+                        className:
+                          'text-xs text-toledo-blue hover:underline disabled:opacity-50 px-2 py-2 min-h-[36px]',
                       },
                       'Re-invite'
                     ),
@@ -290,12 +291,16 @@ export function AdminUsers({ currentUser }: { currentUser: User | null }) {
                         },
                         disabled: busy === u.id,
                         className:
-                          'text-xs ' +
+                          'text-xs px-2 py-2 min-h-[36px] ' +
                           (u.status === 'disabled' ? 'text-green-600' : 'text-red-500') +
                           ' hover:underline disabled:opacity-50',
                       },
                       u.status === 'disabled' ? 'Enable' : 'Disable'
                     ),
+                  // Delete is separated from Re-invite and Disable, and given a
+                  // border rather than being a third bare link in a row. On a
+                  // phone these were ~16px targets sitting flush together, so a
+                  // mistap on Re-invite deleted the account instead.
                   !isSelf &&
                     u.email !== PRIMARY_SUPERADMIN_EMAIL &&
                     React.createElement(
@@ -305,7 +310,8 @@ export function AdminUsers({ currentUser }: { currentUser: User | null }) {
                           deleteUser(u);
                         },
                         disabled: busy === u.id,
-                        className: 'text-xs text-red-700 hover:underline disabled:opacity-50',
+                        className:
+                          'text-xs text-red-700 disabled:opacity-50 px-2 py-2 min-h-[36px] ml-3 border-l border-toledo-border pl-3 hover:bg-red-50 rounded-r',
                       },
                       'Delete'
                     )
