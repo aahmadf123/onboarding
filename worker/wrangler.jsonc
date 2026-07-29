@@ -9,9 +9,25 @@
 	"compatibility_flags": [
 		"nodejs_compat"
 	],
+	// The Vite plugin overwrites `directory` in the generated output config to
+	// point at the client build, so this value only matters to tooling that
+	// reads this file directly (wrangler CLI, the vitest pool). Branding images
+	// now live in client/public/branding and are copied into the build.
+	//
+	// `single-page-application` is what makes /policies and /article/23 work on
+	// refresh: a navigation request that matches no asset is served index.html
+	// without invoking the Worker, so no catch-all route is needed.
+	//
+	// `run_worker_first` is not optional here. With SPA handling alone, a
+	// request to an unmatched /api path matches no asset, falls through to the
+	// not-found handler, and returns index.html with a 200. That would undo the
+	// JSON 404 the client relies on: api() would parse HTML, fail, and freeze
+	// the caller. Routing /api/* to the Worker first keeps API errors as JSON.
 	"assets": {
-		"directory": "../branding",
-		"binding": "ASSETS"
+		"directory": "./dist/client",
+		"binding": "ASSETS",
+		"not_found_handling": "single-page-application",
+		"run_worker_first": ["/api/*"]
 	},
 	"d1_databases": [
 		{
