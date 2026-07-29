@@ -13,6 +13,8 @@ import { BrowseTopicsPage } from './pages/BrowseTopicsPage';
 import { CategoryView } from './pages/CategoryView';
 import { ArticleView } from './pages/ArticleView';
 import { SearchResults } from './pages/SearchResults';
+import { SubmitForm } from './pages/SubmitForm';
+import { ModerationDashboard } from './pages/ModerationDashboard';
 import { ResourcesPage } from './pages/ResourcesPage';
 import { ContactsPage } from './pages/ContactsPage';
 import { PoliciesPage } from './pages/PoliciesPage';
@@ -331,6 +333,19 @@ export function App() {
       break;
     case 'search':
       content = React.createElement(SearchResults, { query: viewParam, onNavigate: navigate });
+      break;
+    case 'submit':
+      content = React.createElement(SubmitForm, {
+        currentUser: currentUser,
+        categories: categories,
+        onNavigate: navigate,
+      });
+      break;
+    case 'moderate':
+      content = React.createElement(ModerationDashboard, {
+        currentUser: currentUser,
+        onNavigate: navigate,
+      });
       break;
     case 'resources':
       content = React.createElement(ResourcesPage, { onNavigate: navigate });
