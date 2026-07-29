@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { formatDateTime } from '../lib/dates';
 import { api } from '../lib/api';
 import { IconCheck, IconX } from '../components/Icon';
 import type { NavigateFn, User } from '../lib/types';
@@ -183,7 +184,7 @@ export function ModerationDashboard(_props: ModerationDashboardProps) {
                     'div',
                     { className: 'flex flex-wrap gap-3 mt-1 text-xs text-gray-500' },
                     React.createElement('span', null, 'By: ' + (item.author_email || 'Unknown')),
-                    React.createElement('span', null, new Date(item.submitted_at).toLocaleString())
+                    React.createElement('span', null, formatDateTime(item.submitted_at))
                   ),
                   React.createElement(
                     'div',

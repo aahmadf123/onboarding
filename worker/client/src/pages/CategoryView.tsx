@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { formatDate } from '../lib/dates';
 import { api } from '../lib/api';
 import { CategoryIcon, IconArrowLeft } from '../components/Icon';
 import type { NavigateFn } from '../lib/types';
@@ -88,7 +89,7 @@ export function CategoryView({ categoryId, onNavigate }: CategoryViewProps) {
               React.createElement(
                 'p',
                 { className: 'text-xs text-gray-400 mt-2' },
-                'Last updated: ' + new Date(article.last_updated).toLocaleDateString()
+                'Last updated: ' + formatDate(article.last_updated)
               )
             )
           )

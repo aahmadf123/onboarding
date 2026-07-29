@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { formatDate } from '../lib/dates';
 import { api } from '../lib/api';
 
 /**
@@ -102,7 +103,7 @@ export function AdminBehind() {
                       'td',
                       { className: 'px-4 py-2.5 text-xs text-gray-500 whitespace-nowrap' },
                       row.last_login_at
-                        ? new Date(row.last_login_at + 'Z').toLocaleDateString()
+                        ? formatDate(row.last_login_at)
                         : 'Never signed in'
                     )
                   );

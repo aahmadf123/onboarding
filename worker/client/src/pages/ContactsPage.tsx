@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../lib/api';
+import { isRealValue } from '../lib/dates';
 import type { NavigateFn } from '../lib/types';
 
 /** onNavigate is part of the page contract but this view has no internal links. */
@@ -170,7 +171,7 @@ export function ContactsPage(_props: { onNavigate: NavigateFn }) {
                     },
                     'Email'
                   ),
-                contact.phone &&
+                isRealValue(contact.phone) &&
                   React.createElement(
                     'a',
                     {

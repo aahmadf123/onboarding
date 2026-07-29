@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { formatDate } from '../lib/dates';
 import { api } from '../lib/api';
 import { renderMarkdown } from '../lib/markdown';
 import { IconArrowLeft } from '../components/Icon';
@@ -60,7 +61,7 @@ export function ArticleView({ articleId, onNavigate }: ArticleViewProps) {
         React.createElement(
           'p',
           { className: 'text-sm text-gray-400 mt-2' },
-          'Last updated: ' + new Date(article.last_updated).toLocaleDateString()
+          'Last updated: ' + formatDate(article.last_updated)
         )
       ),
       React.createElement('div', {

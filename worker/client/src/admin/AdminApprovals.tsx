@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { formatDateTime } from '../lib/dates';
 import { api } from '../lib/api';
 import { IconCheck, IconX } from '../components/Icon';
 import { adminInputCls } from './shared';
@@ -140,11 +141,11 @@ export function AdminApprovals({ onCountChange }: { onCountChange?: (n: number) 
                         ? (item.user_name ? item.user_name + ' — ' : '') +
                             item.user_email +
                             ' · marked complete ' +
-                            (item.completed_at ? new Date(item.completed_at).toLocaleString() : '')
+                            (item.completed_at ? formatDateTime(item.completed_at) : '')
                         : 'By: ' +
                             (item.author_email || 'Unknown') +
                             ' · ' +
-                            new Date(item.submitted_at).toLocaleString()
+                            formatDateTime(item.submitted_at)
                     )
                   ),
                   isTask &&

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { formatDateTime } from '../lib/dates';
 import { api } from '../lib/api';
 import { PRIMARY_SUPERADMIN_EMAIL } from '../lib/constants';
 import {
@@ -252,7 +253,7 @@ export function AdminUsers({ currentUser }: { currentUser: User | null }) {
               React.createElement(
                 'td',
                 { className: 'px-4 py-3 text-xs text-gray-500' },
-                u.last_login_at ? new Date(u.last_login_at).toLocaleString() : '—'
+                formatDateTime(u.last_login_at)
               ),
               React.createElement(
                 'td',

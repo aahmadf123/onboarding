@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { formatDate, isRealValue, parseDbDate } from '../lib/dates';
 import { api } from '../lib/api';
 import { EVENTS, emit } from '../lib/events';
 import { PHASE_META, taskIsChecked } from '../lib/tasks';
@@ -57,7 +58,7 @@ export function HomePage({ categories, onNavigate }: HomePageProps) {
     api('/articles').then(function (r) {
       if (!r.success) return;
       const sorted = (r.data || []).slice().sort(function (a: any, b: any) {
-        return new Date(b.last_updated).getTime() - new Date(a.last_updated).getTime();
+        return (parseDbDate(b.last_updated)?.getTime() ?? 0) - (parseDbDate(a.last_updated)?.getTime() ?? 0);
       });
       setNews(sorted.slice(0, 3));
     });
@@ -585,7 +586,7 @@ export function HomePage({ categories, onNavigate }: HomePageProps) {
                     React.createElement(
                       'p',
                       { className: 'text-[11px] text-toledo-slate mt-0.5' },
-                      'Updated ' + new Date(a.last_updated).toLocaleDateString()
+                      'Updated ' + formatDate(a.last_updated)
                     )
                   );
                 })
@@ -642,7 +643,7 @@ export function HomePage({ categories, onNavigate }: HomePageProps) {
                             },
                             'Email'
                           ),
-                        c.phone &&
+                        isRealValue(c.phone) &&
                           React.createElement(
                             'a',
                             {

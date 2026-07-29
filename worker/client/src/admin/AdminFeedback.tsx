@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { formatDateTime } from '../lib/dates';
 import { api } from '../lib/api';
 
 /**
@@ -101,7 +102,7 @@ export function AdminFeedback({ onCountChange }: { onCountChange?: (n: number) =
                     React.createElement(
                       'p',
                       { className: 'text-xs text-gray-500' },
-                      new Date(row.created_at + 'Z').toLocaleString() +
+                      formatDateTime(row.created_at) +
                         (row.reporter_email ? ' · ' + row.reporter_email : ' · (deleted user)') +
                         (row.page ? ' · on ' + row.page : '')
                     )
