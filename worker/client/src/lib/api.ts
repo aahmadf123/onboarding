@@ -40,17 +40,21 @@ export function setCachedUser(user: unknown): void {
   }
 }
 
+export function clearCachedUser(): void {
+  try {
+    localStorage.removeItem(USER_KEY);
+  } catch {
+    /* non-fatal */
+  }
+}
+
 /**
  * The reason is stashed so the sign-in screen can explain why the user landed
  * there, instead of dropping them on a bare login form with no context.
  */
 export function clearAuthAndReload(reason?: string): void {
   setSessionToken(null);
-  try {
-    localStorage.removeItem(USER_KEY);
-  } catch {
-    /* non-fatal */
-  }
+  clearCachedUser();
   try {
     if (reason) sessionStorage.setItem(SIGNOUT_REASON_KEY, reason);
   } catch {
