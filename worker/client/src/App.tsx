@@ -7,6 +7,10 @@ import { LoadingSplash } from './components/LoadingSplash';
 import { LoginScreen } from './auth/LoginScreen';
 import { ForceResetScreen } from './auth/ForceResetScreen';
 import { ResetWithTokenScreen } from './auth/ResetWithTokenScreen';
+import { BrowseTopicsPage } from './pages/BrowseTopicsPage';
+import { CategoryView } from './pages/CategoryView';
+import { ArticleView } from './pages/ArticleView';
+import { SearchResults } from './pages/SearchResults';
 import type { User } from './lib/types';
 
 const TOUR_KEY = 'toledo_tour_done_v1';
@@ -270,24 +274,45 @@ export function App() {
       )
     );
 
-  // Scaffolding. The page components land in the next commits of the port;
-  // until then this renders inside the real shell so the chrome, routing and
-  // data fetches are all exercised. It reports the state the pages will consume
-  // so a broken fetch shows up here rather than after the pages are written.
-  const content = React.createElement(
-    'div',
-    { className: 'max-w-3xl mx-auto px-4 py-12 text-center text-gray-500 space-y-2' },
-    React.createElement(
-      'p',
-      null,
-      'This view has not been ported yet: ' + view + (viewParam ? ' / ' + viewParam : '')
-    ),
-    React.createElement(
-      'p',
-      { className: 'text-xs' },
-      categories.length + ' categories loaded' + (showTour ? ' · tour requested' : '')
-    )
-  );
+  // Scaffolding for the views still to be ported. Reports the state those
+  // pages will consume, so a broken fetch surfaces now rather than later.
+  function notPortedYet() {
+    return React.createElement(
+      'div',
+      { className: 'max-w-3xl mx-auto px-4 py-12 text-center text-gray-500 space-y-2' },
+      React.createElement(
+        'p',
+        null,
+        'This view has not been ported yet: ' + view + (viewParam ? ' / ' + viewParam : '')
+      ),
+      React.createElement(
+        'p',
+        { className: 'text-xs' },
+        categories.length + ' categories loaded' + (showTour ? ' · tour requested' : '')
+      )
+    );
+  }
+
+  let content;
+  switch (view) {
+    case 'categories':
+      content = React.createElement(BrowseTopicsPage, {
+        categories: categories,
+        onNavigate: navigate,
+      });
+      break;
+    case 'category':
+      content = React.createElement(CategoryView, { categoryId: viewParam, onNavigate: navigate });
+      break;
+    case 'article':
+      content = React.createElement(ArticleView, { articleId: viewParam, onNavigate: navigate });
+      break;
+    case 'search':
+      content = React.createElement(SearchResults, { query: viewParam, onNavigate: navigate });
+      break;
+    default:
+      content = notPortedYet();
+  }
 
   return React.createElement(
     AppShell,
