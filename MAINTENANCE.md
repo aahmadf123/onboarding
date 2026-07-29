@@ -84,26 +84,44 @@ quarantined, junked, or dropped by a transport rule.
 
 ## Database files (bootstrap / bulk changes only)
 
-Apply order for a fresh database:
-1. `db/schema.sql` → 2. `db/schema-v2.sql` → 3. `db/seed.sql` → 4. `db/seed-v2.sql` → 5. `db/migrations/0003_auth_tasks_email.sql` → 6. `db/seed-v3.sql` → 7. `db/migrations/2026-06-14-directory-refresh.sql` → 8. `db/migrations/2026-06-14-content-expansion.sql` → 9. `db/migrations/2026-07-29-page-feedback.sql` → 10. `db/migrations/2026-07-29-repair-seed-data.sql`
-
-> **Do not run `db/migrations/2026-06-12-submissions-ticket-upgrade.sql` on a fresh database** — `schema.sql` already creates the `Submissions` ticketing columns, so this migration errors with "duplicate column". It exists only to upgrade older databases created before those columns were added to `schema.sql`.
+Everything lives in `db/migrations`, numbered in apply order and tracked by
+wrangler, so a database gets each file exactly once:
 
 ```bash
-npx wrangler d1 execute toledo-onboarding-db-prod --remote --file=../db/<file>
+cd worker
+npm run db:status:remote     # what is pending
+npm run db:migrate:remote    # apply it
 ```
 
-- `db/migrations/0003_auth_tasks_email.sql` — auth columns, Sessions, Tasks (the 16 baseline checklist tasks), UserTasks, EmailLog, AppConfig defaults. Additive and idempotent.
-- `db/seed-v3.sql` — the June 2026 researched content refresh (Vector LMS, Rocket Card offices + maps, JobTrax verification, verified benefits/retirement/parking, CBAs, IT contacts incl. the "Athletics IT — JJ" placeholder). Idempotent; safe to re-run.
-- `db/migrations/2026-06-14-directory-refresh.sql` — leadership/org-chart correction from the current staff directory: **Tom Moreland** is now VP & Director of Athletics (replaced Bryan Blair), Nicole Harris disabled (no longer in the directory), **Lauren Best-Hovermale** added (Assoc AD Compliance), **Kim Nigem** added (Faculty Athletic Rep), and a **Title IX** key contact (Michelle McDevitt). Also refreshes the Executive Leadership article and AI index. Idempotent. NOTE: several per-person emails are set by the `firstname.lastname@utoledo.edu` convention and should be verified in Admin → Content.
-- `db/migrations/2026-07-29-page-feedback.sql` — the `PageFeedback` table behind "Report an Issue" and Admin → Reported Issues. Required: without it that endpoint fails.
-- `db/migrations/2026-07-29-repair-seed-data.sql` — **run this on any database seeded before 2026-07-29.** Fixing the seed files does not fix rows already written. It removes the `staff.example@` and `admin@utoledo.edu` placeholder accounts, repoints the sample tips at the real super admin, rebuilds the AI index article rows against the articles that actually exist (they were hardcoded to ids that mostly did not match, so the assistant cited invented articles), and moves `app_base_url` off the old workers.dev host. Idempotent, and a no-op on a freshly seeded database.
-- `db/migrations/2026-06-14-content-expansion.sql` — eight new researched articles (Travel & Expense Reimbursement, Title IX reporting, Emergency & Campus Safety, IT Security Essentials, Payroll details, Key Dates & Academic Calendar, Athletic Scholarships overview, Role-Based Compliance & Recruiting Calendar) plus AI-index entries. Idempotent. Calendar dates and the travel mileage rate change over time — verify against the linked official pages periodically.
+There is no order to remember and no file to run by hand. See the Database
+section of [README.md](./README.md) for the rules, and for the one-off backfill
+a database migrated by hand needs before its first `db:migrate`.
 
-⚠️ Re-running `seed.sql`/`seed-v2.sql` on a live database will overwrite content that admins have since edited in the CMS (and `seed-v2.sql` deletes/reinserts several tables). Prefer the CMS for anything incremental.
+What the numbered files contain, for when you need to trace where a piece of
+content came from:
+
+- `0001_initial_schema.sql` — the base tables (formerly `db/schema.sql` plus `db/schema-v2.sql`).
+- `0002_seed_core_content.sql` — categories and the original articles (formerly `db/seed.sql`).
+- `0003_seed_reference_data.sql` — quick links, key contacts, systems, policies, org chart (formerly `db/seed-v2.sql`).
+- `0004_auth_tasks_email.sql` — auth columns, Sessions, Tasks (the 16 baseline checklist tasks), UserTasks, EmailLog, AppConfig defaults.
+- `0005_content_refresh.sql` — the June 2026 researched content refresh (Vector LMS, Rocket Card offices + maps, JobTrax verification, verified benefits/retirement/parking, CBAs, IT contacts) — formerly `db/seed-v3.sql`.
+- `0006_directory_refresh.sql` — leadership/org-chart correction from the current staff directory: **Tom Moreland** is now VP & Director of Athletics (replaced Bryan Blair), Nicole Harris disabled (no longer in the directory), **Lauren Best-Hovermale** added (Assoc AD Compliance), **Kim Nigem** added (Faculty Athletic Rep), and a **Title IX** key contact (Michelle McDevitt). NOTE: several per-person emails are set by the `firstname.lastname@utoledo.edu` convention and should be verified in Admin → Content.
+- `0007_content_expansion.sql` — eight researched articles (Travel & Expense Reimbursement, Title IX reporting, Emergency & Campus Safety, IT Security Essentials, Payroll details, Key Dates & Academic Calendar, Athletic Scholarships overview, Role-Based Compliance & Recruiting Calendar). Calendar dates and the travel mileage rate change over time — verify against the linked official pages periodically.
+- `0008_page_feedback.sql` — the `PageFeedback` table behind "Report an Issue" and Admin → Reported Issues.
+- `0009_repair_seed_data.sql` — removes the `staff.example@` and `admin@utoledo.edu` placeholder accounts, rebuilds the AI index against the articles that actually exist, and moves `app_base_url` off the old workers.dev host.
+- `0010_login_lockout.sql` — the per-account failed-attempt counter.
+- `0011_indexes.sql` — the missing indexes, including case-insensitive uniqueness on `Users.email`.
+- `0012_content_placeholders.sql` — clears placeholder contact details that shipped as real data.
+- `0013_submissions_ticket_columns.sql` — the `Submissions` ticketing and assignment columns. Production never had them, so every ticket submission failed there until this ran.
+
+⚠️ Never re-run a seed migration against a live database. `0002` deletes and
+re-inserts every article, which renumbers ids that `SiteContentIndex` still
+points at — the AI assistant then cites the wrong article for every question
+with nothing visibly broken. Tracking prevents this as long as you use
+`db:migrate` rather than `wrangler d1 execute --file=`.
 
 ## Staff / Org Chart
-- File: `db/seed-v2.sql`, table `OrgChart` (no admin UI — the org chart page was removed; data is still used by AI chat context).
+- `db/migrations/0003_seed_reference_data.sql`, table `OrgChart` (no admin UI — the org chart page was removed; data is still used by AI chat context).
 
 ## Onboarding checklist tasks
 - Live in the `Tasks` table (managed in Admin → Tasks). Per-user progress is in `UserTasks` — it survives content edits.

@@ -1,9 +1,75 @@
 -- ============================================================
--- Toledo Athletics Onboarding Platform — Schema V3
--- Expanded from Schema V2 to support richer onboarding content
--- and structured operational reference data.
--- Run AFTER the original schema.sql
+-- 0001 — initial schema
+--
+-- Merged from the former db/schema.sql and db/schema-v2.sql. Splitting them
+-- served no purpose: neither was runnable on its own, the order between them
+-- existed only as prose in the README, and db/schema.sql created four of the
+-- twenty-three tables, so a database built from "the schema" answered the
+-- first authenticated request with "no such table: Sessions".
+--
+-- This file is the base of the tracked chain. It is applied by
+--   npx wrangler d1 migrations apply toledo-onboarding-db-prod --local
+-- and recorded in d1_migrations, so it runs exactly once per database.
+--
+-- The auth, task and email tables arrive in 0004; they are a later addition
+-- and are kept in their own migration so the chain matches the order every
+-- existing database was actually built in.
 -- ============================================================
+
+-- Users Table: Tracks authenticated employees and defines moderation privileges
+CREATE TABLE IF NOT EXISTS Users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    email TEXT UNIQUE NOT NULL,
+    role TEXT DEFAULT 'staff', -- Roles: 'staff', 'moderator', 'admin'
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Categories Table: Establishes the taxonomy of the onboarding portal
+CREATE TABLE IF NOT EXISTS Categories (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL, -- e.g., 'HR & Benefits', 'NCAA Compliance', 'Facilities'
+    description TEXT
+);
+
+-- Articles Table: The authoritative repository of published onboarding knowledge
+CREATE TABLE IF NOT EXISTS Articles (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    category_id INTEGER,
+    title TEXT NOT NULL,
+    current_content TEXT,
+    last_updated DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (category_id) REFERENCES Categories(id)
+);
+
+-- Submissions Table: The moderation queue capturing crowdsourced employee input
+CREATE TABLE IF NOT EXISTS Submissions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    article_id INTEGER, -- Null implies a proposal for a brand new article
+    author_id INTEGER NOT NULL,
+    proposed_title TEXT,
+    proposed_content TEXT NOT NULL,
+    -- The ticketing columns (request_type, priority, topic_area, source_context
+    -- and the four assignment_* fields) are deliberately not here. They arrive
+    -- in 0013, because that is where they arrive for every database that
+    -- already exists — see that file for why this matters.
+    status TEXT DEFAULT 'pending', -- States: 'pending', 'approved', 'rejected'
+    submitted_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    reviewed_by INTEGER,
+    review_notes TEXT,
+    FOREIGN KEY (article_id) REFERENCES Articles(id),
+    FOREIGN KEY (author_id) REFERENCES Users(id),
+    FOREIGN KEY (reviewed_by) REFERENCES Users(id)
+);
+
+-- Indexing for query optimization on heavily accessed columns
+CREATE INDEX IF NOT EXISTS idx_submissions_status ON Submissions(status);
+CREATE INDEX IF NOT EXISTS idx_articles_category ON Articles(category_id);
+
+
+-- ============================================================
+-- Merged from the former db/schema-v2.sql
+-- ============================================================
+
 
 PRAGMA foreign_keys = ON;
 

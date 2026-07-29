@@ -10,26 +10,43 @@ import { hashPassword } from '../src/services/passwords';
  * That is what let the /tips/0/feedback foreign-key violation ship: no test
  * could see the constraint it broke.
  *
- * The files and their order match the fresh-database sequence in the README.
- * 2026-06-12-submissions-ticket-upgrade.sql is deliberately absent — it only
- * applies to databases created before schema.sql gained those columns, and it
- * wraps itself in BEGIN TRANSACTION/COMMIT, which D1 rejects.
+ * It then listed six files by hand, which drifted the moment a migration was
+ * added — one was added and left out of the list, and the suite stayed green
+ * because nothing noticed. The glob is the fix: every file in db/migrations is
+ * loaded, in the same order wrangler applies them, and a new migration is
+ * picked up with no edit here. Opting one out now takes a deliberate entry in
+ * CONTENT_ONLY below.
  */
-import schemaSql from '../../db/schema.sql?raw';
-import schemaV2Sql from '../../db/schema-v2.sql?raw';
-import authTasksEmailSql from '../../db/migrations/0003_auth_tasks_email.sql?raw';
-import pageFeedbackSql from '../../db/migrations/2026-07-29-page-feedback.sql?raw';
-import loginLockoutSql from '../../db/migrations/2026-07-29-login-lockout.sql?raw';
-import indexesSql from '../../db/migrations/2026-07-29-indexes.sql?raw';
+const MIGRATIONS = import.meta.glob<string>('../../db/migrations/*.sql', {
+  query: '?raw',
+  import: 'default',
+  eager: true,
+});
 
-const SCHEMA_FILES = [
-  schemaSql,
-  schemaV2Sql,
-  authTasksEmailSql,
-  pageFeedbackSql,
-  loginLockoutSql,
-  indexesSql,
+/**
+ * Migrations that only move content around: seeds and one-off data repairs.
+ *
+ * Tests need the deployed *structure* — constraints are what they assert
+ * against. Loading roughly 90KB of seeded articles, contacts and org chart on
+ * top would make every test share a large fixture nobody asked for, and slow
+ * each suite's beforeAll for no gain. Structure is never skipped.
+ */
+const CONTENT_ONLY = [
+  '0002_seed_core_content.sql',
+  '0003_seed_reference_data.sql',
+  '0005_content_refresh.sql',
+  '0006_directory_refresh.sql',
+  '0007_content_expansion.sql',
+  '0009_repair_seed_data.sql',
+  '0012_content_placeholders.sql',
 ];
+
+const SCHEMA_FILES = Object.entries(MIGRATIONS)
+  .filter(([path]) => !CONTENT_ONLY.some((name) => path.endsWith('/' + name)))
+  // Object key order from import.meta.glob is not guaranteed to be the apply
+  // order, and later migrations ALTER tables the earlier ones create.
+  .sort(([a], [b]) => a.localeCompare(b))
+  .map(([, sql]) => sql);
 
 /**
  * Splits a SQL file into statements.

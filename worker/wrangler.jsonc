@@ -29,11 +29,20 @@
 		"not_found_handling": "single-page-application",
 		"run_worker_first": ["/api/*"]
 	},
+	// `migrations_dir` is what makes `wrangler d1 migrations apply` usable here.
+	// Without it the apply order lived only as prose in the README, nothing
+	// recorded what a given database had already run, and the two migrations
+	// with bare `ALTER TABLE ADD COLUMN` aborted on a second pass. Wrangler now
+	// tracks applied names in a `d1_migrations` table, so each file runs once.
+	//
+	// The path is resolved relative to this config file, so it points at the
+	// repository's db/migrations.
 	"d1_databases": [
 		{
 			"binding": "DB",
 			"database_name": "toledo-onboarding-db-prod",
-			"database_id": "aadabb36-a150-44d6-8734-fe88645147fa"
+			"database_id": "aadabb36-a150-44d6-8734-fe88645147fa",
+			"migrations_dir": "../db/migrations"
 		}
 	],
 	// Workers AI — powers AI Chat widget
