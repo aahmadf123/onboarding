@@ -1,6 +1,8 @@
-import React, { useEffect, useState } from 'react';
-import { api } from '../lib/api';
+import React from 'react';
+import { formatDate } from '../lib/dates';
+import { useResource } from '../lib/useResource';
 import { CategoryIcon, IconArrowLeft } from '../components/Icon';
+import { EmptyState, ErrorState, LoadingState } from '../components/AsyncState';
 import type { NavigateFn } from '../lib/types';
 
 interface CategoryViewProps {
@@ -9,20 +11,26 @@ interface CategoryViewProps {
 }
 
 export function CategoryView({ categoryId, onNavigate }: CategoryViewProps) {
-  const [category, setCategory] = useState<any>(null);
-  const [articles, setArticles] = useState<any[]>([]);
+  const path = categoryId ? '/categories/' + categoryId : null;
+  const {
+    data: category,
+    error,
+    loading,
+    reload,
+  } = useResource<any>(path, 'This topic may have been removed.');
+  const { data: articleData } = useResource<any[]>(path ? path + '/articles' : null);
+  const articles = articleData || [];
 
-  useEffect(() => {
-    api('/categories/' + categoryId).then((r) => r.success && setCategory(r.data));
-    api('/categories/' + categoryId + '/articles').then((r) => r.success && setArticles(r.data));
-  }, [categoryId]);
+  if (loading) return React.createElement(LoadingState);
 
-  if (!category)
-    return React.createElement(
-      'div',
-      { className: 'max-w-4xl mx-auto px-4 py-12 text-center text-gray-500' },
-      'Loading...'
-    );
+  // A removed topic 404s here; that used to render "Loading..." indefinitely.
+  if (error || !category)
+    return React.createElement(ErrorState, {
+      message: error || 'This topic could not be found.',
+      onRetry: reload,
+      onBack: () => onNavigate('categories'),
+      backLabel: 'All topics',
+    });
 
   return React.createElement(
     'div',
@@ -57,11 +65,7 @@ export function CategoryView({ categoryId, onNavigate }: CategoryViewProps) {
       )
     ),
     articles.length === 0
-      ? React.createElement(
-          'p',
-          { className: 'text-gray-500 text-center py-8' },
-          'No articles in this category yet.'
-        )
+      ? React.createElement(EmptyState, { message: 'No articles in this category yet.' })
       : React.createElement(
           'div',
           { className: 'space-y-3 stagger' },
@@ -87,8 +91,8 @@ export function CategoryView({ categoryId, onNavigate }: CategoryViewProps) {
               ),
               React.createElement(
                 'p',
-                { className: 'text-xs text-gray-400 mt-2' },
-                'Last updated: ' + new Date(article.last_updated).toLocaleDateString()
+                { className: 'text-xs text-toledo-slate mt-2' },
+                'Last updated: ' + formatDate(article.last_updated)
               )
             )
           )

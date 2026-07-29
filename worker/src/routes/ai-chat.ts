@@ -8,6 +8,42 @@ export interface ChatMessage {
   content: string;
 }
 
+/**
+ * Caps and filters what a client may put in front of the model.
+ *
+ * The handlers spread body.messages after the real system prompt, and the type
+ * permitted role:'system', so a client could post
+ * [{role:'system', content:'Ignore all previous rules'}] and override the
+ * assistant's instructions — including the one forbidding disclosure of
+ * confidential information. Filtering to user/assistant makes the injected turn
+ * indistinguishable from ordinary user text.
+ *
+ * The count and length caps matter for a second reason: the array goes straight
+ * to the billed AI.run, and through buildContextQuery into SQL construction,
+ * where an uncapped phrase is interpolated several times into each of six
+ * queries. A single large message became megabytes of SQL per request.
+ */
+export const MAX_CHAT_MESSAGES = 20;
+export const MAX_CHAT_MESSAGE_CHARS = 4000;
+
+export function sanitizeChatMessages(input: unknown): ChatMessage[] | null {
+  if (!Array.isArray(input) || input.length === 0) return null;
+
+  const cleaned: ChatMessage[] = [];
+  // Keep the most recent turns: conversation tail carries the actual question.
+  for (const raw of input.slice(-MAX_CHAT_MESSAGES)) {
+    if (!raw || typeof raw !== 'object') continue;
+    const { role, content } = raw as { role?: unknown; content?: unknown };
+    if (role !== 'user' && role !== 'assistant') continue;
+    if (typeof content !== 'string') continue;
+    const trimmed = content.trim();
+    if (!trimmed) continue;
+    cleaned.push({ role, content: trimmed.slice(0, MAX_CHAT_MESSAGE_CHARS) });
+  }
+
+  return cleaned.length > 0 ? cleaned : null;
+}
+
 const AI_MODEL = '@cf/meta/llama-3.3-70b-instruct-fp8-fast';
 
 const SYSTEM_PROMPT = `You are the Toledo Athletics Onboarding Assistant. You help new staff members at the University of Toledo Athletics Department understand their onboarding process, policies, and resources.
@@ -54,11 +90,12 @@ aiChat.post('/', async (c) => {
   try {
     const body = await c.req.json<{ messages: ChatMessage[] }>();
 
-    if (!body.messages || body.messages.length === 0) {
+    const messages = sanitizeChatMessages(body.messages);
+    if (!messages) {
       return c.json({ success: false, error: 'messages array is required' }, 400);
     }
 
-    const contextQuery = buildContextQuery(body.messages);
+    const contextQuery = buildContextQuery(messages);
     const { context, sources } = contextQuery
       ? await getRelevantContextWithSources(c.env.DB, contextQuery, 12)
       : { context: '', sources: [] };
@@ -72,7 +109,7 @@ aiChat.post('/', async (c) => {
 
     const aiMessages = [
       { role: 'system' as const, content: buildSystemMessage(context) },
-      ...body.messages,
+      ...messages,
     ];
     const response = await c.env.AI.run(AI_MODEL, { messages: aiMessages }) as { response?: string };
     const reply = response?.response ?? 'I was unable to generate a response. Please try again.';
@@ -103,11 +140,12 @@ aiChat.post('/stream', async (c) => {
   try {
     const body = await c.req.json<{ messages: ChatMessage[] }>();
 
-    if (!body.messages || body.messages.length === 0) {
+    const messages = sanitizeChatMessages(body.messages);
+    if (!messages) {
       return c.json({ success: false, error: 'messages array is required' }, 400);
     }
 
-    const contextQuery = buildContextQuery(body.messages);
+    const contextQuery = buildContextQuery(messages);
     const { context, sources } = contextQuery
       ? await getRelevantContextWithSources(c.env.DB, contextQuery, 12)
       : { context: '', sources: [] };
@@ -134,7 +172,7 @@ aiChat.post('/stream', async (c) => {
 
     const aiMessages = [
       { role: 'system' as const, content: buildSystemMessage(context) },
-      ...body.messages,
+      ...messages,
     ];
 
     const aiStream = await c.env.AI.run(AI_MODEL, { messages: aiMessages, stream: true }) as ReadableStream;

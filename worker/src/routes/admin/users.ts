@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import { asTrimmedString, pageBounds } from '../../services/http';
 import { AppEnv, Role, UserRow } from '../../types';
 import { generatePasscode, hashPassword } from '../../services/passwords';
 import { sendEmail } from '../../services/email';
@@ -31,6 +32,16 @@ async function issuePasscodeAndInvite(
        WHERE id = ?`
     ).bind(await hashPassword(passcode), passcodeExpiry(), user.id),
     c.env.DB.prepare('DELETE FROM Sessions WHERE user_id = ?').bind(user.id),
+    // A re-invite replaces the credential, so any reset link already in flight
+    // must stop working with it. Otherwise an emailed link issued minutes ago
+    // still sets a password on an account the admin has just re-secured.
+    c.env.DB.prepare(
+      'UPDATE PasswordResets SET used_at = CURRENT_TIMESTAMP WHERE user_id = ? AND used_at IS NULL'
+    ).bind(user.id),
+    // Fresh credential, fresh throttle state.
+    c.env.DB.prepare(
+      'UPDATE Users SET failed_login_attempts = 0, locked_until = NULL WHERE id = ?'
+    ).bind(user.id),
   ]);
 
   const baseUrl = await getConfig(c.env.DB, 'app_base_url');
@@ -47,9 +58,12 @@ async function issuePasscodeAndInvite(
 
 // GET /api/admin/users
 users.get('/', async (c) => {
+  const { limit, offset } = pageBounds(c);
   const { results } = await c.env.DB.prepare(
-    `SELECT ${LIST_FIELDS} FROM Users ORDER BY created_at DESC`
-  ).all();
+    `SELECT ${LIST_FIELDS} FROM Users ORDER BY created_at DESC LIMIT ? OFFSET ?`
+  )
+    .bind(limit, offset)
+    .all();
   return c.json({ success: true, data: results });
 });
 
@@ -60,8 +74,8 @@ users.post('/', async (c) => {
   const body = await c.req
     .json<{ email?: string; name?: string; role?: string }>()
     .catch(() => ({}) as { email?: string; name?: string; role?: string });
-  const email = (body.email ?? '').trim().toLowerCase();
-  const name = (body.name ?? '').trim() || null;
+  const email = asTrimmedString(body.email).toLowerCase();
+  const name = asTrimmedString(body.name) || null;
   const role = (body.role ?? 'staff') as Role;
 
   if (!EMAIL_RE.test(email)) {
@@ -132,7 +146,7 @@ users.put('/:id', async (c) => {
 
   if (body.name !== undefined) {
     sets.push('name = ?');
-    binds.push(body.name.trim() || null);
+    binds.push(asTrimmedString(body.name) || null);
   }
   if (body.role !== undefined) {
     if (!VALID_ROLES.includes(body.role as Role)) {

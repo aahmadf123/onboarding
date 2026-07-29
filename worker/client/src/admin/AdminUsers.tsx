@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { formatDateTime } from '../lib/dates';
 import { api } from '../lib/api';
 import { PRIMARY_SUPERADMIN_EMAIL } from '../lib/constants';
 import {
@@ -169,7 +170,7 @@ export function AdminUsers({ currentUser }: { currentUser: User | null }) {
   }
 
   if (users === null)
-    return React.createElement('p', { className: 'text-gray-400 py-8 text-center' }, 'Loading…');
+    return React.createElement('p', { className: 'text-toledo-slate py-8 text-center' }, 'Loading…');
 
   return React.createElement(
     'div',
@@ -226,7 +227,7 @@ export function AdminUsers({ currentUser }: { currentUser: User | null }) {
                 'td',
                 { className: 'px-4 py-3' },
                 React.createElement('p', { className: 'text-sm text-gray-900' }, u.name || u.email),
-                u.name && React.createElement('p', { className: 'text-xs text-gray-400' }, u.email)
+                u.name && React.createElement('p', { className: 'text-xs text-toledo-slate' }, u.email)
               ),
               React.createElement(
                 'td',
@@ -252,14 +253,14 @@ export function AdminUsers({ currentUser }: { currentUser: User | null }) {
               React.createElement(
                 'td',
                 { className: 'px-4 py-3 text-xs text-gray-500' },
-                u.last_login_at ? new Date(u.last_login_at).toLocaleString() : '—'
+                formatDateTime(u.last_login_at)
               ),
               React.createElement(
                 'td',
                 { className: 'px-4 py-3' },
                 React.createElement(
                   'div',
-                  { className: 'flex gap-2' },
+                  { className: 'flex flex-wrap items-center gap-1' },
                   u.status !== 'disabled' &&
                     React.createElement(
                       'button',
@@ -268,7 +269,8 @@ export function AdminUsers({ currentUser }: { currentUser: User | null }) {
                           reinvite(u);
                         },
                         disabled: busy === u.id,
-                        className: 'text-xs text-toledo-blue hover:underline disabled:opacity-50',
+                        className:
+                          'text-xs text-toledo-blue hover:underline disabled:opacity-50 px-2 py-2 min-h-[36px]',
                       },
                       'Re-invite'
                     ),
@@ -289,12 +291,16 @@ export function AdminUsers({ currentUser }: { currentUser: User | null }) {
                         },
                         disabled: busy === u.id,
                         className:
-                          'text-xs ' +
+                          'text-xs px-2 py-2 min-h-[36px] ' +
                           (u.status === 'disabled' ? 'text-green-600' : 'text-red-500') +
                           ' hover:underline disabled:opacity-50',
                       },
                       u.status === 'disabled' ? 'Enable' : 'Disable'
                     ),
+                  // Delete is separated from Re-invite and Disable, and given a
+                  // border rather than being a third bare link in a row. On a
+                  // phone these were ~16px targets sitting flush together, so a
+                  // mistap on Re-invite deleted the account instead.
                   !isSelf &&
                     u.email !== PRIMARY_SUPERADMIN_EMAIL &&
                     React.createElement(
@@ -304,7 +310,8 @@ export function AdminUsers({ currentUser }: { currentUser: User | null }) {
                           deleteUser(u);
                         },
                         disabled: busy === u.id,
-                        className: 'text-xs text-red-700 hover:underline disabled:opacity-50',
+                        className:
+                          'text-xs text-red-700 disabled:opacity-50 px-2 py-2 min-h-[36px] ml-3 border-l border-toledo-border pl-3 hover:bg-red-50 rounded-r',
                       },
                       'Delete'
                     )

@@ -1,3 +1,13 @@
+-- NOTE (2026-07-29): this file previously wrapped itself in BEGIN TRANSACTION
+-- and COMMIT. D1 rejects explicit transaction control, so the migration could
+-- not run at all as written — it was documented as one-time but was in fact
+-- impossible. The statements are unchanged; only the transaction wrapper is
+-- gone.
+--
+-- It remains applicable ONLY to databases created before schema.sql included
+-- these Submissions columns. On a current database every ALTER below will fail
+-- with "duplicate column name", which is expected — skip this file.
+
 -- ============================================================
 -- Submissions Ticketing Upgrade (one-time migration)
 -- Date: 2026-06-12
@@ -15,9 +25,6 @@
 -- ============================================================
 
 PRAGMA foreign_keys = ON;
-
-BEGIN TRANSACTION;
-
 ALTER TABLE Submissions ADD COLUMN request_type TEXT DEFAULT 'content_update';
 ALTER TABLE Submissions ADD COLUMN priority TEXT DEFAULT 'normal';
 ALTER TABLE Submissions ADD COLUMN topic_area TEXT;
@@ -30,9 +37,6 @@ ALTER TABLE Submissions ADD COLUMN assignment_reason TEXT;
 CREATE INDEX IF NOT EXISTS idx_submissions_request_type ON Submissions(request_type);
 CREATE INDEX IF NOT EXISTS idx_submissions_priority ON Submissions(priority);
 CREATE INDEX IF NOT EXISTS idx_submissions_assigned_team ON Submissions(assigned_team);
-
-COMMIT;
-
 -- ============================================================
 -- Post-migration verification (optional)
 -- ============================================================

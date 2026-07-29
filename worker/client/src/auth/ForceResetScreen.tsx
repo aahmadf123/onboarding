@@ -97,7 +97,7 @@ export function ForceResetScreen({ currentUser, onComplete, onSignOut }: ForceRe
       ),
       React.createElement(
         'p',
-        { className: 'text-xs text-gray-400 text-center' },
+        { className: 'text-xs text-toledo-slate text-center' },
         'Lost your passcode? An administrator can issue a new one from Admin → Users.'
       ),
       onSignOut &&
@@ -106,7 +106,7 @@ export function ForceResetScreen({ currentUser, onComplete, onSignOut }: ForceRe
           {
             type: 'button',
             onClick: onSignOut,
-            className: 'w-full text-xs text-gray-400 hover:text-gray-600 text-center',
+            className: 'w-full text-xs text-toledo-slate hover:text-gray-600 text-center',
           },
           'Sign out'
         )

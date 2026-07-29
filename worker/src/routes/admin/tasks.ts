@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import { asTrimmedString } from '../../services/http';
 import { AppEnv, TaskRow, UserRow } from '../../types';
 import { sendEmail } from '../../services/email';
 import { taskAssignedEmail } from '../../services/email-templates';
@@ -37,7 +38,7 @@ function validateTaskBody(body: TaskBody, partial: boolean): string | null {
     if (!body.phase || !PHASES.includes(body.phase)) return 'phase must be one of ' + PHASES.join(', ');
   }
   if (!partial || body.title !== undefined) {
-    if (!body.title || !body.title.trim()) return 'title is required';
+    if (!asTrimmedString(body.title)) return 'title is required';
   }
   if (body.priority !== undefined && !PRIORITIES.includes(body.priority)) {
     return 'priority must be one of ' + PRIORITIES.join(', ');
@@ -63,7 +64,7 @@ tasks.post('/', async (c) => {
   const error = validateTaskBody(body, false);
   if (error) return c.json({ success: false, error }, 400);
 
-  let slug = (body.slug ?? '').trim() || slugify(body.title as string);
+  let slug = asTrimmedString(body.slug) || slugify(asTrimmedString(body.title));
   if (!slug) slug = 'task';
   // Ensure slug uniqueness with a numeric suffix.
   const base = slug;
@@ -83,7 +84,7 @@ tasks.post('/', async (c) => {
     .bind(
       slug,
       body.phase,
-      (body.title as string).trim(),
+      asTrimmedString(body.title),
       body.description ?? null,
       body.priority ?? 'recommended',
       body.display_order ?? 0,
@@ -117,7 +118,7 @@ tasks.put('/:id', async (c) => {
   const binds: unknown[] = [];
   const fields: [string, unknown][] = [
     ['phase', body.phase],
-    ['title', body.title !== undefined ? body.title.trim() : undefined],
+    ['title', body.title !== undefined ? asTrimmedString(body.title) : undefined],
     ['description', body.description],
     ['priority', body.priority],
     ['display_order', body.display_order],

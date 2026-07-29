@@ -8,6 +8,7 @@ import {
   hashPassword,
   sha256Hex,
   verifyPassword,
+  DUMMY_PASSWORD_HASH,
 } from '../services/passwords';
 import { sendEmail } from '../services/email';
 import { inviteEmail, passwordResetEmail } from '../services/email-templates';
@@ -60,6 +61,45 @@ function validateNewPassword(password: string, email: string): string | null {
   return null;
 }
 
+/**
+ * Per-account throttling, which the IP-keyed rateLimit() cannot provide.
+ *
+ * Keying on IP alone is wrong in both directions: an attacker with a pool of
+ * addresses gets unlimited attempts against one account, while the whole
+ * department behind a single campus NAT shares one bucket and locks each other
+ * out. This bounds attempts per account instead, and the two limits compose.
+ */
+const LOCKOUT_THRESHOLD = 5;
+const LOCKOUT_MAX_MINUTES = 15;
+
+/** 5 failures → 1 min, then 2, 4, 8, capped at 15. */
+function lockoutMinutes(attempts: number): number {
+  const over = attempts - LOCKOUT_THRESHOLD;
+  if (over < 0) return 0;
+  return Math.min(LOCKOUT_MAX_MINUTES, 2 ** over);
+}
+
+async function recordFailedLogin(c: Context<AppEnv>, user: UserRow): Promise<void> {
+  const attempts = (user.failed_login_attempts ?? 0) + 1;
+  const minutes = lockoutMinutes(attempts);
+  const lockedUntil =
+    minutes > 0 ? new Date(Date.now() + minutes * 60_000).toISOString() : user.locked_until ?? null;
+
+  await c.env.DB.prepare(
+    'UPDATE Users SET failed_login_attempts = ?, locked_until = ? WHERE id = ?'
+  )
+    .bind(attempts, lockedUntil, user.id)
+    .run();
+}
+
+async function clearFailedLogins(c: Context<AppEnv>, userId: number): Promise<void> {
+  await c.env.DB.prepare(
+    'UPDATE Users SET failed_login_attempts = 0, locked_until = NULL WHERE id = ?'
+  )
+    .bind(userId)
+    .run();
+}
+
 // ── POST /api/auth/login ──────────────────────────────────────────────────────
 auth.post('/login', rateLimit(10), async (c) => {
   const body = await c.req.json<{ email?: string; password?: string }>().catch(() => ({}) as { email?: string; password?: string });
@@ -74,11 +114,41 @@ auth.post('/login', rateLimit(10), async (c) => {
     .first<UserRow>();
 
   const invalid = () => c.json({ success: false, error: 'Invalid email or password' }, 401);
-  if (!user || !user.password_hash) return invalid();
+
+  // Always verify, even when there is no account, so an unknown address costs
+  // the same 100,000 PBKDF2 iterations as a known one. Returning early here
+  // made the two answer ~1ms apart, which enumerates the staff list.
+  const passwordOk = await verifyPassword(password, user?.password_hash || DUMMY_PASSWORD_HASH);
+
+  if (!user || !user.password_hash || !passwordOk) {
+    if (user) await recordFailedLogin(c, user);
+    return invalid();
+  }
+
+  // Everything below here has proven the caller owns the account, which is what
+  // makes it safe to say something specific. All of these checks used to run
+  // before verification, so they answered to anyone who knew an address.
+  // recordFailedLogin writes an ISO string, which already carries its zone.
+  // Appending 'Z' — the idiom for D1's zone-less CURRENT_TIMESTAMP — would
+  // produce an Invalid Date here and silently disable the lockout entirely.
+  const lockedUntil = user.locked_until ? new Date(user.locked_until).getTime() : 0;
+  if (lockedUntil > Date.now()) {
+    const minutes = Math.max(1, Math.ceil((lockedUntil - Date.now()) / 60_000));
+    return c.json(
+      {
+        success: false,
+        error: `Too many failed sign-in attempts. Try again in ${minutes} minute${minutes === 1 ? '' : 's'}.`,
+        code: 'ACCOUNT_LOCKED',
+      },
+      429
+    );
+  }
+
   if (user.status === 'disabled') {
     return c.json({ success: false, error: 'This account has been disabled. Contact an administrator.' }, 403);
   }
-  if (!(await verifyPassword(password, user.password_hash))) return invalid();
+
+  await clearFailedLogins(c, user.id);
 
   // Correct passcode but past its expiry: require a fresh invite.
   if (
@@ -128,7 +198,7 @@ auth.post('/logout', requireAuth, async (c) => {
 
 // ── POST /api/auth/change-password ────────────────────────────────────────────
 // Also completes the forced first-login reset (passcode = current password).
-auth.post('/change-password', requireAuth, async (c) => {
+auth.post('/change-password', rateLimit(10), requireAuth, async (c) => {
   const user = c.get('currentUser');
   const body = await c.req
     .json<{ current_password?: string; new_password?: string }>()
@@ -154,6 +224,13 @@ auth.post('/change-password', requireAuth, async (c) => {
       user.id,
       c.get('sessionId')
     ),
+    // Burn any outstanding reset tokens. Requesting a reset, remembering the
+    // password, then changing it normally used to leave the emailed link live
+    // for the rest of its hour — so anyone reaching that mailbox could reset
+    // the password again and kill every session.
+    c.env.DB.prepare(
+      'UPDATE PasswordResets SET used_at = CURRENT_TIMESTAMP WHERE user_id = ? AND used_at IS NULL'
+    ).bind(user.id),
   ]);
 
   const updated = await c.env.DB.prepare('SELECT * FROM Users WHERE id = ?')
@@ -241,10 +318,17 @@ auth.post('/reset', rateLimit(10), async (c) => {
       `UPDATE Users SET password_hash = ?, must_reset = 0, status = 'active',
        password_set_at = CURRENT_TIMESTAMP, passcode_expires_at = NULL WHERE id = ?`
     ).bind(newHash, user.id),
-    c.env.DB.prepare('UPDATE PasswordResets SET used_at = CURRENT_TIMESTAMP WHERE id = ?').bind(
-      reset.id
-    ),
+    // Burns every outstanding token for this user, not only the one just used.
+    // Requesting a reset twice left the earlier link live, so the older email
+    // could still change the password after the newer one already had.
+    c.env.DB.prepare(
+      'UPDATE PasswordResets SET used_at = CURRENT_TIMESTAMP WHERE user_id = ? AND used_at IS NULL'
+    ).bind(user.id),
     c.env.DB.prepare('DELETE FROM Sessions WHERE user_id = ?').bind(user.id),
+    // A completed reset means the owner is back in; drop any lockout.
+    c.env.DB.prepare(
+      'UPDATE Users SET failed_login_attempts = 0, locked_until = NULL WHERE id = ?'
+    ).bind(user.id),
   ]);
 
   return c.json({ success: true, message: 'Password updated. You can sign in now.' });
@@ -255,7 +339,7 @@ auth.post('/reset', rateLimit(10), async (c) => {
 // the initial passcode for the seeded admin and returns it in the response —
 // deliberate, because in Resend sandbox mode the email may only reach the
 // Resend account owner. Inert once every admin has a password.
-auth.post('/bootstrap', async (c) => {
+auth.post('/bootstrap', rateLimit(5), async (c) => {
   if (!c.env.BOOTSTRAP_TOKEN) {
     return c.json({ success: false, error: 'Not found' }, 404);
   }

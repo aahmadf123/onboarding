@@ -304,7 +304,7 @@ function AssignTaskModal({ task, onClose, onAssigned }: AssignTaskModalProps) {
       'Each selected person gets this task in their checklist and an email notification.'
     ),
     users === null
-      ? React.createElement('p', { className: 'text-gray-400 text-sm' }, 'Loading…')
+      ? React.createElement('p', { className: 'text-toledo-slate text-sm' }, 'Loading…')
       : React.createElement(
           'div',
           {
@@ -353,6 +353,7 @@ export function AdminTasks() {
   const [editing, setEditing] = useState<any>(null); // null | 'new' | task object
   const [assigning, setAssigning] = useState<any>(null);
   const [notice, setNotice] = useState('');
+  const [error, setError] = useState('');
 
   function load() {
     api('/admin/tasks').then(function (r) {
@@ -364,11 +365,20 @@ export function AdminTasks() {
   function deactivate(task: any) {
     if (!window.confirm('Hide "' + task.title + '" for everyone? Existing progress is kept.'))
       return;
-    api('/admin/tasks/' + task.id, { method: 'DELETE' }).then(load);
+    setError('');
+    // .then(load) discarded the result, so a rejected delete looked identical
+    // to a successful one: the list simply reloaded unchanged.
+    api('/admin/tasks/' + task.id, { method: 'DELETE' }).then(function (r) {
+      if (!r.success) {
+        setError(r.error || 'Could not hide that task.');
+        return;
+      }
+      load();
+    });
   }
 
   if (tasks === null)
-    return React.createElement('p', { className: 'text-gray-400 py-8 text-center' }, 'Loading…');
+    return React.createElement('p', { className: 'text-toledo-slate py-8 text-center' }, 'Loading…');
 
   function taskRow(t: any) {
     return React.createElement(
@@ -478,6 +488,12 @@ export function AdminTasks() {
       )
     ),
     notice && React.createElement('p', { className: 'text-green-600 text-sm mb-3' }, notice),
+    error &&
+      React.createElement(
+        'div',
+        { className: 'mb-3 bg-red-50 border border-red-200 rounded-lg p-3', role: 'alert' },
+        React.createElement('p', { className: 'text-sm text-red-700' }, error)
+      ),
     ADMIN_PHASES.map(function (phase) {
       const phaseTasks = tasks.filter(function (t) {
         return t.phase === phase.id;

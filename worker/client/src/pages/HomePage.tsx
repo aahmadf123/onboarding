@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { formatDate, isRealValue, parseDbDate } from '../lib/dates';
 import { api } from '../lib/api';
 import { EVENTS, emit } from '../lib/events';
 import { PHASE_META, taskIsChecked } from '../lib/tasks';
@@ -44,8 +45,11 @@ interface HomePageProps {
 
 export function HomePage({ categories, onNavigate }: HomePageProps) {
   const [tasks, setTasks] = useState<any[] | null>(null);
-  const [keyContacts, setKeyContacts] = useState<any[]>([]);
-  const [news, setNews] = useState<any[]>([]);
+  // null means "not loaded yet" — these used to start as [], so the rails
+  // rendered "No recent updates" and "No contacts available yet" on every page
+  // load, before their fetches had even been sent.
+  const [keyContacts, setKeyContacts] = useState<any[] | null>(null);
+  const [news, setNews] = useState<any[] | null>(null);
 
   useEffect(function () {
     api('/tasks').then(function (r) {
@@ -57,7 +61,7 @@ export function HomePage({ categories, onNavigate }: HomePageProps) {
     api('/articles').then(function (r) {
       if (!r.success) return;
       const sorted = (r.data || []).slice().sort(function (a: any, b: any) {
-        return new Date(b.last_updated).getTime() - new Date(a.last_updated).getTime();
+        return (parseDbDate(b.last_updated)?.getTime() ?? 0) - (parseDbDate(a.last_updated)?.getTime() ?? 0);
       });
       setNews(sorted.slice(0, 3));
     });
@@ -367,7 +371,7 @@ export function HomePage({ categories, onNavigate }: HomePageProps) {
                   ? 'bg-toledo-gold text-toledo-blue'
                   : isCurrent
                     ? 'bg-toledo-blue text-white ring-2 ring-toledo-gold ring-offset-2'
-                    : 'bg-white text-gray-400 border-2 border-gray-200';
+                    : 'bg-white text-toledo-slate border-2 border-gray-200';
                 return React.createElement(
                   'button',
                   {
@@ -555,7 +559,9 @@ export function HomePage({ categories, onNavigate }: HomePageProps) {
 
         railCard(
           'Announcements',
-          news.length === 0
+          news === null
+            ? React.createElement('p', { className: 'text-sm text-toledo-slate' }, 'Loading…')
+            : news.length === 0
             ? React.createElement(
                 'p',
                 { className: 'text-sm text-toledo-slate' },
@@ -585,7 +591,7 @@ export function HomePage({ categories, onNavigate }: HomePageProps) {
                     React.createElement(
                       'p',
                       { className: 'text-[11px] text-toledo-slate mt-0.5' },
-                      'Updated ' + new Date(a.last_updated).toLocaleDateString()
+                      'Updated ' + formatDate(a.last_updated)
                     )
                   );
                 })
@@ -594,7 +600,9 @@ export function HomePage({ categories, onNavigate }: HomePageProps) {
 
         railCard(
           'Your Support Team',
-          keyContacts.length === 0
+          keyContacts === null
+            ? React.createElement('p', { className: 'text-sm text-toledo-slate' }, 'Loading…')
+            : keyContacts.length === 0
             ? React.createElement(
                 'p',
                 { className: 'text-sm text-toledo-slate' },
@@ -642,7 +650,7 @@ export function HomePage({ categories, onNavigate }: HomePageProps) {
                             },
                             'Email'
                           ),
-                        c.phone &&
+                        isRealValue(c.phone) &&
                           React.createElement(
                             'a',
                             {

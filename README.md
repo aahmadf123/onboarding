@@ -33,6 +33,9 @@ npx wrangler d1 execute toledo-onboarding-db-prod --local --file=../db/migration
 npx wrangler d1 execute toledo-onboarding-db-prod --local --file=../db/migrations/2026-06-14-content-expansion.sql
 npx wrangler d1 execute toledo-onboarding-db-prod --local --file=../db/migrations/2026-07-29-page-feedback.sql
 npx wrangler d1 execute toledo-onboarding-db-prod --local --file=../db/migrations/2026-07-29-repair-seed-data.sql
+npx wrangler d1 execute toledo-onboarding-db-prod --local --file=../db/migrations/2026-07-29-login-lockout.sql
+npx wrangler d1 execute toledo-onboarding-db-prod --local --file=../db/migrations/2026-07-29-indexes.sql
+npx wrangler d1 execute toledo-onboarding-db-prod --local --file=../db/migrations/2026-07-29-content-placeholders.sql
 
 npx wrangler dev
 # Then issue the super admin's passcode (it is in the response). This targets
@@ -63,6 +66,16 @@ npx wrangler d1 execute toledo-onboarding-db-prod --remote --file=../db/seed-v3.
 npx wrangler d1 execute toledo-onboarding-db-prod --remote --file=../db/migrations/2026-06-14-directory-refresh.sql
 npx wrangler d1 execute toledo-onboarding-db-prod --remote --file=../db/migrations/2026-06-14-content-expansion.sql
 npx wrangler d1 execute toledo-onboarding-db-prod --remote --file=../db/migrations/2026-07-29-page-feedback.sql
+
+# Adds per-account login throttling columns (P1-2). Required before the login
+# lockout does anything: without them every sign-in attempt errors.
+npx wrangler d1 execute toledo-onboarding-db-prod --remote --file=../db/migrations/2026-07-29-login-lockout.sql
+
+# Indexes only — safe to re-run, and safe to apply before the code that uses them.
+npx wrangler d1 execute toledo-onboarding-db-prod --remote --file=../db/migrations/2026-07-29-indexes.sql
+
+# Clears placeholder contact details that shipped as real data. Safe to re-run.
+npx wrangler d1 execute toledo-onboarding-db-prod --remote --file=../db/migrations/2026-07-29-content-placeholders.sql
 
 # Repairs a database seeded before 2026-07-29. Fixing the seed files does not
 # fix rows already written, so this is required on any existing database. It

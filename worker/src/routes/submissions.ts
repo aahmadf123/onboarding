@@ -1,6 +1,9 @@
 import { Hono } from 'hono';
+import { pageBounds } from '../services/http';
 import { AppEnv } from '../types';
 import { requireRole } from '../middleware/auth';
+import { rateLimit } from '../middleware/rate-limit';
+import { readJson, badBody } from '../services/http';
 import { reindexArticle } from '../services/content-index';
 import { expandSearchTerms } from '../services/query-utils';
 
@@ -154,21 +157,23 @@ async function buildAssignmentSuggestion(
   };
 }
 
-submissions.post('/assignment-preview', async (c) => {
-  const body = await c.req.json<SubmissionPayload>();
+submissions.post('/assignment-preview', rateLimit(30), async (c) => {
+  const body = await readJson<SubmissionPayload>(c);
+  if (!body) return badBody(c);
   const assignment = await buildAssignmentSuggestion(c.env.DB, body);
   return c.json({ success: true, data: assignment });
 });
 
 submissions.put('/:id/assignment', requireRole('moderator', 'admin'), async (c) => {
   const submissionId = c.req.param('id');
-  const body = await c.req.json<{
+  const body = await readJson<{
     contact_id?: number;
     assigned_team?: string;
     assigned_to_name?: string | null;
     assigned_to_email?: string | null;
     assignment_reason?: string;
-  }>();
+  }>(c);
+  if (!body) return badBody(c);
 
   const submission = await c.env.DB.prepare(
     'SELECT id, status FROM Submissions WHERE id = ?'
@@ -246,11 +251,11 @@ submissions.get('/', requireRole('moderator', 'admin'), async (c) => {
     bindings.push(status);
   }
 
-  query += ' ORDER BY Submissions.submitted_at DESC';
+  const { limit, offset } = pageBounds(c);
+  query += ' ORDER BY Submissions.submitted_at DESC LIMIT ? OFFSET ?';
+  bindings.push(limit, offset);
 
-  const stmt = c.env.DB.prepare(query);
-  const { results } =
-    bindings.length > 0 ? await stmt.bind(...bindings).all() : await stmt.all();
+  const { results } = await c.env.DB.prepare(query).bind(...bindings).all();
   return c.json({ success: true, data: results });
 });
 
@@ -272,9 +277,10 @@ submissions.get('/:id', requireRole('moderator', 'admin'), async (c) => {
 });
 
 // POST create a new submission (author = the signed-in user)
-submissions.post('/', async (c) => {
+submissions.post('/', rateLimit(10), async (c) => {
   const author = c.get('currentUser');
-  const body = await c.req.json<SubmissionPayload>();
+  const body = await readJson<SubmissionPayload>(c);
+  if (!body) return badBody(c);
 
   if (!body.proposed_content) {
     return c.json({ success: false, error: 'proposed_content is required' }, 400);

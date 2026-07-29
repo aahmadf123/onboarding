@@ -46,7 +46,7 @@ export function AdminSettings() {
   }
 
   if (cfg === null)
-    return React.createElement('p', { className: 'text-gray-400 py-8 text-center' }, 'Loading…');
+    return React.createElement('p', { className: 'text-toledo-slate py-8 text-center' }, 'Loading…');
 
   return React.createElement(
     'form',

@@ -31,7 +31,7 @@ export function renderMapDirectives(text: string): string {
       if (ok) {
         out.push(
           '<div style="position:relative;width:100%;padding-bottom:56%;border-radius:12px;overflow:hidden;margin:12px 0;border:1px solid #e5e7eb;">' +
-            '<iframe src="' +
+            '<iframe title="Embedded map" src="' +
             url.replace(/"/g, '&quot;') +
             '" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;border:0;" allowfullscreen referrerpolicy="no-referrer-when-downgrade"></iframe>' +
             '</div>'

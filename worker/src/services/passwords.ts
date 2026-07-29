@@ -64,6 +64,21 @@ export async function hashPassword(password: string): Promise<string> {
   return `pbkdf2$${PBKDF2_ITERATIONS}$${toBase64(salt)}$${toBase64(hash)}`;
 }
 
+/**
+ * A well-formed hash that no password matches, for verifying against when the
+ * account does not exist.
+ *
+ * Returning early for an unknown email skipped 100,000 PBKDF2 iterations, so a
+ * known address answered two orders of magnitude slower than an unknown one —
+ * trivially measurable, and enough to enumerate the staff list. Verifying
+ * against this instead makes both paths cost the same.
+ *
+ * The salt and digest are random bytes in the correct shape rather than a hash
+ * of any real string, so there is no password that could ever match it.
+ */
+export const DUMMY_PASSWORD_HASH =
+  'pbkdf2$100000$QTsJ03UApC1DEG5eASRuLA==$qjVGH47TSBhs7VRvPkRCpGF2p0QesRp2VdktkzQ5J0U=';
+
 /** Constant-time verification against a stored `pbkdf2$…` string. */
 export async function verifyPassword(
   password: string,

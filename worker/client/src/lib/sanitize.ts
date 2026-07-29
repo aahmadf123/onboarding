@@ -54,6 +54,10 @@ export function sanitizeHtml(html: string): string {
     ADD_TAGS: ['iframe'],
     ADD_ATTR: [
       'src',
+      // Explicit rather than relying on DOMPurify's defaults: the ::map iframe
+      // carries a title for screen readers, and an attribute silently stripped
+      // here would make that fix inert with nothing to notice.
+      'title',
       'allow',
       'allowfullscreen',
       'frameborder',

@@ -217,7 +217,7 @@ function ContentFormModal({ entity, row, categories, onClose, onSaved }: Content
         ),
         React.createElement(
           'p',
-          { className: 'text-xs text-gray-400 mt-1' },
+          { className: 'text-xs text-toledo-slate mt-1' },
           'Tip: a line like "::map <google-maps-embed-url>" becomes an embedded map on the article page.'
         )
       );
@@ -379,9 +379,9 @@ export function AdminContent() {
       )
     ),
     rows === null
-      ? React.createElement('p', { className: 'text-gray-400 py-8 text-center' }, 'Loading…')
+      ? React.createElement('p', { className: 'text-toledo-slate py-8 text-center' }, 'Loading…')
       : rows.length === 0
-        ? React.createElement('p', { className: 'text-gray-400 py-8 text-center' }, 'Nothing here yet.')
+        ? React.createElement('p', { className: 'text-toledo-slate py-8 text-center' }, 'Nothing here yet.')
         : React.createElement(
             'div',
             { className: 'space-y-2' },
@@ -405,7 +405,7 @@ export function AdminContent() {
                   ),
                   React.createElement(
                     'p',
-                    { className: 'text-xs text-gray-400 truncate' },
+                    { className: 'text-xs text-toledo-slate truncate' },
                     (hidden ? 'hidden · ' : '') +
                       (row.contact_name ||
                         row.url ||

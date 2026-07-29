@@ -89,7 +89,7 @@ export function SearchBar({ onSearch, onNavigate, compact }: SearchBarProps) {
         'div',
         {
           className:
-            'absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400',
+            'absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-toledo-slate',
         },
         React.createElement(IconSearch)
       ),
@@ -161,14 +161,14 @@ export function SearchBar({ onSearch, onNavigate, compact }: SearchBarProps) {
                   'p',
                   {
                     className:
-                      'text-[11px] uppercase tracking-wide text-gray-400 mt-0.5 truncate',
+                      'text-[11px] uppercase tracking-wide text-toledo-slate mt-0.5 truncate',
                   },
                   meta
                 ),
               snippet &&
                 React.createElement(
                   'p',
-                  { className: 'text-xs text-gray-400 truncate mt-0.5' },
+                  { className: 'text-xs text-toledo-slate truncate mt-0.5' },
                   snippet
                 )
             ),

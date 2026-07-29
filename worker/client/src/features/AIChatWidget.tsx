@@ -246,7 +246,8 @@ export function AIChatWidget(_props: { currentUser?: User | null }) {
     React.createElement(
       'div',
       { className: 'px-3 py-2 bg-yellow-50 border-b text-xs text-yellow-700 flex-shrink-0' },
-      'Scoped to Toledo Athletics onboarding topics. Answers use portal context first and list the source sections below each response.'
+      React.createElement('strong', null, 'Answers can be wrong. '),
+      'This assistant summarises portal content and cites its sources below each reply. For anything binding — benefits, leave, eligibility, pay — confirm with HR or the named contact before acting on it.'
     ),
     React.createElement(
       'div',
@@ -260,7 +261,7 @@ export function AIChatWidget(_props: { currentUser?: User | null }) {
           { className: 'py-2' },
           React.createElement(
             'p',
-            { className: 'text-center text-xs text-gray-400 mb-3' },
+            { className: 'text-center text-xs text-toledo-slate mb-3' },
             'Try asking:'
           ),
           React.createElement(
@@ -311,7 +312,7 @@ export function AIChatWidget(_props: { currentUser?: User | null }) {
                 msg.sources.map(function (src, j) {
                   return React.createElement(
                     'p',
-                    { key: j, className: 'text-xs text-gray-400' },
+                    { key: j, className: 'text-xs text-toledo-slate' },
                     '• ' + src
                   );
                 })

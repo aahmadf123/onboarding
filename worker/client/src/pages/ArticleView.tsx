@@ -1,7 +1,9 @@
-import React, { useEffect, useState } from 'react';
-import { api } from '../lib/api';
+import React from 'react';
+import { useResource } from '../lib/useResource';
 import { renderMarkdown } from '../lib/markdown';
+import { formatDate } from '../lib/dates';
 import { IconArrowLeft } from '../components/Icon';
+import { ErrorState, LoadingState } from '../components/AsyncState';
 import type { NavigateFn } from '../lib/types';
 
 interface ArticleViewProps {
@@ -10,18 +12,27 @@ interface ArticleViewProps {
 }
 
 export function ArticleView({ articleId, onNavigate }: ArticleViewProps) {
-  const [article, setArticle] = useState<any>(null);
+  const {
+    data: article,
+    error,
+    loading,
+    reload,
+  } = useResource<any>(
+    articleId ? '/articles/' + articleId : null,
+    'This article may have been removed or is no longer published.'
+  );
 
-  useEffect(() => {
-    api('/articles/' + articleId).then((r) => r.success && setArticle(r.data));
-  }, [articleId]);
+  if (loading) return React.createElement(LoadingState);
 
-  if (!article)
-    return React.createElement(
-      'div',
-      { className: 'max-w-4xl mx-auto px-4 py-12 text-center text-gray-500' },
-      'Loading...'
-    );
+  // A soft-deleted or hidden article legitimately 404s here. That used to
+  // render "Loading..." forever, with no explanation and no way back.
+  if (error || !article)
+    return React.createElement(ErrorState, {
+      message: error || 'This article could not be found.',
+      onRetry: reload,
+      onBack: () => onNavigate('categories'),
+      backLabel: 'Browse topics',
+    });
 
   return React.createElement(
     'div',
@@ -59,8 +70,8 @@ export function ArticleView({ articleId, onNavigate }: ArticleViewProps) {
         ),
         React.createElement(
           'p',
-          { className: 'text-sm text-gray-400 mt-2' },
-          'Last updated: ' + new Date(article.last_updated).toLocaleDateString()
+          { className: 'text-sm text-toledo-slate mt-2' },
+          'Last updated: ' + formatDate(article.last_updated)
         )
       ),
       React.createElement('div', {

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { formatDateTime } from '../lib/dates';
 import { api } from '../lib/api';
 
 const TYPE_OPTIONS = [
@@ -72,11 +73,11 @@ export function AdminEmailLog() {
       )
     ),
     rows === null
-      ? React.createElement('p', { className: 'text-gray-400 py-8 text-center' }, 'Loading…')
+      ? React.createElement('p', { className: 'text-toledo-slate py-8 text-center' }, 'Loading…')
       : rows.length === 0
         ? React.createElement(
             'p',
-            { className: 'text-gray-400 py-8 text-center' },
+            { className: 'text-toledo-slate py-8 text-center' },
             'No emails logged yet.'
           )
         : React.createElement(
@@ -125,9 +126,7 @@ export function AdminEmailLog() {
                       React.createElement(
                         'td',
                         { className: 'px-4 py-2.5 text-xs text-gray-500 whitespace-nowrap' },
-                        // D1 returns UTC with no zone marker, so the 'Z' is what
-                        // stops every timestamp reading four hours in the future.
-                        new Date(row.created_at + 'Z').toLocaleString()
+                        formatDateTime(row.created_at)
                       ),
                       React.createElement(
                         'td',

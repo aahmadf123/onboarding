@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { formatDate } from '../lib/dates';
 import { api } from '../lib/api';
 
 /**
@@ -36,11 +37,11 @@ export function AdminBehind() {
         React.createElement('p', { className: 'text-sm text-red-700' }, error)
       ),
     rows === null
-      ? React.createElement('p', { className: 'text-gray-400 py-8 text-center' }, 'Loading…')
+      ? React.createElement('p', { className: 'text-toledo-slate py-8 text-center' }, 'Loading…')
       : rows.length === 0
         ? React.createElement(
             'p',
-            { className: 'text-gray-400 py-8 text-center' },
+            { className: 'text-toledo-slate py-8 text-center' },
             'Everyone is up to date.'
           )
         : React.createElement(
@@ -102,7 +103,7 @@ export function AdminBehind() {
                       'td',
                       { className: 'px-4 py-2.5 text-xs text-gray-500 whitespace-nowrap' },
                       row.last_login_at
-                        ? new Date(row.last_login_at + 'Z').toLocaleDateString()
+                        ? formatDate(row.last_login_at)
                         : 'Never signed in'
                     )
                   );

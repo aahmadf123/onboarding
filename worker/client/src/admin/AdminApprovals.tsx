@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { formatDateTime } from '../lib/dates';
 import { api } from '../lib/api';
 import { IconCheck, IconX } from '../components/Icon';
 import { adminInputCls } from './shared';
@@ -14,6 +15,7 @@ export function AdminApprovals({ onCountChange }: { onCountChange?: (n: number) 
   const [items, setItems] = useState<any[] | null>(null);
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState<number | null>(null);
+  const [error, setError] = useState('');
 
   const load = useCallback(function () {
     setItems(null);
@@ -60,8 +62,12 @@ export function AdminApprovals({ onCountChange }: { onCountChange?: (n: number) 
     api('/admin/approvals/' + item.id + '/' + (approve ? 'approve' : 'reject'), {
       method: 'PUT',
       body: JSON.stringify({ note: note }),
-    }).then(function () {
+    }).then(function (r) {
       setBusy(null);
+      if (!r.success) {
+        setError(r.error || 'Could not record that decision.');
+        return;
+      }
       load();
     });
   }
@@ -72,7 +78,12 @@ export function AdminApprovals({ onCountChange }: { onCountChange?: (n: number) 
     api(base + item.id + '/' + action, {
       method: 'PUT',
       body: JSON.stringify({ review_notes: notes[item.id] || '' }),
-    }).then(function () {
+    }).then(function (r) {
+      if (!r.success) {
+        setBusy(null);
+        setError(r.error || 'Could not record that decision.');
+        return;
+      }
       setBusy(null);
       load();
     });
@@ -100,12 +111,18 @@ export function AdminApprovals({ onCountChange }: { onCountChange?: (n: number) 
         );
       })
     ),
+    error &&
+      React.createElement(
+        'div',
+        { className: 'mb-4 bg-red-50 border border-red-200 rounded-lg p-3', role: 'alert' },
+        React.createElement('p', { className: 'text-sm text-red-700' }, error)
+      ),
     items === null
-      ? React.createElement('p', { className: 'text-gray-400 py-8 text-center' }, 'Loading…')
+      ? React.createElement('p', { className: 'text-toledo-slate py-8 text-center' }, 'Loading…')
       : items.length === 0
         ? React.createElement(
             'p',
-            { className: 'text-gray-400 py-8 text-center' },
+            { className: 'text-toledo-slate py-8 text-center' },
             'Nothing waiting for review. 🎉'
           )
         : React.createElement(
@@ -140,11 +157,11 @@ export function AdminApprovals({ onCountChange }: { onCountChange?: (n: number) 
                         ? (item.user_name ? item.user_name + ' — ' : '') +
                             item.user_email +
                             ' · marked complete ' +
-                            (item.completed_at ? new Date(item.completed_at).toLocaleString() : '')
+                            (item.completed_at ? formatDateTime(item.completed_at) : '')
                         : 'By: ' +
                             (item.author_email || 'Unknown') +
                             ' · ' +
-                            new Date(item.submitted_at).toLocaleString()
+                            formatDateTime(item.submitted_at)
                     )
                   ),
                   isTask &&

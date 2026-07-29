@@ -113,7 +113,7 @@ export function ResourcesPage(_props: { onNavigate: NavigateFn }) {
         shownLinks.length === 0
           ? React.createElement(
               'p',
-              { className: 'text-center text-gray-400 py-8' },
+              { className: 'text-center text-toledo-slate py-8' },
               q ? 'No quick links match your filter.' : 'No quick links available.'
             )
           : React.createElement(
@@ -171,7 +171,7 @@ export function ResourcesPage(_props: { onNavigate: NavigateFn }) {
         shownSystems.length === 0
           ? React.createElement(
               'p',
-              { className: 'text-center text-gray-400 py-8' },
+              { className: 'text-center text-toledo-slate py-8' },
               q ? 'No systems match your filter.' : 'No systems available.'
             )
           : React.createElement(

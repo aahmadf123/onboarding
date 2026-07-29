@@ -53,6 +53,9 @@ export interface UserRow {
   password_set_at: string | null;
   last_login_at: string | null;
   localstorage_migrated_at: string | null;
+  /** Per-account login throttling; see recordFailedLogin in routes/auth.ts. */
+  failed_login_attempts: number;
+  locked_until: string | null;
 }
 
 /** The subset of UserRow that is safe to send to the client. */

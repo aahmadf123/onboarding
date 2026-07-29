@@ -2,7 +2,7 @@ import { env, createExecutionContext, waitOnExecutionContext } from 'cloudflare:
 import { describe, it, expect, beforeAll } from 'vitest';
 import worker from '../src/index';
 import { Bindings } from '../src/types';
-import { applySchema, mockResend, createUser } from './helpers';
+import { applySchema, mockResend, createUser, completeAllRequiredTasks } from './helpers';
 
 beforeAll(async () => {
   await applySchema();
@@ -35,12 +35,9 @@ describe('weekly reminder cron', () => {
     const caughtUp = await createUser({ email: 'caught.up@utoledo.edu' });
     await createUser({ email: 'invited.only@utoledo.edu', status: 'invited' });
 
-    const task = await env.DB.prepare("SELECT id FROM Tasks WHERE slug = 'required-step'").first<{ id: number }>();
-    await env.DB.prepare(
-      "INSERT INTO UserTasks (user_id, task_id, status, completed_at) VALUES (?, ?, 'done', CURRENT_TIMESTAMP)"
-    )
-      .bind(caughtUp.id, task!.id)
-      .run();
+    // The real schema seeds a baseline checklist, so being caught up means
+    // finishing all of it, not one row.
+    await completeAllRequiredTasks(caughtUp.id);
 
     await runScheduled();
 

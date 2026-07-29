@@ -1,6 +1,7 @@
 import { env } from 'cloudflare:test';
 import { describe, it, expect, beforeAll } from 'vitest';
-import { applySchema, mockResend, createUserAndLogin, apiCall, login } from './helpers';
+import { applySchema, mockResend, createUserAndLogin,
+  completeAllRequiredTasks, apiCall, login } from './helpers';
 import { getRelevantContextWithSources } from '../src/services/content-index';
 
 beforeAll(async () => {
@@ -516,12 +517,15 @@ describe('who is behind', () => {
     expect(row).toBeDefined();
     expect(row.open_tasks).toBeGreaterThan(0);
 
-    // Completing the task removes the user from the list.
+    // Completing everything required removes the user from the list. The real
+    // schema seeds a baseline checklist, so finishing only this one task would
+    // leave them legitimately behind.
     await apiCall(`/api/tasks/${taskId}/status`, {
       method: 'PUT',
       token: laggard.token,
       body: JSON.stringify({ done: true }),
     });
+    await completeAllRequiredTasks(laggard.id);
 
     const after = await apiCall('/api/admin/behind', { token: admin.token });
     const stillListed = after.json.data.find((r: { email: string }) => r.email === laggard.email);
@@ -530,6 +534,54 @@ describe('who is behind', () => {
 });
 
 describe('settings & email log', () => {
+  it('rejects a base URL that could redirect live reset tokens', async () => {
+    // app_base_url is interpolated into every password-reset link. With only a
+    // typeof check, an admin session could point it at a host they control and
+    // every subsequent reset would deliver a working token there. A javascript:
+    // value would land straight in an email href, and escapeHtml does not
+    // filter schemes.
+    const admin = await createUserAndLogin({ role: 'admin' });
+    const rejected = [
+      'javascript:alert(1)',
+      'http://evil.example',
+      'evil.example',
+      'https://evil.example/?next=x',
+      '',
+    ];
+    for (const value of rejected) {
+      const res = await apiCall('/api/admin/settings', {
+        method: 'PUT',
+        token: admin.token,
+        body: JSON.stringify({ app_base_url: value }),
+      });
+      expect(res.status, `should have rejected ${JSON.stringify(value)}`).toBe(400);
+    }
+  });
+
+  it('accepts a valid base URL and strips trailing slashes', async () => {
+    const admin = await createUserAndLogin({ role: 'admin' });
+    const res = await apiCall('/api/admin/settings', {
+      method: 'PUT',
+      token: admin.token,
+      body: JSON.stringify({ app_base_url: 'https://utrockets-onboarding.com/' }),
+    });
+    expect(res.status).toBe(200);
+    // Without stripping, links come out as https://host//reset-password.
+    expect(res.json.data.app_base_url).toBe('https://utrockets-onboarding.com');
+  });
+
+  it('rejects a sender that is not a bare email address', async () => {
+    const admin = await createUserAndLogin({ role: 'admin' });
+    for (const value of ['noreply', 'Onboarding <a@b.com>', 'a@b', 'a@b.com\nBcc: x@y.com']) {
+      const res = await apiCall('/api/admin/settings', {
+        method: 'PUT',
+        token: admin.token,
+        body: JSON.stringify({ email_from_address: value }),
+      });
+      expect(res.status, `should have rejected ${JSON.stringify(value)}`).toBe(400);
+    }
+  });
+
   it('whitelists settings keys and round-trips values', async () => {
     const admin = await createUserAndLogin({ role: 'admin' });
     const bad = await apiCall('/api/admin/settings', {
