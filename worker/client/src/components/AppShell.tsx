@@ -109,7 +109,7 @@ function SidebarNav({
     'div',
     {
       className:
-        'flex flex-col h-full bg-gradient-to-b from-toledo-blue to-toledo-navy navy-texture text-white',
+        'flex flex-col h-full navy-gradient text-white',
     },
     React.createElement(
       'button',
@@ -142,7 +142,7 @@ function SidebarNav({
       'p',
       {
         className:
-          'px-4 mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-blue-300/70',
+          'px-4 mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-blue-300',
       },
       'Workspace'
     ),
@@ -158,7 +158,7 @@ function SidebarNav({
             'p',
             {
               className:
-                'px-1 mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-blue-300/70',
+                'px-1 mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-blue-300',
             },
             'Manage'
           ),

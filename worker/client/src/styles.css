@@ -61,21 +61,45 @@ body {
   outline-offset: 2px;
 }
 
-.navy-texture {
-  background-image: radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px);
-  background-size: 22px 22px;
-}
+/* ---------------------------------------------------------------------------
+ * Decorative surfaces.
+ *
+ * These sit in `@layer components` on purpose. An unlayered rule beats every
+ * layered rule in the cascade no matter the specificity, and Tailwind v4 emits
+ * its utilities into `@layer utilities`. So while these rules were unlayered,
+ * `.navy-texture` quietly won `background-image` against any gradient utility
+ * on the same element: the sidebar's `from-toledo-blue to-toledo-navy` never
+ * painted and the panel fell through to the page's pale `#F4F7FB`. Inside a
+ * layer, a utility wins when a call site actually asks for one.
+ *
+ * `.navy-texture` is for surfaces that bring their own background-color.
+ * `.navy-gradient` carries the dots *and* the brand gradient in a single
+ * declaration, because a second `background-image` would replace this one
+ * rather than stack with it.
+ * ------------------------------------------------------------------------- */
+@layer components {
+  .navy-texture {
+    background-image: radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+    background-size: 22px 22px;
+  }
 
-.gold-trail {
-  background-image: linear-gradient(
-    115deg,
-    transparent 0%,
-    transparent 46%,
-    rgba(255, 205, 0, 0.14) 46.5%,
-    rgba(255, 205, 0, 0.14) 49%,
-    transparent 49.5%,
-    transparent 100%
-  );
+  .navy-gradient {
+    background-image: radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+      linear-gradient(to bottom, var(--color-toledo-blue), var(--color-toledo-navy));
+    background-size: 22px 22px, auto;
+  }
+
+  .gold-trail {
+    background-image: linear-gradient(
+      115deg,
+      transparent 0%,
+      transparent 46%,
+      rgba(255, 205, 0, 0.14) 46.5%,
+      rgba(255, 205, 0, 0.14) 49%,
+      transparent 49.5%,
+      transparent 100%
+    );
+  }
 }
 
 .drawer-in {

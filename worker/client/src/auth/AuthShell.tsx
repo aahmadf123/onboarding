@@ -49,7 +49,7 @@ export function AuthShell({ children, subtitle }: AuthShellProps) {
       'div',
       {
         className:
-          'flex-1 flex items-center justify-center px-4 py-10 bg-gradient-to-br from-toledo-blue via-toledo-navy to-toledo-blue navy-texture',
+          'flex-1 flex items-center justify-center px-4 py-10 navy-gradient',
       },
       React.createElement(
         'div',
