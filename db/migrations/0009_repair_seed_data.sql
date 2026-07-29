@@ -33,17 +33,8 @@ VALUES ('utdata@utoledo.edu', 'Super Admin', 'admin', 'invited');
 -- ------------------------------------------------------------
 -- 2. Repoint content owned by the placeholder accounts.
 -- ------------------------------------------------------------
-UPDATE Tips
-SET author_id = (SELECT id FROM Users WHERE email = 'utdata@utoledo.edu')
-WHERE author_id IN (
-  SELECT id FROM Users WHERE email IN ('staff.example@utoledo.edu', 'admin@utoledo.edu')
-);
-
-UPDATE Tips
-SET reviewed_by = (SELECT id FROM Users WHERE email = 'utdata@utoledo.edu')
-WHERE reviewed_by IN (
-  SELECT id FROM Users WHERE email IN ('staff.example@utoledo.edu', 'admin@utoledo.edu')
-);
+-- The two UPDATE Tips statements that stood here are gone with the table
+-- (retired in 0014). Production ran them under this file's old name.
 
 UPDATE Submissions
 SET author_id = (SELECT id FROM Users WHERE email = 'utdata@utoledo.edu')
@@ -62,9 +53,6 @@ WHERE reviewed_by IN (
 --    accounts themselves. These are seeded rows nobody ever signed in to,
 --    so there is no real user data to preserve.
 -- ------------------------------------------------------------
-DELETE FROM TipFeedback WHERE reporter_id IN (
-  SELECT id FROM Users WHERE email IN ('staff.example@utoledo.edu', 'admin@utoledo.edu')
-);
 DELETE FROM Sessions WHERE user_id IN (
   SELECT id FROM Users WHERE email IN ('staff.example@utoledo.edu', 'admin@utoledo.edu')
 );

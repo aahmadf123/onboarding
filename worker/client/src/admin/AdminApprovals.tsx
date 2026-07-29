@@ -7,7 +7,6 @@ import { adminInputCls } from './shared';
 const TABS = [
   { id: 'tasks', label: '🔏 Task sign-offs' },
   { id: 'submissions', label: '📝 Submissions' },
-  { id: 'tips', label: '💡 Tips' },
 ];
 
 export function AdminApprovals({ onCountChange }: { onCountChange?: (n: number) => void }) {
@@ -26,12 +25,8 @@ export function AdminApprovals({ onCountChange }: { onCountChange?: (n: number) 
           if (onCountChange) onCountChange(r.data.length);
         }
       });
-    } else if (tab === 'submissions') {
-      api('/submissions?status=pending').then(function (r) {
-        if (r.success) setItems(r.data || []);
-      });
     } else {
-      api('/tips/queue?status=pending').then(function (r) {
+      api('/submissions?status=pending').then(function (r) {
         if (r.success) setItems(r.data || []);
       });
     }
@@ -74,8 +69,7 @@ export function AdminApprovals({ onCountChange }: { onCountChange?: (n: number) 
 
   function decideContent(item: any, action: string) {
     setBusy(item.id);
-    const base = tab === 'submissions' ? '/submissions/' : '/tips/';
-    api(base + item.id + '/' + action, {
+    api('/submissions/' + item.id + '/' + action, {
       method: 'PUT',
       body: JSON.stringify({ review_notes: notes[item.id] || '' }),
     }).then(function (r) {

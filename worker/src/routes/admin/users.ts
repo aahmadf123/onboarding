@@ -232,11 +232,6 @@ users.delete('/:id', async (c) => {
     c.env.DB.prepare('UPDATE Submissions SET reviewed_by = NULL WHERE reviewed_by = ?').bind(id),
     c.env.DB.prepare('DELETE FROM Submissions WHERE author_id = ?').bind(id),
 
-    c.env.DB.prepare('UPDATE Tips SET reviewed_by = NULL WHERE reviewed_by = ?').bind(id),
-    c.env.DB.prepare('DELETE FROM TipFeedback WHERE reporter_id = ?').bind(id),
-    c.env.DB.prepare('DELETE FROM TipFeedback WHERE tip_id IN (SELECT id FROM Tips WHERE author_id = ?)').bind(id),
-    c.env.DB.prepare('DELETE FROM Tips WHERE author_id = ?').bind(id),
-
     c.env.DB.prepare('DELETE FROM Users WHERE id = ?').bind(id),
   ]);
 

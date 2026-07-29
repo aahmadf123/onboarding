@@ -128,31 +128,6 @@ describe('user provisioning', () => {
     ).run();
     const articleId = article.meta.last_row_id as number;
 
-    const tipByVictim = await env.DB.prepare(
-      "INSERT INTO Tips (author_id, category_id, title, content, status, reviewed_by) VALUES (?, 1, 'Victim tip', 'Tip body', 'pending', ?)"
-    )
-      .bind(victim.id, victim.id)
-      .run();
-    const tipByVictimId = tipByVictim.meta.last_row_id as number;
-
-    const tipByOther = await env.DB.prepare(
-      "INSERT INTO Tips (author_id, category_id, title, content, status, reviewed_by) VALUES (?, 1, 'Other tip', 'Other body', 'pending', ?)"
-    )
-      .bind(other.id, victim.id)
-      .run();
-    const tipByOtherId = tipByOther.meta.last_row_id as number;
-
-    await env.DB.prepare(
-      "INSERT INTO TipFeedback (tip_id, reporter_id, reason, details, status) VALUES (?, ?, 'issue', 'details', 'open')"
-    )
-      .bind(tipByVictimId, other.id)
-      .run();
-    await env.DB.prepare(
-      "INSERT INTO TipFeedback (tip_id, reporter_id, reason, details, status) VALUES (?, ?, 'issue', 'details', 'open')"
-    )
-      .bind(tipByOtherId, victim.id)
-      .run();
-
     await env.DB.prepare(
       `INSERT INTO Submissions (article_id, author_id, proposed_title, proposed_content, request_type, priority, topic_area, status, reviewed_by)
        VALUES (?, ?, 'Victim submission', 'Submission body', 'content_update', 'normal', 'IT', 'pending', ?)`
@@ -202,26 +177,6 @@ describe('user provisioning', () => {
       .bind(victim.id)
       .first<{ n: number }>();
     expect(reviewedSubmissions?.n).toBe(0);
-
-    const authoredTips = await env.DB.prepare('SELECT COUNT(*) AS n FROM Tips WHERE author_id = ?')
-      .bind(victim.id)
-      .first<{ n: number }>();
-    expect(authoredTips?.n).toBe(0);
-
-    const reviewedTips = await env.DB.prepare('SELECT COUNT(*) AS n FROM Tips WHERE reviewed_by = ?')
-      .bind(victim.id)
-      .first<{ n: number }>();
-    expect(reviewedTips?.n).toBe(0);
-
-    const reporterFeedback = await env.DB.prepare('SELECT COUNT(*) AS n FROM TipFeedback WHERE reporter_id = ?')
-      .bind(victim.id)
-      .first<{ n: number }>();
-    expect(reporterFeedback?.n).toBe(0);
-
-    const deletedTipFeedback = await env.DB.prepare('SELECT COUNT(*) AS n FROM TipFeedback WHERE tip_id = ?')
-      .bind(tipByVictimId)
-      .first<{ n: number }>();
-    expect(deletedTipFeedback?.n).toBe(0);
 
     const victimTasks = await env.DB.prepare('SELECT COUNT(*) AS n FROM UserTasks WHERE user_id = ?')
       .bind(victim.id)

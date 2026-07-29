@@ -65,45 +65,9 @@ INSERT INTO OrgChart (id, name, title, department, email, phone, parent_id, disp
 (36, 'Chris Bailey-Greene', 'Head Women''s Rowing Coach', 'Women''s Rowing', NULL, NULL, 3, 13, 1),
 (37, 'Shelby Tincher', 'Head Cheerleading Coach', 'Cheerleading', NULL, NULL, 9, 11, 1);
 
--- ============================================================
--- SAMPLE TIPS
--- ============================================================
-DELETE FROM Tips;
-
-INSERT INTO Tips (id, author_id, category_id, title, content, tags, status, reviewed_by, approved_at) VALUES
-(1, 100, 7, 'Parking Pro Tip: First Day Arrival', 'Arrive at least 30 minutes early on your first day. The lots near Savage Arena fill up fast before 9am. If you do not have your A permit yet, use the C permit daily option through ParkUToledo.', 'parking,first-day,savage-arena', 'approved', 100, CURRENT_TIMESTAMP),
-(2, 100, 6, 'UTAD First, MFA Second, Everything Else Third', 'The fastest path is Rocket ID to UTAD activation to Microsoft Authenticator to MyUT. Skipping MFA setup early tends to create access friction across payroll and employee systems.', 'utad,mfa,it,myut', 'approved', 100, CURRENT_TIMESTAMP),
-(3, 100, 5, 'Benefits Deadline Is Not Soft', 'You have 30 days to elect or waive benefits. Declining coverage still requires action in MyUT; silence is not a waiver.', 'benefits,hr,deadline,30-day', 'approved', 100, CURRENT_TIMESTAMP),
-(4, 100, 2, 'When Compliance Is Unclear, Call Before You Act', 'If a recruiting, NIL, booster, or eligibility action feels even slightly uncertain, call Compliance before you do anything. Prevention is easier than remediation.', 'compliance,ncaa,booster,nil', 'approved', 100, CURRENT_TIMESTAMP),
-(5, 100, 9, 'Best Quick Lunch Circuit Near Campus', 'For a fast lunch, Gateway Plaza is the easiest campus-adjacent option. For off-campus options, Old Orchard and Secor corridor spots are practical on a workday.', 'food,lunch,campus,toledo', 'approved', 100, CURRENT_TIMESTAMP),
-(6, 100, 6, 'Direct Deposit and Tax Setup Belong on Day One', 'Once UTAD and MFA are working, go straight into MyUT to verify direct deposit and tax setup. That closes one of the most common onboarding gaps.', 'payroll,direct-deposit,myut,taxes', 'approved', 100, CURRENT_TIMESTAMP),
-(7, 100, 4, 'Use Official Work Email Only for Athletics Business', 'Do not route onboarding or student-related work through personal email. Use official @utoledo.edu accounts for business records, security, and compliance.', 'email,security,ferpa,workflows', 'approved', 100, CURRENT_TIMESTAMP),
-(8, 100, 3, 'Branding Has Two Blue Standards', 'Athletics branding and University marketing materials do not always use the same blue hex value. Check whether the asset is Athletics-facing or University-wide before publishing.', 'branding,design,athletics,marketing', 'approved', 100, CURRENT_TIMESTAMP);
-
--- ============================================================
--- BRANDING TOKENS
--- ============================================================
-DELETE FROM BrandingTokens;
-
-INSERT INTO BrandingTokens (id, token_group, token_key, token_value, format, description, display_order) VALUES
-(1, 'font', 'primary_typeface', 'Poppins', 'font-family', 'Official University brand typeface.', 1),
-(2, 'voice', 'campaign', 'Power To Do', 'text', 'University-level brand positioning phrase.', 1),
-(3, 'voice', 'approved_identifiers', 'The University of Toledo|Toledo Rockets|Toledo Athletics|Toledo|Rockets|UToledo', 'pipe-list', 'Approved identifiers for institutional use.', 2),
-(4, 'voice', 'avoid_identifiers', 'UT|UT Rockets|Toledo Rockets Football|Lady Rockets', 'pipe-list', 'Examples of disallowed or discouraged naming.', 3),
-(5, 'color_university', 'midnight_blue', '#003E7E', 'hex', 'University-wide midnight blue.', 1),
-(6, 'color_university', 'gold', '#FFD200', 'hex', 'University-wide gold.', 2),
-(7, 'color_athletics', 'midnight_blue', '#0B2240', 'hex', 'Athletics midnight blue.', 1),
-(8, 'color_athletics', 'gold', '#FFCD00', 'hex', 'Athletics gold.', 2),
-(9, 'color_secondary', 'dark_blue', '#000F3E', 'hex', 'Secondary dark blue.', 1),
-(10, 'color_secondary', 'space_blue', '#102B5F', 'hex', 'Secondary space blue.', 2),
-(11, 'color_secondary', 'azure', '#009CE5', 'hex', 'Secondary azure.', 3),
-(12, 'color_accent', 'magenta', '#A2047D', 'hex', 'Accent magenta.', 1),
-(13, 'color_accent', 'turquoise', '#168F9C', 'hex', 'Accent turquoise.', 2),
-(14, 'color_tertiary', 'neutral_base', '#D3C1AE', 'hex', 'Neutral base tone.', 1),
-(15, 'logo_rules', 'primary_logo_required', 'true', 'boolean', 'Primary athletic logo is the default mark for institutional and athletics use.', 1),
-(16, 'logo_rules', 'secondary_logo_usage', 'Only after the primary logo has already established brand identity on the same asset.', 'text', 'Constraint for secondary mark usage.', 2),
-(17, 'logo_rules', 'athletic_logo_clear_space', 'X = 1/4 logo height', 'rule', 'Athletic logo clear-space guidance.', 3),
-(18, 'logo_rules', 'rocket_logo_clear_space', 'X = 1/3 logo height', 'rule', 'Rocket logo clear-space guidance.', 4);
+-- The sample tips and the eighteen BrandingTokens rows stood here.
+-- Neither table had a reader: Tips had no browse or submit UI, and the
+-- branding palette lives in the stylesheet. Both are retired in 0014.
 
 -- ============================================================
 -- QUICK LINKS

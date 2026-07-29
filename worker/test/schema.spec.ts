@@ -17,10 +17,15 @@ beforeAll(async () => {
  */
 describe('test database matches the deployed schema', () => {
   it('enforces foreign keys', async () => {
-    // The exact shape of the shipped bug: TipFeedback.tip_id references Tips(id)
-    // and no tip has id 0.
+    // The shipped bug had this shape: an insert naming a parent row id that
+    // cannot exist. It reached production because the hand-built test schema
+    // declared no foreign keys at all, so the violation was invisible in CI.
+    // (It was TipFeedback.tip_id = 0 at the time; that table is retired, and
+    // Submissions.author_id is the same NOT NULL reference to Users.)
     await expect(
-      env.DB.prepare('INSERT INTO TipFeedback (tip_id, is_helpful) VALUES (0, 1)').run()
+      env.DB.prepare(
+        "INSERT INTO Submissions (author_id, proposed_content) VALUES (0, 'body')"
+      ).run()
     ).rejects.toThrow();
   });
 

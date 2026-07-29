@@ -81,52 +81,10 @@ const aiChat = new Hono<AppEnv>();
 // Rate limit: 20 AI chat requests per minute per IP
 aiChat.use('*', rateLimit(20));
 
-/**
- * POST /api/ai/chat
- * Body: { messages: ChatMessage[] }
- * Returns: { success: true, data: { reply: string, sources: string[] } }
- */
-aiChat.post('/', async (c) => {
-  try {
-    const body = await c.req.json<{ messages: ChatMessage[] }>();
-
-    const messages = sanitizeChatMessages(body.messages);
-    if (!messages) {
-      return c.json({ success: false, error: 'messages array is required' }, 400);
-    }
-
-    const contextQuery = buildContextQuery(messages);
-    const { context, sources } = contextQuery
-      ? await getRelevantContextWithSources(c.env.DB, contextQuery, 12)
-      : { context: '', sources: [] };
-
-    if (!c.env.AI) {
-      const fallbackReply = context
-        ? `Based on onboarding materials:\n\n${context.substring(0, 500)}...\n\nFor more details, please contact the relevant department.`
-        : 'The AI assistant is currently unavailable. Please try again later or contact your department directly.';
-      return c.json({ success: true, data: { reply: fallbackReply, sources } });
-    }
-
-    const aiMessages = [
-      { role: 'system' as const, content: buildSystemMessage(context) },
-      ...messages,
-    ];
-    const response = await c.env.AI.run(AI_MODEL, { messages: aiMessages }) as { response?: string };
-    const reply = response?.response ?? 'I was unable to generate a response. Please try again.';
-
-    return c.json({ success: true, data: { reply, sources } });
-  } catch (err) {
-    console.error('AI Chat error:', err);
-    return c.json({
-      success: false,
-      error: 'AI service temporarily unavailable',
-      data: {
-        reply: 'The AI assistant encountered an error. Please try again in a moment, or contact your department directly for help.',
-        sources: [],
-      },
-    });
-  }
-});
+// There was a non-streaming POST /api/ai/chat alongside this one. Nothing ever
+// called it — the widget has only ever used /stream — so it was a second copy
+// of the context lookup, the system prompt assembly and the billed AI.run,
+// kept in sync by hand. Removed rather than maintained.
 
 /**
  * POST /api/ai/chat/stream

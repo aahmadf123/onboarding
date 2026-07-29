@@ -117,48 +117,8 @@ export interface SubmissionRow {
 }
 
 // ============================================================
-// DB row interfaces — schema-v2 (new tables)
+// DB row interfaces — reference data
 // ============================================================
-
-export interface TipRow {
-  id: number;
-  author_id: number;
-  category_id: number | null;
-  title: string;
-  content: string;
-  tags: string | null;
-  status: 'pending' | 'approved' | 'rejected';
-  reviewed_by: number | null;
-  review_notes: string | null;
-  submitted_at: string;
-  approved_at: string | null;
-  last_updated: string;
-  author_email?: string;
-  category_name?: string;
-}
-
-export interface TipFeedbackRow {
-  id: number;
-  tip_id: number;
-  reporter_id: number;
-  reason: string;
-  details: string | null;
-  status: 'open' | 'resolved';
-  created_at: string;
-}
-
-export interface OrgChartRow {
-  id: number;
-  name: string;
-  title: string;
-  department: string | null;
-  email: string | null;
-  phone: string | null;
-  parent_id: number | null;
-  display_order: number;
-  photo_url: string | null;
-  is_active: number;
-}
 
 export interface SiteContentIndexRow {
   id: number;

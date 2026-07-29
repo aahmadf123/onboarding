@@ -157,7 +157,7 @@ export function AdminUsers({ currentUser }: { currentUser: User | null }) {
       !window.confirm(
         'Delete ' +
           user.email +
-          '? This permanently removes their account, authored submissions/tips, and related records.'
+          '? This permanently removes their account, authored submissions, and related records.'
       )
     )
       return;
