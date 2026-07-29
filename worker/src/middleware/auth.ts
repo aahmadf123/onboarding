@@ -66,7 +66,10 @@ export async function authGate(c: AppContext, next: Next) {
     return c.json({ success: false, error: 'Authentication required' }, 401);
   }
   if (session.user.status === 'disabled') {
-    return c.json({ success: false, error: 'Account disabled' }, 403);
+    return c.json(
+      { success: false, error: 'Account disabled', code: 'ACCOUNT_DISABLED' },
+      403
+    );
   }
   if (session.user.must_reset) {
     return c.json(
@@ -91,7 +94,10 @@ export async function requireAuth(c: AppContext, next: Next) {
     return c.json({ success: false, error: 'Authentication required' }, 401);
   }
   if (session.user.status === 'disabled') {
-    return c.json({ success: false, error: 'Account disabled' }, 403);
+    return c.json(
+      { success: false, error: 'Account disabled', code: 'ACCOUNT_DISABLED' },
+      403
+    );
   }
   c.set('currentUser', session.user);
   c.set('sessionId', session.sessionId);

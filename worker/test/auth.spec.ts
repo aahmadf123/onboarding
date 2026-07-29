@@ -48,6 +48,27 @@ describe('global auth gate', () => {
     expect(res.status).toBe(200);
     expect(res.json.success).toBe(true);
   });
+
+  it('returns JSON 404 for an unmatched API path instead of the SPA shell', async () => {
+    const user = await createUserAndLogin();
+    const res = await apiCall('/api/does-not-exist', { token: user.token });
+    // This used to fall through to the SPA catch-all and return 200 + HTML,
+    // which made the client's res.json() reject and froze the caller.
+    expect(res.status).toBe(404);
+    expect(res.json.success).toBe(false);
+  });
+
+  it('tags the disabled-account rejection with a machine-readable code', async () => {
+    const user = await createUserAndLogin();
+    await env.DB.prepare("UPDATE Users SET status = 'disabled' WHERE email = ?")
+      .bind(user.email)
+      .run();
+    const res = await apiCall('/api/categories', { token: user.token });
+    expect(res.status).toBe(403);
+    // The client keys on the code to sign the user out with an explanation,
+    // rather than sitting on a loading state forever.
+    expect(res.json.code).toBe('ACCOUNT_DISABLED');
+  });
 });
 
 describe('login', () => {

@@ -434,14 +434,16 @@ function SearchResults({ query, onNavigate }) {
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
+  // NOTE: this file is a template literal, so every backslash must be doubled.
+  // A single backslash is eaten before the browser ever sees the code.
   function escapeRegex(str) {
-    return str.replace(/[.*+?^{}()|[\]\\$]/g, '\\$&');
+    return str.replace(/[.*+?^\${}()|[\\]\\\\]/g, '\\\\$&');
   }
 
   function highlightText(text, q) {
     if (!text || !q) return escapeHtml(text);
     let escaped = escapeHtml(text);
-    const terms = q.split(/\s+/).filter(function (t) { return t.length > 1; });
+    const terms = q.split(/\\s+/).filter(function (t) { return t.length > 1; });
     terms.forEach(function (term) {
       const re = new RegExp('(' + escapeRegex(term) + ')', 'gi');
       escaped = escaped.replace(re, '<mark>$1</mark>');
@@ -452,11 +454,11 @@ function SearchResults({ query, onNavigate }) {
   function getSnippet(item, q) {
     const raw = item.current_content || item.description || item.summary || item.notes || '';
     if (!raw) return '';
-    const firstTerm = (q || '').split(/\s+/)[0] || '';
+    const firstTerm = (q || '').split(/\\s+/)[0] || '';
     const idx = firstTerm ? raw.toLowerCase().indexOf(firstTerm.toLowerCase()) : -1;
     const start = idx > 60 ? idx - 60 : 0;
     const end = Math.min(raw.length, start + 220);
-    let snippet = raw.substring(start, end).replace(/[#*_~>|!\\[\]]/g, '').replace(/\s+/g, ' ').trim();
+    let snippet = raw.substring(start, end).replace(/[#*_~>|!\\[\\]]/g, '').replace(/\\s+/g, ' ').trim();
     if (start > 0) snippet = '\u2026' + snippet;
     if (end < raw.length) snippet = snippet + '\u2026';
     return snippet;
@@ -730,8 +732,11 @@ function ModerationDashboard({ currentUser, onNavigate }) {
   const [activeTab, setActiveTab] = useState('submissions');
   const [items, setItems] = useState([]);
   const [filter, setFilter] = useState('pending');
-  const [processing, setProcessing] = useState(null);
-  const [reviewNotes, setReviewNotes] = useState('');
+  // busyId tracks the in-flight request; reviewNotes is keyed per item. These
+  // used to be one variable, so typing a note disabled every card's buttons.
+  const [busyId, setBusyId] = useState(null);
+  const [reviewNotes, setReviewNotes] = useState({});
+  const [error, setError] = useState('');
   const [contacts, setContacts] = useState([]);
   const [assignmentContactId, setAssignmentContactId] = useState({});
   const [assignmentReason, setAssignmentReason] = useState({});
@@ -752,29 +757,43 @@ function ModerationDashboard({ currentUser, onNavigate }) {
   }, [activeTab]);
 
   async function handleAction(id, action) {
-    setProcessing(id);
+    setBusyId(id);
+    setError('');
     const base = activeTab === 'submissions' ? '/submissions/' : '/tips/';
-    await api(base + id + '/' + action, {
+    const res = await api(base + id + '/' + action, {
       method: 'PUT',
-      body: JSON.stringify({ review_notes: reviewNotes }),
+      body: JSON.stringify({ review_notes: reviewNotes[id] || '' }),
     });
-    setReviewNotes('');
-    setProcessing(null);
+    setBusyId(null);
+    if (!res.success) {
+      setError(res.error || 'Could not save that decision. Please try again.');
+      return;
+    }
+    setReviewNotes(function (prev) {
+      const next = Object.assign({}, prev);
+      delete next[id];
+      return next;
+    });
     loadData();
   }
 
   async function handleReassign(itemId) {
     const contactId = assignmentContactId[itemId];
     if (!contactId) return;
-    setProcessing('assign-' + itemId);
-    await api('/submissions/' + itemId + '/assignment', {
+    setBusyId('assign-' + itemId);
+    setError('');
+    const res = await api('/submissions/' + itemId + '/assignment', {
       method: 'PUT',
       body: JSON.stringify({
         contact_id: Number(contactId),
         assignment_reason: assignmentReason[itemId] || undefined,
       }),
     });
-    setProcessing(null);
+    setBusyId(null);
+    if (!res.success) {
+      setError(res.error || 'Could not reassign that ticket. Please try again.');
+      return;
+    }
     loadData();
   }
 
@@ -784,13 +803,16 @@ function ModerationDashboard({ currentUser, onNavigate }) {
     React.createElement('div', { className: 'flex gap-1 mb-4 bg-gray-100 p-1 rounded-lg w-fit' },
       ['submissions', 'tips'].map(t => React.createElement('button', {
         key: t,
-        onClick: () => { setActiveTab(t); setFilter('pending'); setItems([]); },
+        onClick: () => { setActiveTab(t); setFilter('pending'); setItems([]); setError(''); },
         className: 'px-4 py-1.5 rounded-md text-sm font-medium transition-colors ' + (activeTab === t ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900')
       }, t === 'submissions' ? 'Submissions' : 'Tips'))
     ),
+    error && React.createElement('div', { className: 'mb-4 bg-red-50 border border-red-200 rounded-lg p-3', role: 'alert' },
+      React.createElement('p', { className: 'text-sm text-red-700' }, error)
+    ),
     React.createElement('div', { className: 'flex gap-2 mb-6' },
       ['pending', 'approved', 'rejected'].map(s => React.createElement('button', {
-        key: s, onClick: () => setFilter(s),
+        key: s, onClick: () => { setFilter(s); setError(''); },
         className: 'px-4 py-2 rounded-lg text-sm font-medium transition-colors ' +
           (filter === s
             ? (s === 'pending' ? 'bg-orange-100 text-orange-700' : s === 'approved' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700')
@@ -845,9 +867,9 @@ function ModerationDashboard({ currentUser, onNavigate }) {
                     React.createElement('button', {
                       type: 'button',
                       onClick: () => handleReassign(item.id),
-                      disabled: processing === 'assign-' + item.id || !assignmentContactId[item.id],
+                      disabled: busyId === 'assign-' + item.id || !assignmentContactId[item.id],
                       className: 'px-4 py-2 rounded-lg bg-slate-900 text-white text-sm font-medium hover:bg-slate-800 disabled:opacity-50'
-                    }, processing === 'assign-' + item.id ? 'Updating...' : 'Reassign')
+                    }, busyId === 'assign-' + item.id ? 'Updating...' : 'Reassign')
                   )
                 )
               ),
@@ -864,8 +886,15 @@ function ModerationDashboard({ currentUser, onNavigate }) {
             ),
             filter === 'pending' && React.createElement('div', { className: 'space-y-3' },
               React.createElement('textarea', {
-                value: processing === item.id ? reviewNotes : '',
-                onChange: (e) => { setProcessing(item.id); setReviewNotes(e.target.value); },
+                value: reviewNotes[item.id] || '',
+                onChange: (e) => {
+                  const value = e.target.value;
+                  setReviewNotes(function (prev) {
+                    const next = Object.assign({}, prev);
+                    next[item.id] = value;
+                    return next;
+                  });
+                },
                 placeholder: 'Optional review notes...',
                 rows: 2,
                 className: 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-toledo-blue'
@@ -873,12 +902,12 @@ function ModerationDashboard({ currentUser, onNavigate }) {
               React.createElement('div', { className: 'flex gap-2' },
                 React.createElement('button', {
                   onClick: () => handleAction(item.id, 'approve'),
-                  disabled: !!processing,
+                  disabled: busyId === item.id,
                   className: 'flex items-center gap-1 px-4 py-2 bg-success text-white rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-50'
-                }, React.createElement(IconCheck), 'Approve & Publish'),
+                }, React.createElement(IconCheck), busyId === item.id ? 'Saving…' : 'Approve & Publish'),
                 React.createElement('button', {
                   onClick: () => handleAction(item.id, 'reject'),
-                  disabled: !!processing,
+                  disabled: busyId === item.id,
                   className: 'flex items-center gap-1 px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 disabled:opacity-50'
                 }, React.createElement(IconX), 'Reject')
               )

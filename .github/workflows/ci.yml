@@ -28,6 +28,11 @@ jobs:
       - name: Typecheck
         run: npx tsc --noEmit
 
+      # The SPA has no build step, so tsc cannot see inside the template
+      # literals it lives in. This catches backslash escapes the literal strips.
+      - name: Frontend escape check
+        run: npm run check:escapes
+
       - name: Test
         run: npx vitest run
 

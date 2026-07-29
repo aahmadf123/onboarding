@@ -56,23 +56,76 @@ function setSessionToken(token) {
   } catch (e) {}
 }
 
-function clearAuthAndReload() {
+// Reason is stashed so the sign-in screen can explain why the user landed there
+// instead of dropping them on a bare login form with no context.
+function clearAuthAndReload(reason) {
   setSessionToken(null);
   try { localStorage.removeItem('toledo_auth_user'); } catch (e) {}
+  try { if (reason) sessionStorage.setItem('toledo_signout_reason', reason); } catch (e) {}
   window.location.href = '/';
 }
 
+function takeSignOutReason() {
+  try {
+    const reason = sessionStorage.getItem('toledo_signout_reason');
+    if (reason) sessionStorage.removeItem('toledo_signout_reason');
+    return reason || '';
+  } catch (e) { return ''; }
+}
+
+// Always resolves to a { success, error? } shape. A rejected fetch or a
+// non-JSON body (Hono's plain-text 500, a proxy interstitial, the SPA shell
+// served for an unmatched /api path) used to reject here, which left every
+// caller's loading flag stuck on forever.
 async function api(path, options = {}) {
   const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
   const token = getSessionToken();
   if (token) headers['Authorization'] = 'Bearer ' + token;
-  const res = await fetch(API_BASE + path, { ...options, headers });
+
+  let res;
+  try {
+    res = await fetch(API_BASE + path, { ...options, headers });
+  } catch (e) {
+    return { success: false, error: 'Could not reach the server. Check your connection and try again.' };
+  }
+
+  const isAuthPath = path.indexOf('/auth/') === 0;
+
   // A 401 outside the auth endpoints means the session is gone — start over.
-  if (res.status === 401 && path.indexOf('/auth/') !== 0 && token) {
-    clearAuthAndReload();
+  if (res.status === 401 && !isAuthPath && token) {
+    clearAuthAndReload('Your session expired. Please sign in again.');
     return { success: false, error: 'Session expired' };
   }
-  return res.json();
+
+  let body = null;
+  try {
+    body = await res.json();
+  } catch (e) {
+    body = null;
+  }
+
+  // The gate returns 403 for disabled accounts and for accounts still owing a
+  // password reset. Neither used to be handled, so the UI just froze.
+  if (res.status === 403 && body) {
+    if (body.code === 'PASSWORD_RESET_REQUIRED') {
+      window.dispatchEvent(new CustomEvent('toledo:password-reset-required'));
+      return body;
+    }
+    if (body.code === 'ACCOUNT_DISABLED') {
+      clearAuthAndReload('This account has been disabled. Contact an administrator.');
+      return body;
+    }
+  }
+
+  if (body === null) {
+    return {
+      success: false,
+      error: res.ok
+        ? 'The server sent a response we could not read. Please try again.'
+        : 'Something went wrong (error ' + res.status + '). Please try again.',
+    };
+  }
+  return body;
 }
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
@@ -463,10 +516,11 @@ function LoginScreen({ onLogin }) {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [notice, setNotice] = useState(takeSignOutReason);
 
   async function handleLogin(e) {
     e.preventDefault();
-    setLoading(true); setError('');
+    setLoading(true); setError(''); setNotice('');
     const res = await api('/auth/login', { method: 'POST', body: JSON.stringify({ email: email, password: password }) });
     setLoading(false);
     if (res.success) onLogin(res.data);
@@ -476,8 +530,15 @@ function LoginScreen({ onLogin }) {
   async function handleForgot(e) {
     e.preventDefault();
     setLoading(true); setError('');
-    await api('/auth/forgot', { method: 'POST', body: JSON.stringify({ email: email }) });
+    const res = await api('/auth/forgot', { method: 'POST', body: JSON.stringify({ email: email }) });
     setLoading(false);
+    // The endpoint always reports success so account existence cannot be
+    // probed, but a rate-limit or network failure must not be reported as
+    // "check your inbox" — that leaves a locked-out user waiting forever.
+    if (res && res.success === false) {
+      setError(res.error || 'Could not send the reset link. Please try again shortly.');
+      return;
+    }
     setView('sent');
   }
 
@@ -510,6 +571,9 @@ function LoginScreen({ onLogin }) {
 
   return React.createElement(AuthShell, null,
     React.createElement('form', { onSubmit: handleLogin, className: 'space-y-4' },
+      notice && React.createElement('div', { className: 'bg-amber-50 border border-amber-200 rounded-lg p-3', role: 'status' },
+        React.createElement('p', { className: 'text-xs text-amber-800' }, notice)
+      ),
       React.createElement(AuthInput, { label: 'University Email', type: 'email', value: email, onChange: function (e) { setEmail(e.target.value); }, placeholder: 'your.name@utoledo.edu', autoComplete: 'email' }),
       React.createElement(AuthInput, { label: 'Password', type: 'password', value: password, onChange: function (e) { setPassword(e.target.value); }, placeholder: '••••••••••', autoComplete: 'current-password' }),
       error && React.createElement('p', { className: 'text-red-500 text-sm' }, error),

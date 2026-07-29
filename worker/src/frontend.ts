@@ -1156,6 +1156,18 @@ function App() {
     api('/stats').then(function (r) { if (r.success) setStats(r.data); });
   }, [authState.user, authState.mustReset]);
 
+  // The API gate rejects a must_reset account with 403 on every route. Without
+  // this the whole UI just sat on "Loading…" with no way forward.
+  useEffect(function () {
+    function onResetRequired() {
+      setAuthState(function (prev) {
+        return { loading: false, user: prev.user, mustReset: true };
+      });
+    }
+    window.addEventListener('toledo:password-reset-required', onResetRequired);
+    return function () { window.removeEventListener('toledo:password-reset-required', onResetRequired); };
+  }, []);
+
   // One-time import of the legacy localStorage checklist into the database.
   function migrateLocalChecklist(user) {
     var slugs = [];
@@ -1315,9 +1327,41 @@ function App() {
   );
 }
 
+// ErrorBoundary: a throw inside render used to unmount the whole tree and leave
+// a blank page with no way back. Catch it and offer a recovery path instead.
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { error: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { error: error };
+  }
+
+  componentDidCatch(error, info) {
+    console.error('Unhandled render error:', error, info);
+  }
+
+  render() {
+    if (!this.state.error) return this.props.children;
+    return React.createElement('div', { className: 'min-h-screen bg-gray-50 flex items-center justify-center px-4' },
+      React.createElement('div', { className: 'bg-white rounded-2xl shadow-lg p-8 max-w-md w-full text-center' },
+        React.createElement('h1', { className: 'display-title text-xl text-toledo-blue mb-2' }, 'Something went wrong'),
+        React.createElement('p', { className: 'text-sm text-gray-600 mb-5' },
+          'This page hit an unexpected error. Your progress is saved — reloading usually fixes it.'),
+        React.createElement('button', {
+          onClick: function () { window.location.href = '/'; },
+          className: 'w-full py-3 bg-toledo-gold text-toledo-blue rounded-lg hover:bg-yellow-300 transition-colors font-semibold',
+        }, 'Back to the portal')
+      )
+    );
+  }
+}
+
 // Mount
 var root = ReactDOM.createRoot(document.getElementById('root'));
-root.render(React.createElement(App));
+root.render(React.createElement(ErrorBoundary, null, React.createElement(App)));
 `;
 }
 

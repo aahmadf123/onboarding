@@ -129,6 +129,20 @@ app.get('/branding/*', async (c) => {
   return serveBrandingAsset(c, url.pathname);
 });
 
+// ── API 404 + error handling ──────────────────────────────────
+// Without these, an unmatched /api path fell through to the SPA catch-all and
+// returned HTTP 200 with an HTML document, and a thrown handler returned
+// Hono's plain-text 500. Both made the client's res.json() reject.
+app.all('/api/*', (c) => c.json({ success: false, error: 'Not found' }, 404));
+
+app.onError((err, c) => {
+  console.error('Unhandled error:', err instanceof Error ? err.stack ?? err.message : err);
+  if (new URL(c.req.url).pathname.startsWith('/api/')) {
+    return c.json({ success: false, error: 'Something went wrong. Please try again.' }, 500);
+  }
+  return c.text('Internal Server Error', 500);
+});
+
 // ── SPA fallback ──────────────────────────────────────────────
 // For any non-API route, serve the React SPA shell (this also covers
 // /reset-password, which the SPA handles client-side).
