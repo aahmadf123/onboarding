@@ -83,7 +83,16 @@ UPDATE UserTasks SET reviewed_by = NULL WHERE reviewed_by IN (
 UPDATE Tasks SET created_by = NULL WHERE created_by IN (
   SELECT id FROM Users WHERE email IN ('staff.example@utoledo.edu', 'admin@utoledo.edu')
 );
+UPDATE ApprovedYouTubeSources SET added_by = NULL WHERE added_by IN (
+  SELECT id FROM Users WHERE email IN ('staff.example@utoledo.edu', 'admin@utoledo.edu')
+);
 DELETE FROM EmailLog WHERE user_id IN (
+  SELECT id FROM Users WHERE email IN ('staff.example@utoledo.edu', 'admin@utoledo.edu')
+);
+DELETE FROM AIAssessmentResults WHERE user_id IN (
+  SELECT id FROM Users WHERE email IN ('staff.example@utoledo.edu', 'admin@utoledo.edu')
+);
+DELETE FROM UserLearningPlan WHERE user_id IN (
   SELECT id FROM Users WHERE email IN ('staff.example@utoledo.edu', 'admin@utoledo.edu')
 );
 
