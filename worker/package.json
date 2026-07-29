@@ -12,6 +12,7 @@
 		"test:ci": "vite build && vitest run",
 		"typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p client/tsconfig.json",
 		"smoke": "node scripts/browser-smoke.mjs",
+		"db:fresh": "node scripts/apply-schema.mjs",
 		"cf-typegen": "wrangler types"
 	},
 	"devDependencies": {
