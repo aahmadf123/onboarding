@@ -153,6 +153,81 @@ describe('login', () => {
     expect(res.json.error).toContain('expired');
   });
 
+  it('locks an account after repeated failures, regardless of source IP', async () => {
+    // rateLimit(10) keys on IP alone, so an attacker rotating addresses had
+    // unlimited attempts against a single account. Every request below comes
+    // from a different IP (apiCall's default), so only the per-account counter
+    // can stop this.
+    const user = await createUser();
+
+    for (let i = 0; i < 5; i++) {
+      const res = await apiCall('/api/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({ email: user.email, password: 'wrong-password' }),
+      });
+      expect(res.status).toBe(401);
+    }
+
+    // Correct password now, but the account is locked.
+    const locked = await apiCall('/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email: user.email, password: user.password }),
+    });
+    expect(locked.status).toBe(429);
+    expect(locked.json.code).toBe('ACCOUNT_LOCKED');
+  });
+
+  it('does not reveal a locked account to someone without the password', async () => {
+    // The lockout message names a real account, so it must stay behind the
+    // password check — otherwise it re-opens the enumeration hole that the
+    // status check had.
+    const user = await createUser();
+    for (let i = 0; i < 6; i++) {
+      await apiCall('/api/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({ email: user.email, password: 'wrong-password' }),
+      });
+    }
+
+    const stillWrong = await apiCall('/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email: user.email, password: 'still-wrong' }),
+    });
+    const unknown = await apiCall('/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email: 'nobody.here@utoledo.edu', password: 'still-wrong' }),
+    });
+
+    expect(stillWrong.status).toBe(401);
+    expect(stillWrong.status).toBe(unknown.status);
+    expect(stillWrong.json.error).toBe(unknown.json.error);
+    expect(stillWrong.json.code).toBeUndefined();
+  });
+
+  it('clears the failure counter on a successful sign-in', async () => {
+    const user = await createUser();
+    for (let i = 0; i < 3; i++) {
+      await apiCall('/api/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({ email: user.email, password: 'wrong-password' }),
+      });
+    }
+
+    const ok = await apiCall('/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email: user.email, password: user.password }),
+    });
+    expect(ok.status).toBe(200);
+
+    const row = await env.DB.prepare(
+      'SELECT failed_login_attempts, locked_until FROM Users WHERE id = ?'
+    )
+      .bind(user.id)
+      .first<{ failed_login_attempts: number; locked_until: string | null }>();
+    expect(row!.failed_login_attempts).toBe(0);
+    expect(row!.locked_until).toBeNull();
+  });
+
   it('rate limits repeated attempts from one IP', async () => {
     const ip = 'rate-limit-test-ip';
     let last = 0;
