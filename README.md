@@ -68,25 +68,49 @@ Emails go through Resend from `mail.utrockets-onboarding.com`.
 **Do not assume email reaches anyone at `utoledo.edu`.** Resend reporting a send
 as successful only means the receiving mail server returned a 250 accept at SMTP
 time. The university runs Microsoft 365, which accepts first and quarantines
-afterwards, and mail from a newly registered domain whose name resembles
-`utrockets.com` carrying a passcode and a sign-in link matches the profile
-anti-phishing filters are built to stop. In testing, invites to `utoledo.edu`
-addresses showed as delivered in Resend and never arrived.
+afterwards. `utoledo.edu` and `rockets.utoledo.edu` both publish DMARC
+`p=reject` and report to dmarcian, so that tenant enforces.
 
 The portal is therefore built so nothing critical depends on email:
 
 - Invite passcodes are shown once in the admin UI. Hand them over directly.
+  **The invite email deliberately contains no passcode** — a credential next to
+  a sign-in link, sent from a young domain resembling `utrockets.com`, is what
+  anti-phishing filters are built to stop.
 - A locked-out user is recovered with **Admin → Users → Re-invite**, which
   issues a fresh passcode on screen.
 - Outstanding tasks are shown in the app on sign-in, and an admin-facing digest
   lists who is behind, so the weekly nudge does not depend on delivery.
 
+#### Required DNS
+
+Authentication must stay complete on the sending domain, or placement gets
+worse everywhere, not just at UToledo:
+
+| Name | Type | Value |
+|---|---|---|
+| `resend._domainkey.mail.utrockets-onboarding.com` | TXT | DKIM key from the Resend dashboard |
+| `send.mail.utrockets-onboarding.com` | TXT | `v=spf1 include:amazonses.com ~all` |
+| `send.mail.utrockets-onboarding.com` | MX | `feedback-smtp.us-east-1.amazonses.com` (priority 10) |
+| `_dmarc.utrockets-onboarding.com` | TXT | `v=DMARC1; p=none; rua=mailto:dmarc@utrockets-onboarding.com; fo=1; adkim=r; aspf=r` |
+| `_dmarc.mail.utrockets-onboarding.com` | TXT | same as above |
+
+Both DMARC records are needed. The From domain is the `mail.` subdomain; without
+its own record it falls back to the apex, where the `sp=` tag governs. An
+explicit record lets the sending subdomain be tightened to `p=quarantine`
+independently of the apex, where Cloudflare Email Routing forwarding lives and
+forwarding breaks SPF.
+
 The durable fix is to send from inside the university tenant (Microsoft Graph
 `sendMail` via an app registration on a UToledo mailbox), which skips inbound
 filtering entirely. `worker/src/services/email.ts` is structured so that is a
-backend swap rather than a rewrite. Failing that, ask UToledo IT to allowlist
-the sending domain, and have them run a message trace to confirm what is
-happening to the mail.
+backend swap rather than a rewrite — see MAINTENANCE.md for the secrets.
+
+**That route is currently blocked, and so is asking IT.** The app registration
+needs an admin-consented `Mail.Send`, a domain allowlist needs a tenant admin,
+and UToledo IT is not engaging with this project. Do not plan around either.
+Until that changes, the automated path is best-effort and the reliable channel
+is an admin pasting the invite from their own `@utoledo.edu` Outlook.
 
 ## Database
 

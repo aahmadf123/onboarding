@@ -210,8 +210,7 @@ tasks.post('/:id/assign', async (c) => {
     });
     await sendEmail(c.env, {
       to: user.email,
-      subject: content.subject,
-      html: content.html,
+      content,
       type: 'task_assigned',
       userId: user.id,
     });

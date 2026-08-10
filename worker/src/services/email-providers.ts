@@ -18,6 +18,14 @@ export interface OutboundMessage {
   to: string;
   subject: string;
   html: string;
+  /**
+   * The plaintext alternative. Resend generates one from the HTML when this is
+   * omitted, but that version mirrors the styled markup rather than reading as
+   * a written message, and filters score the text part on its own merits.
+   */
+  text: string;
+  replyTo?: string;
+  headers?: Record<string, string>;
 }
 
 export interface SendResult {
@@ -48,6 +56,9 @@ export function resendProvider(apiKey: string): EmailProvider {
           to: [message.to],
           subject: message.subject,
           html: message.html,
+          text: message.text,
+          ...(message.replyTo ? { reply_to: message.replyTo } : {}),
+          ...(message.headers ? { headers: message.headers } : {}),
         }),
       });
 
@@ -116,11 +127,23 @@ export function graphProvider(config: {
             Authorization: `Bearer ${accessToken}`,
             'Content-Type': 'application/json',
           },
+          // `text` is deliberately dropped. sendMail takes one body with one
+          // contentType; carrying both parts means POSTing a base64 RFC 5322
+          // MIME message with a multipart/alternative boundary. That is a
+          // hand-rolled MIME encoder for a path that delivers inside Exchange,
+          // where the HTML-only spam signal does not apply.
+          //
+          // `headers` is dropped for a harder reason: internetMessageHeaders
+          // only accepts x-prefixed names, so List-Unsubscribe cannot be set
+          // here at all.
           body: JSON.stringify({
             message: {
               subject: message.subject,
               body: { contentType: 'HTML', content: message.html },
               toRecipients: [{ emailAddress: { address: message.to } }],
+              ...(message.replyTo
+                ? { replyTo: [{ emailAddress: { address: message.replyTo } }] }
+                : {}),
             },
             saveToSentItems: false,
           }),
@@ -138,6 +161,30 @@ export function graphProvider(config: {
   };
 }
 
+/** The sentinel RESEND_API_KEY that swaps in the recording mock. */
+export const TEST_API_KEY = 'test-resend-key';
+
+/**
+ * Messages the mock provider has been handed, most recent last.
+ *
+ * This used to be a short-circuit at the top of sendEmail, which returned
+ * before a message was ever built. That made the entire outgoing payload —
+ * the From header, reply_to, the text part — untestable: no assertion could
+ * reach it. Sending through a provider like any other keeps that code on the
+ * tested path, and the array is what tests read.
+ */
+export const sentMessages: OutboundMessage[] = [];
+
+export function mockProvider(): EmailProvider {
+  return {
+    name: 'mock',
+    async send(message) {
+      sentMessages.push(message);
+      return { ok: true, providerId: `mock_${crypto.randomUUID()}` };
+    },
+  };
+}
+
 /**
  * Picks the backend for this environment. Graph wins when fully configured,
  * because it is the only one that reliably reaches utoledo.edu mailboxes.
@@ -145,6 +192,9 @@ export function graphProvider(config: {
  * rather than throwing.
  */
 export function resolveProvider(env: Bindings): EmailProvider | null {
+  // Checked before everything else so tests never reach the network, even if
+  // MS_* happens to be set in the environment.
+  if (env.RESEND_API_KEY === TEST_API_KEY) return mockProvider();
   if (env.MS_TENANT_ID && env.MS_CLIENT_ID && env.MS_CLIENT_SECRET && env.MS_SENDER_ADDRESS) {
     return graphProvider({
       tenantId: env.MS_TENANT_ID,

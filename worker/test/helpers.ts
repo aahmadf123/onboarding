@@ -116,8 +116,10 @@ export async function applySchema(): Promise<void> {
 
 /** Intercepts Resend so no test ever sends a real email. */
 export function mockResend(): void {
-  // Intentionally empty: sendEmail short-circuits when RESEND_API_KEY is the
-  // test sentinel key, so tests avoid outbound network calls.
+  // Intentionally empty: resolveProvider returns the recording mock provider
+  // when RESEND_API_KEY is the test sentinel, so no test reaches the network.
+  // Import `sentMessages` from src/services/email-providers to assert on what
+  // a send actually produced.
 }
 
 // Hash computation is expensive (100k PBKDF2 iterations) — reuse per password.

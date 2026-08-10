@@ -73,8 +73,7 @@ async function decide(c: Context<AppEnv>, approve: boolean) {
     });
     await sendEmail(c.env, {
       to: row.email,
-      subject: content.subject,
-      html: content.html,
+      content,
       type: 'approval_decision',
       userId: row.user_id,
     });

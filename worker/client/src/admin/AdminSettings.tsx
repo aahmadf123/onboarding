@@ -55,7 +55,7 @@ export function AdminSettings() {
       AdminField,
       {
         label: 'Email from-address',
-        hint: 'onboarding@resend.dev only delivers to the Resend account owner. After verifying a domain in the Resend dashboard, change this to e.g. onboarding@yourdomain.com — no redeploy needed.',
+        hint: 'Must be on a domain verified in the Resend dashboard, or nothing sends. Changing it takes effect immediately — no redeploy needed.',
       },
       React.createElement('input', {
         type: 'text',
@@ -72,6 +72,19 @@ export function AdminSettings() {
         type: 'text',
         value: cfg.email_from_name,
         onChange: (e: React.ChangeEvent<HTMLInputElement>) => set('email_from_name', e.target.value),
+        className: adminInputCls,
+      })
+    ),
+    React.createElement(
+      AdminField,
+      {
+        label: 'Email reply-to address',
+        hint: 'A real, monitored UToledo mailbox. Replies to invites and reminders go here, and it gives anyone unsure whether the mail is genuine an internal address to check against. Leave blank to send no reply-to.',
+      },
+      React.createElement('input', {
+        type: 'text',
+        value: cfg.email_reply_to,
+        onChange: (e: React.ChangeEvent<HTMLInputElement>) => set('email_reply_to', e.target.value),
         className: adminInputCls,
       })
     ),

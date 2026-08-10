@@ -1,18 +1,22 @@
-// Resend transactional email via plain fetch (no SDK — the send API is one
-// POST and the repo keeps dependencies minimal). Every send is recorded in
-// EmailLog. sendEmail never throws: callers' primary operations (invites,
-// approvals, …) must succeed even when email delivery fails — e.g. while the
-// from-address is the resend.dev sandbox, which only delivers to the Resend
-// account owner's inbox.
+// Transactional email. Every send is recorded in EmailLog.
+//
+// sendEmail never throws: callers' primary operations (invites, approvals, …)
+// must succeed even when delivery fails. Mail to utoledo.edu addresses is
+// accepted by Microsoft 365 and quarantined afterwards, so a successful send
+// here is not evidence that anyone received anything.
 
 import { Bindings, EmailType } from '../types';
 import { getConfigs } from './config';
 import { resolveProvider } from './email-providers';
+import { EmailContent } from './email-templates';
 
 export interface SendEmailOptions {
   to: string;
-  subject: string;
-  html: string;
+  /**
+   * The rendered message. Taken whole rather than as loose subject/html/text
+   * fields so a new template cannot ship without its plaintext part.
+   */
+  content: EmailContent;
   type: EmailType;
   userId?: number | null;
 }
@@ -23,32 +27,42 @@ export interface SendEmailResult {
   error?: string;
 }
 
+/**
+ * Builds the From header.
+ *
+ * The display name is quoted rather than interpolated bare: a name containing
+ * a comma, quote or angle bracket produces a malformed header otherwise, and
+ * validateSetting only strips line breaks from that setting.
+ */
+function formatFrom(name: string, address: string): string {
+  if (!name) return address;
+  return `"${name.replace(/[\\"]/g, '\\$&')}" <${address}>`;
+}
+
 export async function sendEmail(
   env: Pick<Bindings, 'DB' | 'RESEND_API_KEY'> & Partial<Bindings>,
   opts: SendEmailOptions
 ): Promise<SendEmailResult> {
   let result: SendEmailResult;
   try {
-    if (env.RESEND_API_KEY === 'test-resend-key') {
-      // Tests inject this sentinel secret to avoid outbound network calls.
-      result = { ok: true, providerId: 'email_mock' };
+    const provider = resolveProvider(env as Bindings);
+    if (!provider) {
+      result = { ok: false, error: 'No email provider is configured' };
     } else {
-      const provider = resolveProvider(env as Bindings);
-      if (!provider) {
-        result = { ok: false, error: 'No email provider is configured' };
-      } else {
-        const cfg = await getConfigs(env.DB, ['email_from_address', 'email_from_name']);
-        const from = cfg.email_from_name
-          ? `${cfg.email_from_name} <${cfg.email_from_address}>`
-          : cfg.email_from_address;
+      const cfg = await getConfigs(env.DB, [
+        'email_from_address',
+        'email_from_name',
+        'email_reply_to',
+      ]);
 
-        result = await provider.send({
-          from,
-          to: opts.to,
-          subject: opts.subject,
-          html: opts.html,
-        });
-      }
+      result = await provider.send({
+        from: formatFrom(cfg.email_from_name, cfg.email_from_address),
+        to: opts.to,
+        subject: opts.content.subject,
+        html: opts.content.html,
+        text: opts.content.text,
+        ...(cfg.email_reply_to ? { replyTo: cfg.email_reply_to } : {}),
+      });
     }
   } catch (err) {
     result = { ok: false, error: err instanceof Error ? err.message : String(err) };
@@ -63,7 +77,7 @@ export async function sendEmail(
         opts.userId ?? null,
         opts.to,
         opts.type,
-        opts.subject,
+        opts.content.subject,
         result.ok ? 'sent' : 'error',
         result.providerId ?? null,
         result.error ?? null

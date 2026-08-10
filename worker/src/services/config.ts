@@ -3,6 +3,12 @@
 export const CONFIG_DEFAULTS: Record<string, string> = {
   email_from_address: 'onboarding@mail.utrockets-onboarding.com',
   email_from_name: 'Toledo Athletics Onboarding',
+  // Set this to a real, monitored utoledo.edu mailbox. A recipient deciding
+  // whether an unfamiliar sender is legitimate has nothing to check against
+  // otherwise, and filters weigh a missing Reply-To the same way. Empty means
+  // no Reply-To header at all, which is safer than a plausible address nobody
+  // reads.
+  email_reply_to: '',
   weekly_reminder_enabled: '1',
   // Deliberately separate from weekly_reminder_enabled. The per-user reminders
   // are frequently filtered by university mail, so an admin may well turn them
@@ -12,9 +18,6 @@ export const CONFIG_DEFAULTS: Record<string, string> = {
   // not just break the links, it delivers live reset tokens to another host.
   app_base_url: 'https://utrockets-onboarding.com',
 };
-
-/** The Resend sandbox sender, which only delivers to the account owner. */
-export const SANDBOX_FROM_ADDRESS = 'onboarding@resend.dev';
 
 /** Keys exposed through the admin Settings UI. */
 export const EDITABLE_CONFIG_KEYS = Object.keys(CONFIG_DEFAULTS);

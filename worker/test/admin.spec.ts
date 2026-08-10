@@ -537,6 +537,29 @@ describe('settings & email log', () => {
     }
   });
 
+  it('accepts a valid or blank reply-to and rejects anything else', async () => {
+    const admin = await createUserAndLogin({ role: 'admin' });
+
+    for (const value of ['athletics-onboarding@utoledo.edu', '']) {
+      const res = await apiCall('/api/admin/settings', {
+        method: 'PUT',
+        token: admin.token,
+        body: JSON.stringify({ email_reply_to: value }),
+      });
+      expect(res.status, `should have accepted ${JSON.stringify(value)}`).toBe(200);
+      expect(res.json.data.email_reply_to).toBe(value);
+    }
+
+    for (const value of ['noreply', 'a@b', 'Onboarding <a@b.com>', 'a@b.com\nBcc: x@y.com']) {
+      const res = await apiCall('/api/admin/settings', {
+        method: 'PUT',
+        token: admin.token,
+        body: JSON.stringify({ email_reply_to: value }),
+      });
+      expect(res.status, `should have rejected ${JSON.stringify(value)}`).toBe(400);
+    }
+  });
+
   it('whitelists settings keys and round-trips values', async () => {
     const admin = await createUserAndLogin({ role: 'admin' });
     const bad = await apiCall('/api/admin/settings', {

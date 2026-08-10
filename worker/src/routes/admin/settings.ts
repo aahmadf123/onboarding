@@ -16,6 +16,11 @@ const settings = new Hono<AppEnv>();
  * there. A `javascript:` value would land straight in an email href, and
  * escapeHtml does not filter schemes.
  */
+// Deliberately loose: the goal is to reject obvious breakage (a bare word, a
+// display name, an embedded newline that could inject a header), not to
+// out-clever RFC 5322.
+const BARE_EMAIL_RE = /^[^\s@<>,;:"]+@[^\s@<>,;:"]+\.[^\s@<>,;:"]+$/;
+
 function validateSetting(key: string, value: string): string | null {
   if (key === 'app_base_url') {
     let url: URL;
@@ -34,11 +39,17 @@ function validateSetting(key: string, value: string): string | null {
   }
 
   if (key === 'email_from_address') {
-    // Deliberately loose: the goal is to reject obvious breakage (a bare word,
-    // a display name, an embedded newline that could inject a header), not to
-    // out-clever RFC 5322.
-    if (!/^[^\s@<>,;:"]+@[^\s@<>,;:"]+\.[^\s@<>,;:"]+$/.test(value)) {
+    if (!BARE_EMAIL_RE.test(value)) {
       return 'Sender must be a bare email address, e.g. noreply@mail.example.com';
+    }
+    return null;
+  }
+
+  if (key === 'email_reply_to') {
+    // Empty is meaningful here: it means send no Reply-To header at all.
+    if (value === '') return null;
+    if (!BARE_EMAIL_RE.test(value)) {
+      return 'Reply-to must be a bare email address, e.g. athletics-onboarding@utoledo.edu';
     }
     return null;
   }
@@ -88,8 +99,7 @@ settings.post('/test-email', rateLimit(5), async (c) => {
   const content = testEmail({ email: me.email, fromAddress: cfg.email_from_address });
   const result = await sendEmail(c.env, {
     to: me.email,
-    subject: content.subject,
-    html: content.html,
+    content,
     type: 'test',
     userId: me.id,
   });

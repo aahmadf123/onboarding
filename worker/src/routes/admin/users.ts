@@ -45,11 +45,17 @@ async function issuePasscodeAndInvite(
   ]);
 
   const baseUrl = await getConfig(c.env.DB, 'app_base_url');
-  const content = inviteEmail({ name: user.name, email: user.email, passcode, baseUrl });
+  // The passcode is deliberately not passed: the invite email carries no
+  // credential. It is returned to the admin below and handed over directly.
+  const content = inviteEmail({
+    name: user.name,
+    email: user.email,
+    baseUrl,
+    expiryDays: PASSCODE_DAYS,
+  });
   await sendEmail(c.env, {
     to: user.email,
-    subject: content.subject,
-    html: content.html,
+    content,
     type: 'invite',
     userId: user.id,
   });

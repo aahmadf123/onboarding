@@ -272,11 +272,11 @@ auth.post('/forgot', rateLimit(5), async (c) => {
     name: user.name,
     email: user.email,
     resetUrl: `${baseUrl}/reset-password?token=${token}`,
+    expiryMinutes: RESET_TOKEN_MINUTES,
   });
   await sendEmail(c.env, {
     to: user.email,
-    subject: content.subject,
-    html: content.html,
+    content,
     type: 'password_reset',
     userId: user.id,
   });
@@ -389,11 +389,17 @@ auth.post('/bootstrap', rateLimit(5), async (c) => {
     .run();
 
   const baseUrl = await getConfig(c.env.DB, 'app_base_url');
-  const content = inviteEmail({ name: admin.name, email: admin.email, passcode, baseUrl });
+  // No credential in the email. Nothing is lost: the passcode comes back in
+  // the response below, to a caller who proved possession of BOOTSTRAP_TOKEN.
+  const content = inviteEmail({
+    name: admin.name,
+    email: admin.email,
+    baseUrl,
+    expiryDays: PASSCODE_DAYS,
+  });
   await sendEmail(c.env, {
     to: admin.email,
-    subject: content.subject,
-    html: content.html,
+    content,
     type: 'invite',
     userId: admin.id,
   });

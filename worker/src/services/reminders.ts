@@ -5,7 +5,20 @@
 import { Bindings } from '../types';
 import { getConfig } from './config';
 import { sendEmail } from './email';
+import { TEST_API_KEY } from './email-providers';
 import { adminDigestEmail, weeklyReminderEmail } from './email-templates';
+
+/** Just under Resend's ~2 requests/second ceiling. */
+const SEND_INTERVAL_MS = 600;
+
+function sleep(ms: number): Promise<void> {
+  return ms > 0 ? new Promise((resolve) => setTimeout(resolve, ms)) : Promise.resolve();
+}
+
+/** Pacing is real work in production and dead time in tests. */
+function sendInterval(env: Pick<Bindings, 'RESEND_API_KEY'>): number {
+  return env.RESEND_API_KEY === TEST_API_KEY ? 0 : SEND_INTERVAL_MS;
+}
 
 interface ReminderUser {
   id: number;
@@ -115,11 +128,14 @@ export async function runWeeklyReminders(
         tasks: openTasks,
         baseUrl,
       });
-      // Sequential sends keep us under Resend's ~2 req/s rate limit.
+      // Resend allows roughly 2 requests a second. Awaiting each send
+      // serializes the loop but does not pace it — a fast run still bursts
+      // straight through the limit and starts collecting 429s. Wait between
+      // sends, skipping the delay before the first one.
+      if (sent > 0) await sleep(sendInterval(env));
       const result = await sendEmail(env, {
         to: user.email,
-        subject: content.subject,
-        html: content.html,
+        content,
         type: 'weekly_reminder',
         userId: user.id,
       });
@@ -172,8 +188,7 @@ export async function runAdminDigest(
       });
       const result = await sendEmail(env, {
         to: admin.email,
-        subject: content.subject,
-        html: content.html,
+        content,
         type: 'admin_digest',
         userId: admin.id,
       });

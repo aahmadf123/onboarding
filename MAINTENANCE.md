@@ -8,7 +8,7 @@ This site is a Cloudflare Worker (TypeScript + Hono) with a React SPA frontend, 
 - **Framework:** Hono (API routing)
 - **Frontend:** React (no build step — compiled inline in `worker/src/frontend.ts` and `worker/src/frontend/`)
 - **Database:** Cloudflare D1 (SQLite)
-- **Email:** Resend (`RESEND_API_KEY` secret; from-address configurable in Admin → Settings)
+- **Email:** Resend (`RESEND_API_KEY` secret; from-address and reply-to configurable in Admin → Settings)
 - **Deployment:** `npx wrangler deploy` from the `worker/` directory
 
 ## ⭐ The Admin CMS is the primary way to update content
@@ -26,7 +26,7 @@ Sign in as an admin and open **🔒 Admin** in the header. Changes go live immed
 | See who still has outstanding onboarding tasks | Admin → **Who Is Behind** |
 | Read issues staff reported with "Report an Issue" | Admin → **Reported Issues** |
 | Check whether emails were accepted by the recipient's server | Admin → **Email Log** |
-| Change the email from-address/name, base URL, weekly reminder on/off | Admin → **Settings** |
+| Change the email from-address/name, reply-to, base URL, weekly reminder on/off | Admin → **Settings** |
 
 ### Embedding a map in an article
 In any article's markdown, put a line:
@@ -47,17 +47,45 @@ Only `https://www.google.com/maps…` / `maps.google.com` URLs render (anything 
 
 > **Email does not reliably reach `utoledo.edu` mailboxes.** Resend accepts the
 > message and reports success, because the university's mail server returns a
-> 250 accept at SMTP time. Microsoft 365 then quarantines it. Mail from a newly
-> registered domain resembling `utrockets.com`, carrying a passcode and a
-> sign-in link, is exactly what anti-phishing filters are built to stop. In
-> testing, invites to `utoledo.edu` addresses showed as delivered in Resend and
-> never arrived.
+> 250 accept at SMTP time. Microsoft 365 then quarantines it. Both
+> `utoledo.edu` and `rockets.utoledo.edu` publish DMARC `p=reject` and report to
+> dmarcian, so that tenant enforces.
 >
 > **Nothing in the portal depends on email landing.** Use these instead:
 > - Invite passcodes are shown once in the admin UI. Read them out directly.
+>   The invite email no longer contains the passcode at all — see below.
 > - Locked-out users are recovered with **Admin → Users → Re-invite**.
 > - **Admin → Who Is Behind** lists everyone with outstanding tasks, and users
 >   see their own outstanding count in-app on every page.
+>
+> **The reliable channel is your own Outlook.** Mail sent from one mailbox in
+> the university tenant to another is not subject to inbound filtering. Copy the
+> passcode out of Admin → Users and send it from your `@utoledo.edu` account and
+> it will arrive. Nothing automated can make that guarantee.
+
+### Why the invite carries no passcode
+
+A one-time credential printed next to a sign-in button, sent from a domain
+registered in June 2026 whose name resembles the real `utrockets.com` (1999),
+is a textbook phishing signature. The invite now announces the account and
+links to the portal; the passcode travels by hand. `POST /api/auth/bootstrap`
+is unaffected — it returns the passcode in its HTTP response.
+
+### Deliverability settings and DNS
+
+- **Admin → Settings → Email reply-to address.** Set this to a real, monitored
+  `@utoledo.edu` mailbox. It gives a recipient unsure about an unfamiliar sender
+  an internal address to check against, and filters weigh a missing Reply-To.
+  Blank means no Reply-To header is sent.
+- Authentication records live in the Cloudflare zone for
+  `utrockets-onboarding.com` — DKIM, SPF and MX on `send.mail.…`, plus **two**
+  DMARC records (apex and the `mail.` subdomain). The full table is in
+  `README.md` under "Email sending". A missing DMARC record is the single
+  largest self-inflicted deliverability gap; do not remove them.
+- To verify the chain end to end: Admin → Settings → **Send me a test email** to
+  a personal Gmail, open it, and use **Show original**. Expect `SPF: PASS`,
+  `DKIM: PASS`, `DMARC: PASS`. [mail-tester.com](https://www.mail-tester.com)
+  gives a fuller score.
 
 - Secrets: `npx wrangler secret put RESEND_API_KEY` and `npx wrangler secret put BOOTSTRAP_TOKEN` (local dev uses `worker/.dev.vars`, see `.dev.vars.example`).
 - Weekly reminders run Mondays 13:00 UTC, roughly 9am in Toledo (cron in `worker/wrangler.jsonc`). They email each **active** user their outstanding required/assigned tasks, then send every admin a digest of who is behind. A retried cron will not re-send to anyone already emailed in the last six days.
@@ -65,6 +93,13 @@ Only `https://www.google.com/maps…` / `maps.google.com` URLs render (anything 
 - Every send is recorded in Admin → Email Log. **"Accepted" there means the receiving server took the message, not that anyone read it.**
 
 ### Sending from inside the university tenant
+
+> **Blocked as of August 2026.** Every option below needs a UToledo tenant
+> admin, and IT is not engaging with this project. Keep the code path — it costs
+> nothing and works the day that changes — but do not plan delivery around it.
+> The working substitute is manual: copy the passcode from Admin → Users and
+> send it from your own `@utoledo.edu` Outlook. Tenant-internal mail is not
+> filtered on the way in.
 
 The durable fix is Microsoft Graph: send as a real UToledo mailbox, so the mail
 originates inside the tenant and skips inbound filtering. It needs an app
@@ -153,4 +188,4 @@ Admin → Content → Articles → Edit (live markdown preview included). The AI
 - MailChannels was removed (its free Workers API shut down in Aug 2024); all email is Resend now.
 - There is no YouTube integration and no AI Hub / AI Assessment feature (both removed earlier).
 - Cloudflare D1 + Resend are the only external data dependencies.
-- Tests: `cd worker && npm test` (53 tests; Resend is mocked — tests never send real email).
+- Tests: `cd worker && npm test` (144 tests; sends go to a recording mock provider — tests never send real email, and `sentMessages` lets them assert on the exact outgoing payload).
